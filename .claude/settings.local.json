@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 8 bash:*)",
+      "Bash(curl:*)",
+      "Bash(/dev/null)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill //F //PID 40232)",
+      "Bash(timeout 3 bash:*)",
+      "Bash(npm run compile:*)",
+      "Bash(cat:*)",
+      "Bash(time curl:*)",
+      "Bash(npx vitest:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(cd:*)",
+      "mcp__context7__get-library-docs",
+      "Bash(node dist/index.js:*)",
+      "Bash(dir:*)",
+      "mcp__context7__resolve-library-id",
+      "Bash(taskkill:*)",
+      "Bash(python:*)",
+      "Bash(cmd //c \"taskkill /pid 32156 /f\")",
+      "Bash(cmd //c \"taskkill /pid 24612 /T /F\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

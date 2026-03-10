@@ -1,0 +1,11 @@
+export enum POST_STATUS {
+  ACTIVE = 'ACTIVE',
+  HIDDEN = 'HIDDEN',
+  DELETED = 'DELETED',
+}
+
+export enum REPLY_STATUS {
+  ACTIVE = 'ACTIVE',
+  HIDDEN = 'HIDDEN',
+  DELETED = 'DELETED',
+}

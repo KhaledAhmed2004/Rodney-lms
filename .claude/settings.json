@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:www.anthropic.com)",
+      "WebFetch(domain:www.humanlayer.dev)",
+      "WebFetch(domain:www-cdn.anthropic.com)",
+      "WebFetch(domain:claude.com)",
+      "Bash(test -f \"d:/web projects/office-sta/rodney/tasks/lessons.md\")",
+      "Bash(test -f \"d:/web projects/office-sta/rodney/tasks/todo.md\")",
+      "Bash(npm ls slugify)",
+      "Bash(npm run lint:check)",
+      "Bash(npm run test:run)",
+      "Bash(wc -l src/app/modules/course/*.ts)",
+      "Read(//d/web projects/office-sta/rodney/**)",
+      "Read(//c/Users/khaled/AppData/Local/Temp/claude/d--web-projects-office-sta-rodney/tasks/**)",
+      "Bash(python3 -c \":*)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(npm uninstall passport passport-google-oauth20 passport-local)",
+      "Bash(npm uninstall -D @types/passport @types/passport-google-oauth20 @types/passport-local)",
+      "WebSearch",
+      "Bash(npm run prettier:check)",
+      "Bash(npx prettier --ignore-path .gitignore --check \"src/app/modules/enrollment/**/*.ts\" \"src/app/modules/activity/**/*.ts\" \"src/app/modules/legal/**/*.ts\" \"src/app/modules/quiz/**/*.ts\" \"src/app/modules/gradebook/**/*.ts\" \"src/app/modules/community/**/*.ts\" \"src/app/modules/feedback/**/*.ts\" \"src/app/modules/gamification/**/*.ts\" \"src/app/modules/dashboard/**/*.ts\" \"src/app/modules/analytics/**/*.ts\" \"src/app/modules/student-home/**/*.ts\" \"src/app/helpers/enrollmentHelper.ts\" \"src/app/helpers/activityHelper.ts\" \"src/app/helpers/gamificationHelper.ts\" \"src/routes/index.ts\")",
+      "Bash(npx prettier --ignore-path .gitignore --write \"src/app/modules/enrollment/**/*.ts\" \"src/app/modules/activity/**/*.ts\" \"src/app/modules/legal/**/*.ts\" \"src/app/modules/quiz/**/*.ts\" \"src/app/modules/gradebook/**/*.ts\" \"src/app/modules/community/**/*.ts\" \"src/app/modules/feedback/**/*.ts\" \"src/app/modules/gamification/**/*.ts\" \"src/app/modules/dashboard/**/*.ts\" \"src/app/modules/analytics/**/*.ts\" \"src/app/modules/student-home/**/*.ts\" \"src/app/helpers/enrollmentHelper.ts\" \"src/app/helpers/activityHelper.ts\" \"src/app/helpers/gamificationHelper.ts\" \"src/routes/index.ts\" \"src/enums/enrollment.ts\" \"src/enums/quiz.ts\" \"src/enums/gradebook.ts\" \"src/enums/community.ts\" \"src/enums/gamification.ts\")",
+      "Read(//tmp/**)",
+      "Bash(node -e \":*)",
+      "Read(//d/web/ projects/office-sta/rodney/.claude/rules/**)",
+      "Read(//d/web/ projects/office-sta/rodney/public/**)",
+      "Bash(npx eslint src/app/modules/course/)",
+      "Bash(xargs grep -l \"scrapeHelper\\\\|from.*scraper\")",
+      "Bash(rm -rf src/app/scraper)",
+      "Bash(rm -f src/helpers/scrapeHelper.ts)",
+      "Bash(rm -rf dist/app/scraper)",
+      "Bash(rm -f dist/helpers/scrapeHelper.js)"
+    ],
+    "additionalDirectories": [
+      "d:\\web projects\\office-sta\\rodney\\.claude",
+      "d:\\web projects\\office-sta\\rodney\\src\\app\\modules",
+      "d:\\web projects\\office-sta\\rodney\\.claude\\rules"
+    ]
+  }
+}

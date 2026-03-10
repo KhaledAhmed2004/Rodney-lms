@@ -1,0 +1,4872 @@
+{
+  "info": {
+    "name": "Rodney API",
+    "description": "Complete API collection organized by screen. Two main sections: App APIs (student-facing) and Dashboard APIs (admin panel).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@example.com",
+      "type": "string",
+      "description": "Must match SUPER_ADMIN_EMAIL in .env"
+    },
+    {
+      "key": "adminPassword",
+      "value": "strong_password_here",
+      "type": "string",
+      "description": "Must match SUPER_ADMIN_PASSWORD in .env"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "App APIs",
+      "description": "Student/user-facing mobile app APIs organized by screen.",
+      "item": [
+        {
+          "name": "1. Auth Screen",
+          "item": [
+            {
+              "name": "Register",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"1998-05-15\",\n  \"location\": \"Dhaka, Bangladesh\",\n  \"phone\": \"+8801712345678\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
+                },
+                "description": "Register a new student account. Password must include upper, lower, number, special char and be 8+ chars."
+              },
+              "response": []
+            },
+            {
+              "name": "Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Login with email and password. Returns access and refresh tokens."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "if (jsonData.success && jsonData.data) {",
+                      "  pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                      "  if (jsonData.data.refreshToken) {",
+                      "    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+                      "  }",
+                      "  console.log('Student tokens saved to collection variables');",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Logout",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Forget Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/forget-password",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "forget-password"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Verify Email (OTP)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"oneTimeCode\": 123456\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/verify-email",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "verify-email"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Resend Verification Email",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/resend-verify-email",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "resend-verify-email"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Reset Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"newPassword\": \"NewPassword123!\",\n  \"confirmPassword\": \"NewPassword123!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/reset-password",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "reset-password"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Change Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentPassword\": \"Password123!\",\n  \"newPassword\": \"NewPassword456!\",\n  \"confirmPassword\": \"NewPassword456!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/change-password",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "change-password"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Refresh Token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/refresh-token",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "refresh-token"
+                  ]
+                },
+                "description": "Body is optional if refresh token is sent via cookies."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "2. Welcome/Onboarding Screen",
+          "item": [
+            {
+              "name": "Get All Published Courses",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/courses?page=1&limit=50",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "courses"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50"
+                    }
+                  ]
+                },
+                "description": "Get all published courses for onboarding selection. Public endpoint."
+              },
+              "response": []
+            },
+            {
+              "name": "Bulk Enroll in Courses",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"courseIds\": [\"COURSE_ID_1\", \"COURSE_ID_2\"]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/enrollments/bulk",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "enrollments",
+                    "bulk"
+                  ]
+                },
+                "description": "Bulk enroll in multiple courses during onboarding. Auth: STUDENT."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "3. Home Screen",
+          "item": [
+            {
+              "name": "Get Home Data",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/student/home",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "home"
+                  ]
+                },
+                "description": "Aggregated home data: points, streak, enrolled courses, recent badges. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Leaderboard",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/leaderboard?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "leaderboard"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Get gamification leaderboard. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Get All Published Courses",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/courses?page=1&limit=10&sort=-createdAt",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "courses"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-createdAt"
+                    }
+                  ]
+                },
+                "description": "Get latest published courses. Public endpoint."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "4. Browse Courses Screen",
+          "item": [
+            {
+              "name": "Get All Published Courses",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/courses?page=1&limit=10&searchTerm=&sort=-createdAt",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "courses"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "searchTerm",
+                      "value": "",
+                      "description": "Search by title"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-createdAt"
+                    }
+                  ]
+                },
+                "description": "Browse and search published courses. Public endpoint."
+              },
+              "response": []
+            },
+            {
+              "name": "Get My Enrolled Courses",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/enrollments/my-courses?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "enrollments",
+                    "my-courses"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Get enrolled courses with progress. Auth: STUDENT."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "5. Course Content Screen",
+          "item": [
+            {
+              "name": "Get Course by ID or Slug",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/courses/:identifier",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "courses",
+                    ":identifier"
+                  ],
+                  "variable": [
+                    {
+                      "key": "identifier",
+                      "value": "COURSE_ID_OR_SLUG",
+                      "description": "Course ObjectId or slug"
+                    }
+                  ]
+                },
+                "description": "Public. Accepts either MongoDB ObjectId or course slug."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Lessons by Module",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId/lessons",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "courses",
+                    ":courseId",
+                    "modules",
+                    ":moduleId",
+                    "lessons"
+                  ],
+                  "variable": [
+                    {
+                      "key": "courseId",
+                      "value": "COURSE_ID"
+                    },
+                    {
+                      "key": "moduleId",
+                      "value": "MODULE_ID"
+                    }
+                  ]
+                },
+                "description": "Public. Returns all lessons in a module."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Lesson by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/courses/:courseId/lessons/:lessonId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "courses",
+                    ":courseId",
+                    "lessons",
+                    ":lessonId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "courseId",
+                      "value": "COURSE_ID"
+                    },
+                    {
+                      "key": "lessonId",
+                      "value": "LESSON_ID"
+                    }
+                  ]
+                },
+                "description": "Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Enroll in Course",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"courseId\": \"COURSE_ID\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/enrollments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "enrollments"
+                  ]
+                },
+                "description": "Enroll in a single course. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Mark Lesson Complete",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/enrollments/:enrollmentId/lessons/:lessonId/complete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "enrollments",
+                    ":enrollmentId",
+                    "lessons",
+                    ":lessonId",
+                    "complete"
+                  ],
+                  "variable": [
+                    {
+                      "key": "enrollmentId",
+                      "value": "ENROLLMENT_ID"
+                    },
+                    {
+                      "key": "lessonId",
+                      "value": "LESSON_ID"
+                    }
+                  ]
+                },
+                "description": "Mark lesson as completed. Updates completion %. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Quiz (Student View)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/:id/student-view",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    ":id",
+                    "student-view"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "QUIZ_ID"
+                    }
+                  ]
+                },
+                "description": "Get quiz without correct answers. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Start Quiz Attempt",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/:id/attempts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    ":id",
+                    "attempts"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "QUIZ_ID"
+                    }
+                  ]
+                },
+                "description": "Start a new quiz attempt. Returns existing in-progress if any. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Submit Quiz Answers",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"answers\": [\n    { \"questionId\": \"Q1\", \"selectedOptionId\": \"OPT_A\" },\n    { \"questionId\": \"Q2\", \"selectedOptionId\": \"OPT_B\" },\n    { \"questionId\": \"Q3\", \"textAnswer\": \"Node.js is a runtime environment\" }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/attempts/:attemptId/submit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    "attempts",
+                    ":attemptId",
+                    "submit"
+                  ],
+                  "variable": [
+                    {
+                      "key": "attemptId",
+                      "value": "ATTEMPT_ID"
+                    }
+                  ]
+                },
+                "description": "Submit answers. MCQ/TRUE_FALSE auto-graded. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "View Quiz Result",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/attempts/:attemptId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    "attempts",
+                    ":attemptId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "attemptId",
+                      "value": "ATTEMPT_ID"
+                    }
+                  ]
+                },
+                "description": "View result of a completed quiz attempt. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Submit Assignment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"courseId\": \"COURSE_ID\",\n  \"content\": \"My assignment submission content here.\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/gradebook/assignments/:lessonId/submit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gradebook",
+                    "assignments",
+                    ":lessonId",
+                    "submit"
+                  ],
+                  "variable": [
+                    {
+                      "key": "lessonId",
+                      "value": "LESSON_ID"
+                    }
+                  ]
+                },
+                "description": "Submit assignment for a lesson. Auth: STUDENT."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "6. Progress Screen",
+          "item": [
+            {
+              "name": "Get Progress Overview",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/student/progress",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "student",
+                    "progress"
+                  ]
+                },
+                "description": "Overall progress: completion %, points, streak, topic progress. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Activity Calendar",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/activity/calendar",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "activity",
+                    "calendar"
+                  ]
+                },
+                "description": "30-day activity calendar. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Streak",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/activity/streak",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "activity",
+                    "streak"
+                  ]
+                },
+                "description": "Current and longest streak. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Get My Quiz Attempts",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/my-attempts?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    "my-attempts"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Quiz attempt history. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Get My Grades",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gradebook/my-grades?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gradebook",
+                    "my-grades"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "All grades across courses. Auth: STUDENT."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "7. Achievements Screen",
+          "item": [
+            {
+              "name": "Get My Badges",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/my-badges",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "my-badges"
+                  ]
+                },
+                "description": "Get all earned badges. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Get My Points",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/my-points",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "my-points"
+                  ]
+                },
+                "description": "Total points and points history. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Gamification Summary",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/my-summary",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "my-summary"
+                  ]
+                },
+                "description": "Points + top badge + total badges summary. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Get All Badges",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/badges?page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "badges"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "All available badges. Auth required."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "8. Community Screen",
+          "item": [
+            {
+              "name": "Create Post",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "content",
+                      "value": "Just completed the JavaScript module!",
+                      "type": "text"
+                    },
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "community",
+                    "posts"
+                  ]
+                },
+                "description": "Create post with optional image. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Feed",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts?page=1&limit=10&sort=-createdAt",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "community",
+                    "posts"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-createdAt"
+                    }
+                  ]
+                },
+                "description": "Community feed, newest first. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Post by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "community",
+                    "posts",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "POST_ID"
+                    }
+                  ]
+                },
+                "description": "Single post with replies. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Post",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "community",
+                    "posts",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "POST_ID"
+                    }
+                  ]
+                },
+                "description": "Delete own post. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Toggle Like",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts/:id/like",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "community",
+                    "posts",
+                    ":id",
+                    "like"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "POST_ID"
+                    }
+                  ]
+                },
+                "description": "Toggle like on a post. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Reply to Post",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"Great post! Thanks for sharing.\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts/:id/replies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "community",
+                    "posts",
+                    ":id",
+                    "replies"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "POST_ID"
+                    }
+                  ]
+                },
+                "description": "Reply to a community post. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Reply",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/community/replies/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "community",
+                    "replies",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLY_ID"
+                    }
+                  ]
+                },
+                "description": "Delete own reply. Auth required."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "9. Notification Screen",
+          "item": [
+            {
+              "name": "Get Notifications",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/notifications?page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notifications"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "Paginated notifications + unread count. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Mark All as Read",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/notifications/read-all",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notifications",
+                    "read-all"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Mark One as Read",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/notifications/:id/read",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notifications",
+                    ":id",
+                    "read"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "NOTIFICATION_ID"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "10. Profile Screen",
+          "item": [
+            {
+              "name": "Get Own Profile",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "profile"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "name",
+                      "value": "John Updated",
+                      "type": "text"
+                    },
+                    {
+                      "key": "gender",
+                      "value": "male",
+                      "type": "text"
+                    },
+                    {
+                      "key": "dateOfBirth",
+                      "value": "1998-05-15",
+                      "type": "text"
+                    },
+                    {
+                      "key": "location",
+                      "value": "Chittagong, Bangladesh",
+                      "type": "text"
+                    },
+                    {
+                      "key": "phone",
+                      "value": "+8801798765432",
+                      "type": "text"
+                    },
+                    {
+                      "key": "profilePicture",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "profile"
+                  ]
+                },
+                "description": "Supports file upload for profilePicture."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Gamification Summary",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/my-summary",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "my-summary"
+                  ]
+                },
+                "description": "Points, streak, top badge for profile. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Streak",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/activity/streak",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "activity",
+                    "streak"
+                  ]
+                },
+                "description": "Current and longest streak. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Legal Pages",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/legal",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "legal"
+                  ]
+                },
+                "description": "List all published legal pages. Public."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Legal Page",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/legal/:slug",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "legal",
+                    ":slug"
+                  ],
+                  "variable": [
+                    {
+                      "key": "slug",
+                      "value": "terms-of-service"
+                    }
+                  ]
+                },
+                "description": "Get legal page by slug. Public."
+              },
+              "response": []
+            },
+            {
+              "name": "Get My Reviews",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/feedback/my-reviews?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "feedback",
+                    "my-reviews"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Get own course reviews. Auth: STUDENT."
+              },
+              "response": []
+            },
+            {
+              "name": "Submit Course Review",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"courseId\": \"COURSE_ID\",\n  \"rating\": 5,\n  \"review\": \"Excellent course! Very well structured.\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/feedback",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "feedback"
+                  ]
+                },
+                "description": "Submit a course review (1-5 rating). Auth: STUDENT."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "11. Chat Screen",
+          "item": [
+            {
+              "name": "Create Chat",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/chats/:otherUserId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "chats",
+                    ":otherUserId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "otherUserId",
+                      "value": "OTHER_USER_ID",
+                      "description": "User to start chat with"
+                    }
+                  ]
+                },
+                "description": "Create 1-on-1 chat. Returns existing if already exists. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Get My Chats",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/chats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "chats"
+                  ]
+                },
+                "description": "All chats for authenticated user. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Send Message",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "chatId",
+                      "value": "CHAT_ID",
+                      "type": "text"
+                    },
+                    {
+                      "key": "text",
+                      "value": "Hello! How are you?",
+                      "type": "text"
+                    },
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": "",
+                      "description": "Up to 5 images"
+                    },
+                    {
+                      "key": "media",
+                      "type": "file",
+                      "src": "",
+                      "description": "Up to 3 media files"
+                    },
+                    {
+                      "key": "doc",
+                      "type": "file",
+                      "src": "",
+                      "description": "Up to 5 documents"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/messages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "messages"
+                  ]
+                },
+                "description": "Send message with optional attachments. Max 10 files total. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Messages",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/messages/:id?page=1&limit=50",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "messages",
+                    ":id"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "50"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "CHAT_ID"
+                    }
+                  ]
+                },
+                "description": "Paginated messages for a chat. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Mark Chat as Read",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/messages/chat/:chatId/read",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "messages",
+                    "chat",
+                    ":chatId",
+                    "read"
+                  ],
+                  "variable": [
+                    {
+                      "key": "chatId",
+                      "value": "CHAT_ID"
+                    }
+                  ]
+                },
+                "description": "Mark all messages in chat as read. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Public User Details",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/users/:id/user",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    ":id",
+                    "user"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "USER_ID"
+                    }
+                  ]
+                },
+                "description": "Public user profile details. No auth required."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Dashboard APIs",
+      "description": "Admin dashboard APIs organized by screen.",
+      "item": [
+        {
+          "name": "Auth Screen",
+          "item": [
+            {
+              "name": "Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Admin login using collection variables {{adminEmail}} and {{adminPassword}}."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "if (jsonData.success && jsonData.data) {",
+                      "  pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+                      "  if (jsonData.data.refreshToken) {",
+                      "    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+                      "  }",
+                      "  console.log('Admin tokens saved to collection variables');",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Logout",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "Logout the currently authenticated admin."
+              },
+              "response": []
+            },
+            {
+              "name": "Change Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentPassword\": \"OldPass123!\",\n  \"newPassword\": \"NewPass456!\",\n  \"confirmPassword\": \"NewPass456!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/change-password",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "change-password"
+                  ]
+                },
+                "description": "Change the authenticated admin's password."
+              },
+              "response": []
+            },
+            {
+              "name": "Refresh Token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/refresh-token",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "refresh-token"
+                  ]
+                },
+                "description": "Obtain a new access token using the refresh token."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Overview Screen",
+          "item": [
+            {
+              "name": "Get Dashboard Summary",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/dashboard/summary",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard",
+                    "summary"
+                  ]
+                },
+                "description": "Get dashboard summary including total users, courses, enrollments, and completion rate. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Trends",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/dashboard/trends",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard",
+                    "trends"
+                  ]
+                },
+                "description": "Get time-series trend data for the dashboard. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Recent Activity",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/dashboard/recent-activity",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "dashboard",
+                    "recent-activity"
+                  ]
+                },
+                "description": "Get recent platform activity for the admin dashboard. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "User Management Screen",
+          "item": [
+            {
+              "name": "Get All Users",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users?page=1&limit=10&searchTerm=&sort=-createdAt",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "searchTerm",
+                      "value": ""
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-createdAt"
+                    }
+                  ]
+                },
+                "description": "Get all users with pagination, search, and sorting. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get User by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "USER_ID"
+                    }
+                  ]
+                },
+                "description": "Get a specific user by their ID. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Block User",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/:id/block",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    ":id",
+                    "block"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "USER_ID"
+                    }
+                  ]
+                },
+                "description": "Block a user by ID. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Unblock User",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/:id/unblock",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    ":id",
+                    "unblock"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "USER_ID"
+                    }
+                  ]
+                },
+                "description": "Unblock a previously blocked user by ID. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Course Screen",
+          "item": [
+            {
+              "name": "Courses",
+              "item": [
+                {
+                  "name": "Create Course",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      }
+                    ],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "title",
+                          "value": "Introduction to Web Development",
+                          "type": "text"
+                        },
+                        {
+                          "key": "description",
+                          "value": "A comprehensive course covering HTML, CSS, and JavaScript fundamentals.",
+                          "type": "text"
+                        },
+                        {
+                          "key": "status",
+                          "value": "DRAFT",
+                          "type": "text"
+                        },
+                        {
+                          "key": "publishScheduledAt",
+                          "value": "2026-04-01T00:00:00.000Z",
+                          "type": "text",
+                          "disabled": true
+                        },
+                        {
+                          "key": "thumbnail",
+                          "type": "file",
+                          "src": ""
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/courses",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses"
+                      ]
+                    },
+                    "description": "Create a new course with thumbnail upload. Requires SUPER_ADMIN role."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Get All Courses (Admin)",
+                  "request": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/manage?page=1&limit=10&searchTerm=&sort=-createdAt&status=",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        "manage"
+                      ],
+                      "query": [
+                        {
+                          "key": "page",
+                          "value": "1"
+                        },
+                        {
+                          "key": "limit",
+                          "value": "10"
+                        },
+                        {
+                          "key": "searchTerm",
+                          "value": ""
+                        },
+                        {
+                          "key": "sort",
+                          "value": "-createdAt"
+                        },
+                        {
+                          "key": "status",
+                          "value": "",
+                          "description": "Filter by status: DRAFT, PUBLISHED, ARCHIVED, SCHEDULED (empty = all)"
+                        }
+                      ]
+                    },
+                    "description": "Get all courses regardless of status. Requires SUPER_ADMIN role. Supports filtering by status query param."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Get All Published Courses",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/courses?page=1&limit=10&searchTerm=&sort=-createdAt",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses"
+                      ],
+                      "query": [
+                        {
+                          "key": "page",
+                          "value": "1"
+                        },
+                        {
+                          "key": "limit",
+                          "value": "10"
+                        },
+                        {
+                          "key": "searchTerm",
+                          "value": ""
+                        },
+                        {
+                          "key": "sort",
+                          "value": "-createdAt"
+                        }
+                      ]
+                    },
+                    "description": "Get all published courses with pagination and search. Public endpoint."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Get Course by ID or Slug",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:identifier",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":identifier"
+                      ],
+                      "variable": [
+                        {
+                          "key": "identifier",
+                          "value": "introduction-to-web-development"
+                        }
+                      ]
+                    },
+                    "description": "Get a single course by its ID or slug. Public endpoint."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Update Course",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      }
+                    ],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "title",
+                          "value": "Updated Course Title",
+                          "type": "text"
+                        },
+                        {
+                          "key": "description",
+                          "value": "Updated course description with new content.",
+                          "type": "text"
+                        },
+                        {
+                          "key": "status",
+                          "value": "PUBLISHED",
+                          "type": "text"
+                        },
+                        {
+                          "key": "publishScheduledAt",
+                          "value": "2026-05-01T00:00:00.000Z",
+                          "type": "text",
+                          "disabled": true
+                        },
+                        {
+                          "key": "thumbnail",
+                          "type": "file",
+                          "src": ""
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        }
+                      ]
+                    },
+                    "description": "Update an existing course. Status can be DRAFT, PUBLISHED, ARCHIVED, or SCHEDULED. Requires SUPER_ADMIN role."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Delete Course",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        }
+                      ]
+                    },
+                    "description": "Delete a course by ID. Requires SUPER_ADMIN role."
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "Modules",
+              "item": [
+                {
+                  "name": "Add Module",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"title\": \"Module 1: Getting Started\"\n}"
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId/modules",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId",
+                        "modules"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        }
+                      ]
+                    },
+                    "description": "Add a new module to a course. Requires SUPER_ADMIN role."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Reorder Modules",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"moduleOrder\": [\"MODULE_ID_1\", \"MODULE_ID_2\", \"MODULE_ID_3\"]\n}"
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId/modules/reorder",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId",
+                        "modules",
+                        "reorder"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        }
+                      ]
+                    },
+                    "description": "Reorder modules within a course. Requires SUPER_ADMIN role."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Update Module",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"title\": \"Updated Module Title\"\n}"
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId",
+                        "modules",
+                        ":moduleId"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        },
+                        {
+                          "key": "moduleId",
+                          "value": "MODULE_ID"
+                        }
+                      ]
+                    },
+                    "description": "Update a module's details. Requires SUPER_ADMIN role."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Delete Module",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId",
+                        "modules",
+                        ":moduleId"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        },
+                        {
+                          "key": "moduleId",
+                          "value": "MODULE_ID"
+                        }
+                      ]
+                    },
+                    "description": "Delete a module from a course. Requires SUPER_ADMIN role."
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "Lessons",
+              "item": [
+                {
+                  "name": "Create Lesson",
+                  "request": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      }
+                    ],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "title",
+                          "value": "Introduction to HTML",
+                          "type": "text"
+                        },
+                        {
+                          "key": "type",
+                          "value": "VIDEO",
+                          "type": "text"
+                        },
+                        {
+                          "key": "description",
+                          "value": "Learn the basics of HTML structure and tags.",
+                          "type": "text"
+                        },
+                        {
+                          "key": "learningObjectives[]",
+                          "value": "Understand HTML document structure",
+                          "type": "text"
+                        },
+                        {
+                          "key": "learningObjectives[]",
+                          "value": "Use common HTML tags",
+                          "type": "text"
+                        },
+                        {
+                          "key": "isVisible",
+                          "value": "true",
+                          "type": "text",
+                          "disabled": true
+                        },
+                        {
+                          "key": "prerequisiteLesson",
+                          "value": "LESSON_ID",
+                          "type": "text",
+                          "disabled": true
+                        },
+                        {
+                          "key": "readingContent",
+                          "value": "<h1>Reading Content</h1><p>...</p>",
+                          "type": "text",
+                          "disabled": true
+                        },
+                        {
+                          "key": "assignmentInstructions",
+                          "value": "Complete the following tasks...",
+                          "type": "text",
+                          "disabled": true
+                        },
+                        {
+                          "key": "contentFile",
+                          "type": "file",
+                          "src": ""
+                        },
+                        {
+                          "key": "attachments",
+                          "type": "file",
+                          "src": ""
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId/lessons",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId",
+                        "modules",
+                        ":moduleId",
+                        "lessons"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        },
+                        {
+                          "key": "moduleId",
+                          "value": "MODULE_ID"
+                        }
+                      ]
+                    },
+                    "description": "Create a new lesson in a module. Type can be VIDEO, READING, or ASSIGNMENT. Requires SUPER_ADMIN role."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Get Lessons by Module",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId/lessons",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId",
+                        "modules",
+                        ":moduleId",
+                        "lessons"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        },
+                        {
+                          "key": "moduleId",
+                          "value": "MODULE_ID"
+                        }
+                      ]
+                    },
+                    "description": "Get all lessons within a module. Public endpoint."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Get Lesson by ID",
+                  "request": {
+                    "method": "GET",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId/lessons/:lessonId",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId",
+                        "lessons",
+                        ":lessonId"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        },
+                        {
+                          "key": "lessonId",
+                          "value": "LESSON_ID"
+                        }
+                      ]
+                    },
+                    "description": "Get a specific lesson by ID. Requires authentication."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Reorder Lessons",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      },
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"lessonOrder\": [\"LESSON_ID_1\", \"LESSON_ID_2\", \"LESSON_ID_3\"]\n}"
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId/lessons/reorder",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId",
+                        "modules",
+                        ":moduleId",
+                        "lessons",
+                        "reorder"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        },
+                        {
+                          "key": "moduleId",
+                          "value": "MODULE_ID"
+                        }
+                      ]
+                    },
+                    "description": "Reorder lessons within a module. Requires SUPER_ADMIN role."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Update Lesson",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      }
+                    ],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "title",
+                          "value": "Updated Lesson Title",
+                          "type": "text"
+                        },
+                        {
+                          "key": "type",
+                          "value": "VIDEO",
+                          "type": "text",
+                          "disabled": true
+                        },
+                        {
+                          "key": "description",
+                          "value": "Updated lesson description.",
+                          "type": "text"
+                        },
+                        {
+                          "key": "learningObjectives[]",
+                          "value": "Updated objective",
+                          "type": "text",
+                          "disabled": true
+                        },
+                        {
+                          "key": "isVisible",
+                          "value": "true",
+                          "type": "text",
+                          "disabled": true
+                        },
+                        {
+                          "key": "prerequisiteLesson",
+                          "value": "LESSON_ID",
+                          "type": "text",
+                          "disabled": true
+                        },
+                        {
+                          "key": "readingContent",
+                          "value": "<h1>Updated Reading</h1>",
+                          "type": "text",
+                          "disabled": true
+                        },
+                        {
+                          "key": "assignmentInstructions",
+                          "value": "Updated instructions",
+                          "type": "text",
+                          "disabled": true
+                        },
+                        {
+                          "key": "contentFile",
+                          "type": "file",
+                          "src": ""
+                        },
+                        {
+                          "key": "attachments",
+                          "type": "file",
+                          "src": ""
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId/lessons/:lessonId",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId",
+                        "modules",
+                        ":moduleId",
+                        "lessons",
+                        ":lessonId"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        },
+                        {
+                          "key": "moduleId",
+                          "value": "MODULE_ID"
+                        },
+                        {
+                          "key": "lessonId",
+                          "value": "LESSON_ID"
+                        }
+                      ]
+                    },
+                    "description": "Update a lesson's details. Requires SUPER_ADMIN role."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Delete Lesson",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId/lessons/:lessonId",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId",
+                        "modules",
+                        ":moduleId",
+                        "lessons",
+                        ":lessonId"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        },
+                        {
+                          "key": "moduleId",
+                          "value": "MODULE_ID"
+                        },
+                        {
+                          "key": "lessonId",
+                          "value": "LESSON_ID"
+                        }
+                      ]
+                    },
+                    "description": "Delete a lesson from a module. Requires SUPER_ADMIN role."
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Toggle Lesson Visibility",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [
+                      {
+                        "key": "Authorization",
+                        "value": "Bearer {{accessToken}}"
+                      }
+                    ],
+                    "url": {
+                      "raw": "{{baseUrl}}/courses/:courseId/lessons/:lessonId/visibility",
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "path": [
+                        "courses",
+                        ":courseId",
+                        "lessons",
+                        ":lessonId",
+                        "visibility"
+                      ],
+                      "variable": [
+                        {
+                          "key": "courseId",
+                          "value": "COURSE_ID"
+                        },
+                        {
+                          "key": "lessonId",
+                          "value": "LESSON_ID"
+                        }
+                      ]
+                    },
+                    "description": "Toggle the visibility of a lesson. Requires SUPER_ADMIN role."
+                  },
+                  "response": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Enrollment Management Screen",
+          "item": [
+            {
+              "name": "Get All Enrollments",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/enrollments?page=1&limit=10&sort=-createdAt",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "enrollments"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-createdAt"
+                    }
+                  ]
+                },
+                "description": "Get all enrollments with pagination and sorting. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Enrollment Status",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"SUSPENDED\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/enrollments/:id/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "enrollments",
+                    ":id",
+                    "status"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "ENROLLMENT_ID"
+                    }
+                  ]
+                },
+                "description": "Update the status of an enrollment (e.g., SUSPENDED). Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Enrolled Students for Course",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/enrollments/course/:courseId/students?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "enrollments",
+                    "course",
+                    ":courseId",
+                    "students"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "courseId",
+                      "value": "COURSE_ID"
+                    }
+                  ]
+                },
+                "description": "Get all enrolled students for a specific course. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Gradebook Screen",
+          "item": [
+            {
+              "name": "Get Grades by Course",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gradebook/courses/:courseId?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gradebook",
+                    "courses",
+                    ":courseId"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "courseId",
+                      "value": "COURSE_ID"
+                    }
+                  ]
+                },
+                "description": "Get all grades for a specific course. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Course Grade Summary",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gradebook/courses/:courseId/summary",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gradebook",
+                    "courses",
+                    ":courseId",
+                    "summary"
+                  ],
+                  "variable": [
+                    {
+                      "key": "courseId",
+                      "value": "COURSE_ID"
+                    }
+                  ]
+                },
+                "description": "Get grade summary statistics for a course. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Student Grades",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gradebook/students/:studentId?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gradebook",
+                    "students",
+                    ":studentId"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "studentId",
+                      "value": "STUDENT_ID"
+                    }
+                  ]
+                },
+                "description": "Get all grades for a specific student. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Grade",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"score\": 85,\n  \"feedback\": \"Good work!\",\n  \"status\": \"GRADED\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/gradebook/grades/:gradeId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gradebook",
+                    "grades",
+                    ":gradeId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "gradeId",
+                      "value": "GRADE_ID"
+                    }
+                  ]
+                },
+                "description": "Update a grade with score, feedback, and status. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Assignment Submissions",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gradebook/assignments/course/:courseId?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gradebook",
+                    "assignments",
+                    "course",
+                    ":courseId"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "courseId",
+                      "value": "COURSE_ID"
+                    }
+                  ]
+                },
+                "description": "Get all assignment submissions for a course. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Discussion Screen",
+          "item": [
+            {
+              "name": "Get All Posts",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts?page=1&limit=10&sort=-createdAt",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "community",
+                    "posts"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-createdAt"
+                    }
+                  ]
+                },
+                "description": "Get all community posts with pagination and sorting. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Post",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "community",
+                    "posts",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "POST_ID"
+                    }
+                  ]
+                },
+                "description": "Delete a community post by ID. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Reply",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/community/replies/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "community",
+                    "replies",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLY_ID"
+                    }
+                  ]
+                },
+                "description": "Delete a community reply by ID. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Flagged Posts",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/community/admin/flagged?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "community",
+                    "admin",
+                    "flagged"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Get all flagged community posts for moderation. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Quiz Builder Screen",
+          "item": [
+            {
+              "name": "Create Quiz",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"courseId\": \"COURSE_ID\",\n  \"title\": \"Module 1 Quiz\",\n  \"description\": \"Test your knowledge\",\n  \"settings\": {\n    \"timeLimit\": 30,\n    \"maxAttempts\": 3,\n    \"passingScore\": 70,\n    \"shuffleQuestions\": true,\n    \"shuffleOptions\": true,\n    \"showResults\": true\n  },\n  \"status\": \"DRAFT\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes"
+                  ]
+                },
+                "description": "Create a new quiz for a course. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Quizzes by Course",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/course/:courseId?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    "course",
+                    ":courseId"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "courseId",
+                      "value": "COURSE_ID"
+                    }
+                  ]
+                },
+                "description": "Get all quizzes for a specific course. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Quiz by ID",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "QUIZ_ID"
+                    }
+                  ]
+                },
+                "description": "Get a quiz by ID including correct answers. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Quiz",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Updated Quiz Title\",\n  \"status\": \"PUBLISHED\",\n  \"settings\": {\n    \"timeLimit\": 45\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "QUIZ_ID"
+                    }
+                  ]
+                },
+                "description": "Update a quiz's title, status, or settings. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Quiz",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "QUIZ_ID"
+                    }
+                  ]
+                },
+                "description": "Delete a quiz by ID. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Add Question",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"type\": \"MCQ\",\n  \"text\": \"What is Node.js?\",\n  \"options\": [\n    { \"optionId\": \"A\", \"text\": \"A runtime environment\", \"isCorrect\": true },\n    { \"optionId\": \"B\", \"text\": \"A database\", \"isCorrect\": false },\n    { \"optionId\": \"C\", \"text\": \"A CSS framework\", \"isCorrect\": false },\n    { \"optionId\": \"D\", \"text\": \"A text editor\", \"isCorrect\": false }\n  ],\n  \"marks\": 5,\n  \"explanation\": \"Node.js is a JavaScript runtime built on Chrome's V8 engine.\",\n  \"order\": 1\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/:id/questions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    ":id",
+                    "questions"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "QUIZ_ID"
+                    }
+                  ]
+                },
+                "description": "Add a question to a quiz. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Question",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Updated question text\",\n  \"marks\": 10\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/:id/questions/:questionId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    ":id",
+                    "questions",
+                    ":questionId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "QUIZ_ID"
+                    },
+                    {
+                      "key": "questionId",
+                      "value": "QUESTION_ID"
+                    }
+                  ]
+                },
+                "description": "Update a question's text, marks, or options. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Question",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/:id/questions/:questionId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    ":id",
+                    "questions",
+                    ":questionId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "QUIZ_ID"
+                    },
+                    {
+                      "key": "questionId",
+                      "value": "QUESTION_ID"
+                    }
+                  ]
+                },
+                "description": "Delete a question from a quiz. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Reorder Questions",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"questionIds\": [\"Q_ID_1\", \"Q_ID_2\", \"Q_ID_3\"]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/:id/questions/reorder",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    ":id",
+                    "questions",
+                    "reorder"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "QUIZ_ID"
+                    }
+                  ]
+                },
+                "description": "Reorder questions within a quiz. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get All Attempts",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/quizzes/:id/attempts?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "quizzes",
+                    ":id",
+                    "attempts"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "QUIZ_ID"
+                    }
+                  ]
+                },
+                "description": "Get all attempts for a specific quiz. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Notification Screen",
+          "item": [
+            {
+              "name": "Get Admin Notifications",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/notifications/admin?page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notifications",
+                    "admin"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "Get all admin notifications with pagination. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Mark All Admin Notifications as Read",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/notifications/admin/read-all",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notifications",
+                    "admin",
+                    "read-all"
+                  ]
+                },
+                "description": "Mark all admin notifications as read. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Mark Admin Notification as Read",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/notifications/admin/:id/read",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "notifications",
+                    "admin",
+                    ":id",
+                    "read"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "NOTIFICATION_ID"
+                    }
+                  ]
+                },
+                "description": "Mark a single admin notification as read. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Analytics Screen",
+          "item": [
+            {
+              "name": "User Engagement",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/analytics/user-engagement",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "analytics",
+                    "user-engagement"
+                  ]
+                },
+                "description": "Get user engagement analytics data. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Course Completion",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/analytics/course-completion",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "analytics",
+                    "course-completion"
+                  ]
+                },
+                "description": "Get course completion analytics data. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Quiz Performance",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/analytics/quiz-performance",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "analytics",
+                    "quiz-performance"
+                  ]
+                },
+                "description": "Get quiz performance analytics data. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Course Analytics",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/analytics/courses/:courseId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "analytics",
+                    "courses",
+                    ":courseId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "courseId",
+                      "value": "COURSE_ID"
+                    }
+                  ]
+                },
+                "description": "Get detailed analytics for a specific course. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Student Analytics",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/analytics/students/:studentId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "analytics",
+                    "students",
+                    ":studentId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "studentId",
+                      "value": "STUDENT_ID"
+                    }
+                  ]
+                },
+                "description": "Get detailed analytics for a specific student. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Feedback Screen",
+          "item": [
+            {
+              "name": "Get All Feedback",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/feedback/admin/all?page=1&limit=10&sort=-createdAt",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "feedback",
+                    "admin",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-createdAt"
+                    }
+                  ]
+                },
+                "description": "Get all feedback entries with pagination and sorting. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Toggle Publish",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/feedback/:id/publish",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "feedback",
+                    ":id",
+                    "publish"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "FEEDBACK_ID"
+                    }
+                  ]
+                },
+                "description": "Toggle the published state of a feedback entry. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Respond to Feedback",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"adminResponse\": \"Thank you for your feedback! We appreciate your input and will work on improving this area.\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/feedback/:id/respond",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "feedback",
+                    ":id",
+                    "respond"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "FEEDBACK_ID"
+                    }
+                  ]
+                },
+                "description": "Add an admin response to a feedback entry. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Feedback",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/feedback/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "feedback",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "FEEDBACK_ID"
+                    }
+                  ]
+                },
+                "description": "Delete a feedback entry by ID. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Gamification Screen",
+          "item": [
+            {
+              "name": "Create Badge",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "name",
+                      "value": "Quiz Master",
+                      "type": "text"
+                    },
+                    {
+                      "key": "slug",
+                      "value": "quiz-master",
+                      "type": "text"
+                    },
+                    {
+                      "key": "description",
+                      "value": "Pass 10 quizzes",
+                      "type": "text"
+                    },
+                    {
+                      "key": "criteria.type",
+                      "value": "QUIZZES_PASSED",
+                      "type": "text"
+                    },
+                    {
+                      "key": "criteria.threshold",
+                      "value": "10",
+                      "type": "text"
+                    },
+                    {
+                      "key": "isActive",
+                      "value": "true",
+                      "type": "text"
+                    },
+                    {
+                      "key": "icon",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/badges",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "badges"
+                  ]
+                },
+                "description": "Create a new badge with icon upload. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get All Badges",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/badges?page=1&limit=20",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "badges"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "Get all badges with pagination. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Badge",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "name",
+                      "value": "Updated Badge Name",
+                      "type": "text"
+                    },
+                    {
+                      "key": "description",
+                      "value": "Updated badge description",
+                      "type": "text"
+                    },
+                    {
+                      "key": "isActive",
+                      "value": "true",
+                      "type": "text"
+                    },
+                    {
+                      "key": "icon",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/badges/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "badges",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "BADGE_ID"
+                    }
+                  ]
+                },
+                "description": "Update a badge's details and icon. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Badge",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/badges/:id",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "badges",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "BADGE_ID"
+                    }
+                  ]
+                },
+                "description": "Delete a badge by ID. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Adjust Student Points",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"studentId\": \"STUDENT_ID\",\n  \"points\": 50,\n  \"description\": \"Bonus for excellent performance\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/points/adjust",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "points",
+                    "adjust"
+                  ]
+                },
+                "description": "Manually adjust a student's gamification points. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Gamification Stats",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/admin/stats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "admin",
+                    "stats"
+                  ]
+                },
+                "description": "Get overall gamification statistics. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Leaderboard",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/gamification/leaderboard?page=1&limit=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "gamification",
+                    "leaderboard"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Get the gamification leaderboard with pagination. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Legal Screen",
+          "item": [
+            {
+              "name": "Create Legal Page",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"slug\": \"terms-of-service\",\n  \"title\": \"Terms of Service\",\n  \"content\": \"<h1>Terms of Service</h1><p>Welcome to our platform. By using our services, you agree to the following terms and conditions...</p>\",\n  \"isPublished\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/legal",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "legal"
+                  ]
+                },
+                "description": "Create a new legal page (e.g., Terms of Service, Privacy Policy). Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Get All Legal Pages",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/legal",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "legal"
+                  ]
+                },
+                "description": "Get all legal pages. Public endpoint."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Legal Page by Slug",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/legal/:slug",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "legal",
+                    ":slug"
+                  ],
+                  "variable": [
+                    {
+                      "key": "slug",
+                      "value": "terms-of-service"
+                    }
+                  ]
+                },
+                "description": "Get a specific legal page by its slug. Public endpoint."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Legal Page",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Updated Terms of Service\",\n  \"content\": \"<h1>Updated Terms</h1><p>These updated terms govern your use of our platform...</p>\",\n  \"isPublished\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/legal/:slug",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "legal",
+                    ":slug"
+                  ],
+                  "variable": [
+                    {
+                      "key": "slug",
+                      "value": "terms-of-service"
+                    }
+                  ]
+                },
+                "description": "Update a legal page by slug. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Legal Page",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/legal/:slug",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "legal",
+                    ":slug"
+                  ],
+                  "variable": [
+                    {
+                      "key": "slug",
+                      "value": "terms-of-service"
+                    }
+                  ]
+                },
+                "description": "Delete a legal page by slug. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Profile Screen",
+          "item": [
+            {
+              "name": "Get Own Profile",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "profile"
+                  ]
+                },
+                "description": "Get the authenticated user's own profile."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "name",
+                      "value": "Admin Updated",
+                      "type": "text"
+                    },
+                    {
+                      "key": "gender",
+                      "value": "male",
+                      "type": "text"
+                    },
+                    {
+                      "key": "dateOfBirth",
+                      "value": "1990-01-15",
+                      "type": "text"
+                    },
+                    {
+                      "key": "location",
+                      "value": "Dhaka, Bangladesh",
+                      "type": "text"
+                    },
+                    {
+                      "key": "phone",
+                      "value": "+8801712345678",
+                      "type": "text"
+                    },
+                    {
+                      "key": "profilePicture",
+                      "type": "file",
+                      "src": ""
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "profile"
+                  ]
+                },
+                "description": "Update the authenticated user's profile with optional profile picture upload."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

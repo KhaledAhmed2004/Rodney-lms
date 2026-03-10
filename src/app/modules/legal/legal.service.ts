@@ -1,0 +1,73 @@
+import { StatusCodes } from 'http-status-codes';
+import slugify from 'slugify';
+import ApiError from '../../../errors/ApiError';
+import { ILegalPage } from './legal.interface';
+import { LegalPage } from './legal.model';
+
+const generateSlug = async (title: string): Promise<string> => {
+  const slug = slugify(title, { lower: true, strict: true });
+  const existing = await LegalPage.findOne({ slug });
+  if (existing) {
+    throw new ApiError(
+      StatusCodes.CONFLICT,
+      'A legal page with this title already exists',
+    );
+  }
+  return slug;
+};
+
+const createLegalPage = async (
+  payload: Partial<ILegalPage>,
+): Promise<ILegalPage> => {
+  const slug = await generateSlug(payload.title as string);
+  const result = await LegalPage.create({ ...payload, slug });
+  return result;
+};
+
+const getAll = async (): Promise<ILegalPage[]> => {
+  const result = await LegalPage.find()
+    .select('slug title updatedAt')
+    .sort({ title: 1 });
+  return result;
+};
+
+const getBySlug = async (slug: string): Promise<ILegalPage> => {
+  const result = await LegalPage.findOne({ slug });
+  if (!result) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');
+  }
+  return result;
+};
+
+const updateBySlug = async (
+  slug: string,
+  payload: Partial<ILegalPage>,
+): Promise<ILegalPage | null> => {
+  const existing = await LegalPage.findOne({ slug });
+  if (!existing) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');
+  }
+
+  const result = await LegalPage.findOneAndUpdate(
+    { slug },
+    payload,
+    { new: true },
+  );
+  return result;
+};
+
+const deleteBySlug = async (slug: string): Promise<void> => {
+  const existing = await LegalPage.findOne({ slug });
+  if (!existing) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');
+  }
+  await LegalPage.findOneAndDelete({ slug });
+};
+
+export const LegalService = {
+  createLegalPage,
+  getAll,
+  getBySlug,
+  updateBySlug,
+  deleteBySlug,
+};

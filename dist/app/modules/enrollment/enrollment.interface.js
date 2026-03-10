@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ENROLLMENT_STATUS = void 0;
+var ENROLLMENT_STATUS;
+(function (ENROLLMENT_STATUS) {
+    ENROLLMENT_STATUS["ACTIVE"] = "ACTIVE";
+    ENROLLMENT_STATUS["COMPLETED"] = "COMPLETED";
+    ENROLLMENT_STATUS["DROPPED"] = "DROPPED";
+    ENROLLMENT_STATUS["SUSPENDED"] = "SUSPENDED";
+})(ENROLLMENT_STATUS || (exports.ENROLLMENT_STATUS = ENROLLMENT_STATUS = {}));
