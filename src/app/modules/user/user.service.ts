@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes';
 import { JwtPayload } from 'jsonwebtoken';
+import { PipelineStage } from 'mongoose';
 import { USER_ROLES, USER_STATUS } from '../../../enums/user';
 import ApiError from '../../../errors/ApiError';
 import { emailHelper } from '../../../helpers/emailHelper';
@@ -7,9 +8,10 @@ import { emailTemplate } from '../../../shared/emailTemplate';
 import unlinkFile from '../../../shared/unlinkFile';
 import generateOTP from '../../../util/generateOTP';
 import { User } from './user.model';
-import QueryBuilder from '../../builder/QueryBuilder';
-import AggregationBuilder from '../../builder/AggregationBuilder';
 import { IUser } from './user.interface';
+import { Enrollment } from '../enrollment/enrollment.model';
+import { ENROLLMENT_STATUS } from '../enrollment/enrollment.interface';
+import escapeRegex from 'escape-string-regexp';
 
 const createUserToDB = async (payload: Partial<IUser>): Promise<IUser> => {
   const createUser = await User.create(payload);
@@ -103,24 +105,132 @@ const updateProfileToDB = async (
   return updateQuery;
 };
 
-const getAllUsers = async (query: Record<string, unknown>) => {
-  const userQuery = new QueryBuilder(
-    User.find({ role: { $ne: USER_ROLES.SUPER_ADMIN } }),
-    query
-  )
-    .search(['name', 'email'])
-    .filter()
-    .sort()
-    .paginate()
-    .fields();
+const buildUserMatchConditions = (query: Record<string, unknown>) => {
+  const matchConditions: Record<string, unknown> = {
+    role: { $ne: USER_ROLES.SUPER_ADMIN },
+  };
 
-  const users = await userQuery.modelQuery;
-  const paginationInfo = await userQuery.getPaginationInfo();
+  // Status filter: if provided use it; otherwise exclude soft-deleted users
+  if (query.status) {
+    matchConditions.status = query.status;
+  } else {
+    matchConditions.status = { $ne: USER_STATUS.DELETE };
+  }
+
+  if (query.role) {
+    matchConditions.role = query.role;
+  }
+
+  if (query.searchTerm) {
+    const sanitized = escapeRegex(String(query.searchTerm));
+    matchConditions.$or = [
+      { name: { $regex: sanitized, $options: 'i' } },
+      { email: { $regex: sanitized, $options: 'i' } },
+    ];
+  }
+
+  return matchConditions;
+};
+
+const getAllUsers = async (query: Record<string, unknown>) => {
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  // Build sort spec from ?sort=field or ?sort=-field
+  const sortParam = query.sort ? String(query.sort) : '-createdAt';
+  const sortSpec: Record<string, 1 | -1> = {};
+  if (sortParam.startsWith('-')) {
+    sortSpec[sortParam.slice(1)] = -1;
+  } else {
+    sortSpec[sortParam] = 1;
+  }
+
+  const matchConditions = buildUserMatchConditions(query);
+
+  const pipeline: PipelineStage[] = [
+    { $match: matchConditions },
+    {
+      $lookup: {
+        from: 'enrollments',
+        localField: '_id',
+        foreignField: 'student',
+        as: 'enrollments',
+      },
+    },
+    {
+      $addFields: {
+        enrollmentCount: { $size: '$enrollments' },
+        lastActiveDate: '$streak.lastActiveDate',
+      },
+    },
+    {
+      $project: {
+        name: 1,
+        email: 1,
+        profilePicture: 1,
+        status: 1,
+        role: 1,
+        verified: 1,
+        enrollmentCount: 1,
+        lastActiveDate: 1,
+        createdAt: 1,
+      },
+    },
+    {
+      $facet: {
+        data: [{ $sort: sortSpec }, { $skip: skip }, { $limit: limit }],
+        total: [{ $count: 'count' }],
+      },
+    },
+  ];
+
+  const result = await User.aggregate(pipeline);
+  const data = result[0]?.data ?? [];
+  const total = result[0]?.total[0]?.count ?? 0;
+  const totalPage = Math.ceil(total / limit);
 
   return {
-    pagination: paginationInfo,
-    data: users,
+    pagination: { page, limit, totalPage, total },
+    data,
   };
+};
+
+const exportUsers = async (query: Record<string, unknown>) => {
+  const matchConditions = buildUserMatchConditions(query);
+
+  const pipeline: PipelineStage[] = [
+    { $match: matchConditions },
+    {
+      $lookup: {
+        from: 'enrollments',
+        localField: '_id',
+        foreignField: 'student',
+        as: 'enrollments',
+      },
+    },
+    {
+      $addFields: {
+        enrollmentCount: { $size: '$enrollments' },
+        lastActiveDate: '$streak.lastActiveDate',
+      },
+    },
+    {
+      $project: {
+        name: 1,
+        email: 1,
+        status: 1,
+        role: 1,
+        verified: 1,
+        enrollmentCount: 1,
+        lastActiveDate: 1,
+        createdAt: 1,
+      },
+    },
+    { $sort: { createdAt: -1 as const } },
+  ];
+
+  return User.aggregate(pipeline);
 };
 
 const updateUserStatus = async (id: string, status: USER_STATUS) => {
@@ -139,12 +249,65 @@ const updateUserStatus = async (id: string, status: USER_STATUS) => {
 };
 
 const getUserById = async (id: string) => {
-  // Only return user info; remove task/bid side data
-  const user = await User.findById(id).select('-password -authentication');
+  const user = await User.findById(id).select('-password -authentication -deviceTokens');
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, "User doesn't exist!");
   }
-  return { user };
+
+  const enrollments = await Enrollment.find({ student: id })
+    .populate('course', '_id title thumbnail')
+    .lean();
+
+  const courseStats = {
+    total: enrollments.length,
+    active: enrollments.filter(e => e.status === ENROLLMENT_STATUS.ACTIVE).length,
+    completed: enrollments.filter(e => e.status === ENROLLMENT_STATUS.COMPLETED).length,
+    dropped: enrollments.filter(e => e.status === ENROLLMENT_STATUS.DROPPED).length,
+    averageCompletion: Math.round(
+      enrollments.reduce((sum, e) => sum + (e.progress?.completionPercentage ?? 0), 0) /
+        (enrollments.length || 1)
+    ),
+  };
+
+  const enrolledCourses = enrollments.map(e => ({
+    enrollmentId: e._id,
+    course: e.course,
+    enrollmentStatus: e.status,
+    completionPercentage: e.progress?.completionPercentage ?? 0,
+    enrolledAt: e.enrolledAt,
+    lastAccessedAt: e.progress?.lastAccessedAt ?? null,
+  }));
+
+  const userObj = user.toObject();
+  return {
+    ...userObj,
+    lastActiveDate: userObj.streak?.lastActiveDate ?? null,
+    courseStats,
+    enrolledCourses,
+  };
+};
+
+const updateUserByAdmin = async (
+  id: string,
+  payload: Partial<Pick<IUser, 'name' | 'email' | 'status' | 'role' | 'verified'>>
+): Promise<IUser | null> => {
+  const isExistUser = await User.isExistUserById(id);
+  if (!isExistUser) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
+  }
+
+  if (payload.email && payload.email !== isExistUser.email) {
+    const emailExists = await User.findOne({ email: payload.email, _id: { $ne: id } });
+    if (emailExists) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Email already in use');
+    }
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(id, payload, { new: true }).select(
+    '-password -authentication -deviceTokens'
+  );
+
+  return updatedUser;
 };
 
 const getUserDetailsById = async (id: string) => {
@@ -160,7 +323,9 @@ export const UserService = {
   getUserProfileFromDB,
   updateProfileToDB,
   getAllUsers,
+  exportUsers,
   updateUserStatus,
   getUserById,
+  updateUserByAdmin,
   getUserDetailsById,
 };

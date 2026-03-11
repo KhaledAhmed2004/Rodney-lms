@@ -24,11 +24,66 @@ app/modules/[feature]/
 
 **QueryBuilder** (`app/builder/QueryBuilder.ts`):
 - Chainable: `search()`, `filter()`, `sort()`, `paginate()`, `fields()`, `location()`, `timeFilter()`
-- Use for search/filter/sort/pagination queries
+- Use for search/filter/sort/pagination queries on a single collection
 
 **AggregationBuilder** (`app/builder/AggregationBuilder.ts`):
-- Chainable: `match()`, `lookup()`, `unwind()`, `group()`, `sort()`, `paginate()`
-- Use for complex joins/grouping
+- For complex grouping/analytics on a single collection
+- **LIMITATION**: Does NOT support cross-collection `$lookup` joins or `$facet` pagination. Jokhon cross-collection join + pagination ekসাথে dorkar hoy, raw `User.aggregate()` use koro
+
+**Raw Aggregation** (use when `QueryBuilder`/`AggregationBuilder` insufficient):
+- Cross-collection join + single-query pagination: `$lookup` + `$facet`
+- Always type pipeline as `PipelineStage[]` (import from `mongoose`)
+- Use `-1 as const` for sort literals to satisfy TypeScript union type `1 | -1`
+
+```typescript
+import { PipelineStage } from 'mongoose';
+
+const pipeline: PipelineStage[] = [
+  { $match: matchConditions },
+  {
+    $lookup: {
+      from: 'enrollments',          // MongoDB collection name (Mongoose pluralizes model names)
+      localField: '_id',
+      foreignField: 'student',
+      as: 'enrollments',
+    },
+  },
+  {
+    $addFields: {
+      enrollmentCount: { $size: '$enrollments' },
+      lastActiveDate: '$streak.lastActiveDate', // flatten nested field
+    },
+  },
+  {
+    $project: { name: 1, email: 1, enrollmentCount: 1, lastActiveDate: 1 },
+  },
+  {
+    $facet: {                        // single round trip: data + total count
+      data: [{ $sort: sortSpec }, { $skip: skip }, { $limit: limit }],
+      total: [{ $count: 'count' }],
+    },
+  },
+];
+
+const result = await User.aggregate(pipeline);
+const data = result[0]?.data ?? [];
+const total = result[0]?.total[0]?.count ?? 0;
+```
+
+**Shared filter helper pattern** — jodi multiple service methods same `$match` conditions use kore:
+```typescript
+const buildMatchConditions = (query: Record<string, unknown>) => {
+  const conditions: Record<string, unknown> = { status: { $ne: 'DELETE' } };
+  if (query.searchTerm) {
+    const sanitized = escapeRegex(String(query.searchTerm)); // escape-string-regexp
+    conditions.$or = [
+      { name: { $regex: sanitized, $options: 'i' } },
+      { email: { $regex: sanitized, $options: 'i' } },
+    ];
+  }
+  return conditions;
+};
+```
 
 Simple queries: Use Mongoose directly.
 

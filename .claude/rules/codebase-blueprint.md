@@ -595,7 +595,55 @@ import { z } from 'zod';
 
 ---
 
-## 12. Mongoose Operations Cheat Sheet
+## 12. ExportBuilder (`src/app/builder/ExportBuilder.ts`)
+
+**IMPORTANT**: ExportBuilder streams directly to `res` — use in **controller only**, NOT in service.
+
+```typescript
+// Controller
+import ExportBuilder from '../../builder/ExportBuilder';
+
+const exportUsers = catchAsync(async (req: Request, res: Response) => {
+  const users = await UserService.exportUsers(req.query);       // service returns plain array
+  const format = req.query.format === 'xlsx' ? 'excel' : 'csv'; // default csv
+  const filename = `users-export-${new Date().toISOString().slice(0, 10)}`;
+
+  await new ExportBuilder(users)
+    .format(format as 'excel' | 'csv')
+    .columns([
+      { key: 'name', header: 'Name', width: 20 },
+      { key: 'email', header: 'Email', width: 30 },
+      { key: 'verified', header: 'Verified', width: 10 },
+      { key: 'createdAt', header: 'Joined Date', width: 18 },
+    ])
+    .dateFormat('DD/MM/YYYY')
+    .sendResponse(res, filename);
+});
+```
+
+**Service** returns a plain array (no pagination, no ExportBuilder):
+```typescript
+const exportUsers = async (query: Record<string, unknown>) => {
+  const pipeline: PipelineStage[] = [
+    { $match: buildMatchConditions(query) },
+    // ... lookup, addFields, project ...
+    { $sort: { createdAt: -1 as const } },
+    // NO $facet, NO $skip/$limit
+  ];
+  return Model.aggregate(pipeline); // plain array
+};
+```
+
+**Route ordering**: Export route MUST be registered BEFORE parameterized routes:
+```typescript
+router.get('/export', auth(USER_ROLES.SUPER_ADMIN), Controller.exportUsers); // ← BEFORE /:id
+router.get('/:id', auth(USER_ROLES.SUPER_ADMIN), Controller.getById);        // ← AFTER /export
+```
+If `/export` is after `/:id`, Express treats `export` as an ID parameter and calls the wrong handler.
+
+---
+
+## 13. Mongoose Operations Cheat Sheet
 
 ```typescript
 // Create

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { USER_ROLES } from '../../../enums/user';
+import { USER_ROLES, USER_STATUS } from '../../../enums/user';
 
 const phoneRegex = /^\+?[0-9]{7,15}$/;
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-={}\[\]|;:'",.<>/?]).{8,}$/;
@@ -53,7 +53,25 @@ const updateUserZodSchema = z.object({
   }),
 });
 
+const adminUpdateUserZodSchema = z.object({
+  body: z.object({
+    name: z.string().min(1).max(100).optional(),
+    email: z.string().email('Invalid email address').optional(),
+    status: z
+      .enum([
+        USER_STATUS.ACTIVE,
+        USER_STATUS.INACTIVE,
+        USER_STATUS.RESTRICTED,
+        USER_STATUS.DELETE,
+      ])
+      .optional(),
+    role: z.enum([USER_ROLES.STUDENT, USER_ROLES.SUPER_ADMIN]).optional(),
+    verified: z.boolean().optional(),
+  }),
+});
+
 export const UserValidation = {
   createUserZodSchema,
   updateUserZodSchema,
+  adminUpdateUserZodSchema,
 };

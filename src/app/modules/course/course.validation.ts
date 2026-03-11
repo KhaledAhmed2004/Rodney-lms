@@ -10,7 +10,7 @@ const createCourseZodSchema = z.object({
       .min(3, 'Title must be at least 3 characters')
       .max(200, 'Title cannot exceed 200 characters'),
     description: z.string().max(5000).optional(),
-    status: z.enum([COURSE_STATUS.DRAFT, COURSE_STATUS.SCHEDULED]).optional(),
+    status: z.enum([COURSE_STATUS.DRAFT, COURSE_STATUS.PUBLISHED, COURSE_STATUS.SCHEDULED]).optional(),
     publishScheduledAt: z
       .string()
       .datetime('Invalid date format')
@@ -30,7 +30,6 @@ const updateCourseZodSchema = z.object({
       .enum([
         COURSE_STATUS.DRAFT,
         COURSE_STATUS.PUBLISHED,
-        COURSE_STATUS.ARCHIVED,
         COURSE_STATUS.SCHEDULED,
       ])
       .optional(),

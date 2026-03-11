@@ -2187,25 +2187,15 @@
                     "users"
                   ],
                   "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "10"
-                    },
-                    {
-                      "key": "searchTerm",
-                      "value": ""
-                    },
-                    {
-                      "key": "sort",
-                      "value": "-createdAt"
-                    }
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "10" },
+                    { "key": "searchTerm", "value": "" },
+                    { "key": "sort", "value": "-createdAt" },
+                    { "key": "status", "value": "", "disabled": true },
+                    { "key": "role", "value": "", "disabled": true }
                   ]
                 },
-                "description": "Get all users with pagination, search, and sorting. Requires SUPER_ADMIN role."
+                "description": "Get all users with pagination, search, sort, and filter. Returns enrollmentCount + lastActiveDate per user. Supports status/role filters. Requires SUPER_ADMIN role."
               },
               "response": []
             },
@@ -2235,7 +2225,7 @@
                     }
                   ]
                 },
-                "description": "Get a specific user by their ID. Requires SUPER_ADMIN role."
+                "description": "Get full user detail by ID. Returns profile fields + courseStats (total/active/completed/dropped/avgCompletion) + enrolledCourses[] with progress. Requires SUPER_ADMIN role."
               },
               "response": []
             },
@@ -2298,6 +2288,94 @@
                   ]
                 },
                 "description": "Unblock a previously blocked user by ID. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Update User (Admin)",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"newemail@example.com\",\n  \"status\": \"ACTIVE\",\n  \"role\": \"STUDENT\",\n  \"verified\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/users/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "USER_ID"
+                    }
+                  ]
+                },
+                "description": "Admin update a user's name, email, status, role, or verified flag. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete User (Soft)",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "USER_ID"
+                    }
+                  ]
+                },
+                "description": "Soft delete a user (sets status to DELETE). Cannot delete your own account. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Export Users (CSV)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/export?format=csv",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "export"],
+                  "query": [
+                    { "key": "format", "value": "csv" },
+                    { "key": "status", "value": "", "disabled": true },
+                    { "key": "role", "value": "", "disabled": true },
+                    { "key": "searchTerm", "value": "", "disabled": true }
+                  ]
+                },
+                "description": "Export all users as CSV. Supports same filters as list (status, role, searchTerm). Use format=xlsx for Excel. Requires SUPER_ADMIN role."
               },
               "response": []
             }

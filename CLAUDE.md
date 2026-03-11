@@ -89,7 +89,7 @@ new AggregationBuilder(User, req.query).match({ status: 'active' }).lookup(...).
 | Module | Ki Kore | Key Endpoints |
 |--------|---------|---------------|
 | `auth/` | Login, register, password reset, email verify, JWT refresh | POST /auth/login, /auth/register, /auth/refresh-token |
-| `user/` | User CRUD, profile update, role manage | GET /users, PATCH /users/:id |
+| `user/` | User CRUD, profile update, role manage, export | GET /users, GET /users/export, GET /users/:id, PATCH /users/:id, DELETE /users/:id |
 | `course/` | Course + module + lesson CRUD | GET /courses, POST /courses |
 | `chat/` | Chat room create, group/private | POST /chats, GET /chats |
 | `message/` | Message send/receive, Socket.IO real-time | POST /messages, GET /messages/:chatId |

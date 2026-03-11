@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
+import { JwtPayload } from 'jsonwebtoken';
 import catchAsync from '../../../shared/catchAsync';
 import sendResponse from '../../../shared/sendResponse';
 import { UserService } from './user.service';
 import { USER_STATUS } from '../../../enums/user';
-import { JwtPayload } from 'jsonwebtoken';
+import ExportBuilder from '../../builder/ExportBuilder';
+import ApiError from '../../../errors/ApiError';
 
 const createUser = catchAsync(async (req: Request, res: Response) => {
   const { ...userData } = req.body;
@@ -111,6 +113,56 @@ const getUserDetailsById = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updateUserByAdmin = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await UserService.updateUserByAdmin(id, req.body);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'User updated successfully',
+    data: result,
+  });
+});
+
+const deleteUser = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const requesterId = (req.user as JwtPayload).id;
+
+  if (id === requesterId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Cannot delete your own account');
+  }
+
+  await UserService.updateUserStatus(id, USER_STATUS.DELETE);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'User deleted successfully',
+  });
+});
+
+const exportUsers = catchAsync(async (req: Request, res: Response) => {
+  const users = await UserService.exportUsers(req.query);
+  const format = req.query.format === 'xlsx' ? 'excel' : 'csv';
+  const filename = `users-export-${new Date().toISOString().slice(0, 10)}`;
+
+  await new ExportBuilder(users)
+    .format(format as 'excel' | 'csv')
+    .columns([
+      { key: 'name', header: 'Name', width: 20 },
+      { key: 'email', header: 'Email', width: 30 },
+      { key: 'status', header: 'Status', width: 12 },
+      { key: 'role', header: 'Role', width: 12 },
+      { key: 'verified', header: 'Verified', width: 10 },
+      { key: 'enrollmentCount', header: 'Enrolled Courses', width: 16 },
+      { key: 'lastActiveDate', header: 'Last Active', width: 18 },
+      { key: 'createdAt', header: 'Joined Date', width: 18 },
+    ])
+    .dateFormat('DD/MM/YYYY')
+    .sendResponse(res, filename);
+});
+
 export const UserController = {
   createUser,
   getUserProfile,
@@ -120,4 +172,7 @@ export const UserController = {
   unblockUser,
   getUserById,
   getUserDetailsById,
+  updateUserByAdmin,
+  deleteUser,
+  exportUsers,
 };

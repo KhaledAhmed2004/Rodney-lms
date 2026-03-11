@@ -3,7 +3,6 @@ import { Model, Types } from 'mongoose';
 export enum COURSE_STATUS {
   DRAFT = 'DRAFT',
   PUBLISHED = 'PUBLISHED',
-  ARCHIVED = 'ARCHIVED',
   SCHEDULED = 'SCHEDULED',
 }
 
@@ -19,7 +18,6 @@ export enum VIDEO_PROCESSING_STATUS {
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
 }
-
 
 export type ICourseModule = {
   moduleId: string;
@@ -63,8 +61,6 @@ export type CourseModel = {
   isExistCourseById(id: string): Promise<ICourse | null>;
   isExistCourseBySlug(slug: string): Promise<ICourse | null>;
 } & Model<ICourse>;
-
-// ==================== LESSON ====================
 
 export type ILesson = {
   courseId: Types.ObjectId;

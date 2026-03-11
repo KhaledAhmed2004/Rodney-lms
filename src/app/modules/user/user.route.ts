@@ -51,6 +51,9 @@ router.patch(
   UserController.unblockUser
 );
 
+// Export users (must be before /:id to avoid route conflict)
+router.get('/export', auth(USER_ROLES.SUPER_ADMIN), UserController.exportUsers);
+
 // Get a specific user by ID
 router.get('/:id', auth(USER_ROLES.SUPER_ADMIN), UserController.getUserById);
 
@@ -60,5 +63,16 @@ router.get(
   rateLimitMiddleware({ windowMs: 60_000, max: 60, routeName: 'public-user-details' }),
   UserController.getUserDetailsById
 );
+
+// Admin update a user
+router.patch(
+  '/:id',
+  auth(USER_ROLES.SUPER_ADMIN),
+  validateRequest(UserValidation.adminUpdateUserZodSchema),
+  UserController.updateUserByAdmin
+);
+
+// Admin soft delete a user
+router.delete('/:id', auth(USER_ROLES.SUPER_ADMIN), UserController.deleteUser);
 
 export const UserRoutes = router;
