@@ -54,6 +54,9 @@ router.patch(
 // Export users (must be before /:id to avoid route conflict)
 router.get('/export', auth(USER_ROLES.SUPER_ADMIN), UserController.exportUsers);
 
+// User management stats (must be before /:id to avoid route conflict)
+router.get('/stats', auth(USER_ROLES.SUPER_ADMIN), UserController.getUserStats);
+
 // Get a specific user by ID
 router.get('/:id', auth(USER_ROLES.SUPER_ADMIN), UserController.getUserById);
 

@@ -31,7 +31,13 @@
       "Bash(rm -rf src/app/scraper)",
       "Bash(rm -f src/helpers/scrapeHelper.ts)",
       "Bash(rm -rf dist/app/scraper)",
-      "Bash(rm -f dist/helpers/scrapeHelper.js)"
+      "Bash(rm -f dist/helpers/scrapeHelper.js)",
+      "Read(//d/web/ projects/office-sta/rodney/src/app/modules/user/**)",
+      "Bash(npx @usebruno/converters postman public/postman-collection.json ./bruno)",
+      "Bash(npm show:*)",
+      "Bash(rm -rf bruno/)",
+      "Bash(rm -f scripts/bruno-setup.js scripts/postman-to-bruno.js)",
+      "Bash(npm uninstall:*)"
     ],
     "additionalDirectories": [
       "d:\\web projects\\office-sta\\rodney\\.claude",

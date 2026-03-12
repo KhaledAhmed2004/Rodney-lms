@@ -163,6 +163,16 @@ const exportUsers = catchAsync(async (req: Request, res: Response) => {
     .sendResponse(res, filename);
 });
 
+const getUserStats = catchAsync(async (_req: Request, res: Response) => {
+  const result = await UserService.getUserStats();
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'User stats retrieved successfully',
+    data: result,
+  });
+});
+
 export const UserController = {
   createUser,
   getUserProfile,
@@ -175,4 +185,5 @@ export const UserController = {
   updateUserByAdmin,
   deleteUser,
   exportUsers,
+  getUserStats,
 };

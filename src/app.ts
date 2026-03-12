@@ -1,5 +1,4 @@
 import cors from 'cors';
-import YAML from 'yamljs';
 
 /**
  * ⚠️ CRITICAL IMPORT ORDER - DO NOT REORDER ⚠️
@@ -29,7 +28,6 @@ import './app/logging/patchJWT';
 // LAST: Routes (imports controllers/services - auto-labeling must be ready)
 import router from './routes';
 import { Morgan } from './shared/morgen';
-import swaggerUi from 'swagger-ui-express';
 import { StatusCodes } from 'http-status-codes';
 import express, { Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
@@ -38,7 +36,6 @@ import { requestContextInit } from './app/logging/requestContext';
 import { clientInfo } from './app/logging/clientInfo';
 import { requestLogger } from './app/logging/requestLogger';
 import { otelExpressMiddleware } from './app/logging/otelExpress';
-import path from 'path';
 import { logger, errorLogger } from './shared/logger';
 import { allowedOrigins, maybeLogCors } from './app/logging/corsLogger';
 // autoLabelBootstrap moved above router import to ensure controllers are wrapped before route binding
@@ -151,12 +148,6 @@ app.use(requestLogger);
 app.use(express.static('uploads'));
 app.use('/uploads', express.static('uploads'));
 app.use(express.static('public'));
-
-// Swagger
-const swaggerDocument = YAML.load(
-  path.join(__dirname, '../public/swagger.yaml'),
-);
-app.use('/api/v1/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // API routes
 app.use('/api/v1', router);

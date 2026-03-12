@@ -12,6 +12,7 @@ import { IUser } from './user.interface';
 import { Enrollment } from '../enrollment/enrollment.model';
 import { ENROLLMENT_STATUS } from '../enrollment/enrollment.interface';
 import escapeRegex from 'escape-string-regexp';
+import AggregationBuilder from '../../builder/AggregationBuilder';
 
 const createUserToDB = async (payload: Partial<IUser>): Promise<IUser> => {
   const createUser = await User.create(payload);
@@ -318,6 +319,21 @@ const getUserDetailsById = async (id: string) => {
   return user;
 };
 
+const getUserStats = async () => {
+  const [totalStudents, activeStudents] = await Promise.all([
+    new AggregationBuilder(User as any).calculateGrowth({
+      filter: { role: USER_ROLES.STUDENT, status: { $ne: USER_STATUS.DELETE } },
+      period: 'month',
+    }),
+    new AggregationBuilder(User as any).calculateGrowth({
+      filter: { role: USER_ROLES.STUDENT, status: USER_STATUS.ACTIVE },
+      period: 'month',
+    }),
+  ]);
+
+  return { totalStudents, activeStudents };
+};
+
 export const UserService = {
   createUserToDB,
   getUserProfileFromDB,
@@ -328,4 +344,5 @@ export const UserService = {
   getUserById,
   updateUserByAdmin,
   getUserDetailsById,
+  getUserStats,
 };

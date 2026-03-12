@@ -2169,6 +2169,30 @@
           "name": "User Management Screen",
           "item": [
             {
+              "name": "Get User Stats",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/stats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "stats"
+                  ]
+                },
+                "description": "Get student management stats — totalStudents and activeStudents (role:STUDENT only, deleted excluded) with monthly growth metrics (thisPeriodCount, lastPeriodCount, growth%, growthType). Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
               "name": "Get All Users",
               "request": {
                 "method": "GET",
