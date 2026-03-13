@@ -33,6 +33,7 @@ router.patch(
 router.delete(
   '/:slug',
   auth(USER_ROLES.SUPER_ADMIN),
+  validateRequest(LegalValidation.deleteLegalPage),
   LegalController.deleteBySlug,
 );
 

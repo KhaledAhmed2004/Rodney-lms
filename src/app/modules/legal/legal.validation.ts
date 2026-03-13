@@ -12,9 +12,14 @@ const updateLegalPage = z.object({
     slug: z.string({ required_error: 'Slug is required' }),
   }),
   body: z.object({
-    title: z.string().min(1).max(200).optional(),
-    content: z.string().min(1).optional(),
+    content: z.string({ required_error: 'Content is required' }).min(1),
   }),
 });
 
-export const LegalValidation = { createLegalPage, updateLegalPage };
+const deleteLegalPage = z.object({
+  params: z.object({
+    slug: z.string({ required_error: 'Slug is required' }),
+  }),
+});
+
+export const LegalValidation = { createLegalPage, updateLegalPage, deleteLegalPage };

@@ -19,14 +19,17 @@ const generateSlug = async (title: string): Promise<string> => {
 const createLegalPage = async (
   payload: Partial<ILegalPage>,
 ): Promise<ILegalPage> => {
-  const slug = await generateSlug(payload.title as string);
+  if (!payload.title) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Title is required');
+  }
+  const slug = await generateSlug(payload.title);
   const result = await LegalPage.create({ ...payload, slug });
   return result;
 };
 
 const getAll = async (): Promise<ILegalPage[]> => {
   const result = await LegalPage.find()
-    .select('slug title updatedAt')
+    .select('-_id slug title updatedAt')
     .sort({ title: 1 });
   return result;
 };
@@ -42,17 +45,17 @@ const getBySlug = async (slug: string): Promise<ILegalPage> => {
 const updateBySlug = async (
   slug: string,
   payload: Partial<ILegalPage>,
-): Promise<ILegalPage | null> => {
-  const existing = await LegalPage.findOne({ slug });
-  if (!existing) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');
-  }
+): Promise<ILegalPage> => {
+  const { content } = payload;
 
   const result = await LegalPage.findOneAndUpdate(
     { slug },
-    payload,
+    { content },
     { new: true },
   );
+  if (!result) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');
+  }
   return result;
 };
 

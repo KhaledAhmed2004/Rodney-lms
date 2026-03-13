@@ -104,7 +104,11 @@ const verifyEmailToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
     let data;
     if (!isExistUser.verified) {
         yield user_model_1.User.findOneAndUpdate({ _id: isExistUser._id }, { verified: true, authentication: { oneTimeCode: null, expireAt: null } });
-        message = 'Email verify successfully';
+        // Auto-login: generate tokens after email verification
+        const accessToken = jwtHelper_1.jwtHelper.createToken({ id: isExistUser._id, role: isExistUser.role, email: isExistUser.email }, config_1.default.jwt.jwt_secret, config_1.default.jwt.jwt_expire_in);
+        const refreshToken = jwtHelper_1.jwtHelper.createToken({ id: isExistUser._id, role: isExistUser.role, email: isExistUser.email }, config_1.default.jwt.jwt_refresh_secret, config_1.default.jwt.jwt_refresh_expire_in);
+        message = 'Email verified successfully';
+        data = { tokens: { accessToken, refreshToken } };
     }
     else {
         yield user_model_1.User.findOneAndUpdate({ _id: isExistUser._id }, {

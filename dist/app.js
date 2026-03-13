@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const cors_1 = __importDefault(require("cors"));
-const yamljs_1 = __importDefault(require("yamljs"));
 /**
  * ⚠️ CRITICAL IMPORT ORDER - DO NOT REORDER ⚠️
  *
@@ -32,7 +31,6 @@ require("./app/logging/patchJWT");
 // LAST: Routes (imports controllers/services - auto-labeling must be ready)
 const routes_1 = __importDefault(require("./routes"));
 const morgen_1 = require("./shared/morgen");
-const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
 const http_status_codes_1 = require("http-status-codes");
 const express_1 = __importDefault(require("express"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
@@ -41,7 +39,6 @@ const requestContext_1 = require("./app/logging/requestContext");
 const clientInfo_1 = require("./app/logging/clientInfo");
 const requestLogger_1 = require("./app/logging/requestLogger");
 const otelExpress_1 = require("./app/logging/otelExpress");
-const path_1 = __importDefault(require("path"));
 const corsLogger_1 = require("./app/logging/corsLogger");
 // autoLabelBootstrap moved above router import to ensure controllers are wrapped before route binding
 const app = (0, express_1.default)();
@@ -125,9 +122,6 @@ app.use(requestLogger_1.requestLogger);
 app.use(express_1.default.static('uploads'));
 app.use('/uploads', express_1.default.static('uploads'));
 app.use(express_1.default.static('public'));
-// Swagger
-const swaggerDocument = yamljs_1.default.load(path_1.default.join(__dirname, '../public/swagger.yaml'));
-app.use('/api/v1/docs', swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swaggerDocument));
 // API routes
 app.use('/api/v1', routes_1.default);
 // Live response

@@ -23,34 +23,15 @@ router.post(
 
 // Admin routes
 router.get(
-  '/courses/:courseId',
+  '/students',
   auth(USER_ROLES.SUPER_ADMIN),
-  GradebookController.getGradesByCourse,
+  GradebookController.getAllStudentGradebook,
 );
 
 router.get(
-  '/courses/:courseId/summary',
+  '/students/export',
   auth(USER_ROLES.SUPER_ADMIN),
-  GradebookController.getCourseSummary,
-);
-
-router.get(
-  '/students/:studentId',
-  auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.STUDENT),
-  GradebookController.getGradesByStudent,
-);
-
-router.patch(
-  '/grades/:gradeId',
-  auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(GradebookValidation.updateGrade),
-  GradebookController.updateGrade,
-);
-
-router.get(
-  '/assignments/course/:courseId',
-  auth(USER_ROLES.SUPER_ADMIN),
-  GradebookController.getAssignmentsByCourse,
+  GradebookController.exportStudentGradebook,
 );
 
 export const GradebookRoutes = router;

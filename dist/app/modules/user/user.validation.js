@@ -52,7 +52,24 @@ const updateUserZodSchema = zod_1.z.object({
         profilePicture: zod_1.z.string().optional(),
     }),
 });
+const adminUpdateUserZodSchema = zod_1.z.object({
+    body: zod_1.z.object({
+        name: zod_1.z.string().min(1).max(100).optional(),
+        email: zod_1.z.string().email('Invalid email address').optional(),
+        status: zod_1.z
+            .enum([
+            user_1.USER_STATUS.ACTIVE,
+            user_1.USER_STATUS.INACTIVE,
+            user_1.USER_STATUS.RESTRICTED,
+            user_1.USER_STATUS.DELETE,
+        ])
+            .optional(),
+        role: zod_1.z.enum([user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN]).optional(),
+        verified: zod_1.z.boolean().optional(),
+    }),
+});
 exports.UserValidation = {
     createUserZodSchema,
     updateUserZodSchema,
+    adminUpdateUserZodSchema,
 };

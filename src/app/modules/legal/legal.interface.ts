@@ -8,6 +8,4 @@ export type ILegalPage = {
   updatedAt?: Date;
 };
 
-export type LegalPageModel = {
-  isExistBySlug(slug: string): Promise<ILegalPage | null>;
-} & Model<ILegalPage>;
+export type LegalPageModel = Model<ILegalPage>;

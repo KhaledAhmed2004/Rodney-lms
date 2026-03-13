@@ -3361,7 +3361,7 @@
           "name": "Gradebook Screen",
           "item": [
             {
-              "name": "Get Grades by Course",
+              "name": "Get All Student Gradebook",
               "request": {
                 "method": "GET",
                 "header": [
@@ -3371,14 +3371,13 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/gradebook/courses/:courseId?page=1&limit=10",
+                  "raw": "{{baseUrl}}/gradebook/students?page=1&limit=10",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "gradebook",
-                    "courses",
-                    ":courseId"
+                    "students"
                   ],
                   "query": [
                     {
@@ -3388,21 +3387,30 @@
                     {
                       "key": "limit",
                       "value": "10"
-                    }
-                  ],
-                  "variable": [
+                    },
+                    {
+                      "key": "searchTerm",
+                      "value": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "ACTIVE",
+                      "disabled": true
+                    },
                     {
                       "key": "courseId",
-                      "value": "COURSE_ID"
+                      "value": "",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "Get all grades for a specific course. Requires SUPER_ADMIN role."
+                "description": "Get all student enrollments with quiz scores and completion percentage. Each row is a student-course pair. Requires SUPER_ADMIN role."
               },
               "response": []
             },
             {
-              "name": "Get Course Grade Summary",
+              "name": "Export Student Gradebook",
               "request": {
                 "method": "GET",
                 "header": [
@@ -3412,146 +3420,33 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/gradebook/courses/:courseId/summary",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gradebook",
-                    "courses",
-                    ":courseId",
-                    "summary"
-                  ],
-                  "variable": [
-                    {
-                      "key": "courseId",
-                      "value": "COURSE_ID"
-                    }
-                  ]
-                },
-                "description": "Get grade summary statistics for a course. Requires SUPER_ADMIN role."
-              },
-              "response": []
-            },
-            {
-              "name": "Get Student Grades",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/gradebook/students/:studentId?page=1&limit=10",
+                  "raw": "{{baseUrl}}/gradebook/students/export?format=csv",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "gradebook",
                     "students",
-                    ":studentId"
+                    "export"
                   ],
                   "query": [
                     {
-                      "key": "page",
-                      "value": "1"
+                      "key": "format",
+                      "value": "csv"
                     },
                     {
-                      "key": "limit",
-                      "value": "10"
-                    }
-                  ],
-                  "variable": [
-                    {
-                      "key": "studentId",
-                      "value": "STUDENT_ID"
-                    }
-                  ]
-                },
-                "description": "Get all grades for a specific student. Requires SUPER_ADMIN role."
-              },
-              "response": []
-            },
-            {
-              "name": "Update Grade",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"score\": 85,\n  \"feedback\": \"Good work!\",\n  \"status\": \"GRADED\"\n}"
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/gradebook/grades/:gradeId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gradebook",
-                    "grades",
-                    ":gradeId"
-                  ],
-                  "variable": [
-                    {
-                      "key": "gradeId",
-                      "value": "GRADE_ID"
-                    }
-                  ]
-                },
-                "description": "Update a grade with score, feedback, and status. Requires SUPER_ADMIN role."
-              },
-              "response": []
-            },
-            {
-              "name": "Get Assignment Submissions",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/gradebook/assignments/course/:courseId?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gradebook",
-                    "assignments",
-                    "course",
-                    ":courseId"
-                  ],
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
+                      "key": "searchTerm",
+                      "value": "",
+                      "disabled": true
                     },
                     {
-                      "key": "limit",
-                      "value": "10"
-                    }
-                  ],
-                  "variable": [
-                    {
-                      "key": "courseId",
-                      "value": "COURSE_ID"
+                      "key": "status",
+                      "value": "ACTIVE",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "Get all assignment submissions for a course. Requires SUPER_ADMIN role."
+                "description": "Export student gradebook as CSV or XLSX. Requires SUPER_ADMIN role."
               },
               "response": []
             }

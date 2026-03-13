@@ -25,8 +25,16 @@ router.get('/', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), user_control
 router.patch('/:id/block', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.blockUser);
 // Unblock a user
 router.patch('/:id/unblock', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.unblockUser);
+// Export users (must be before /:id to avoid route conflict)
+router.get('/export', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.exportUsers);
+// User management stats (must be before /:id to avoid route conflict)
+router.get('/stats', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.getUserStats);
 // Get a specific user by ID
 router.get('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.getUserById);
 // Public user details (no auth required)
 router.get('/:id/user', (0, rateLimit_1.rateLimitMiddleware)({ windowMs: 60000, max: 60, routeName: 'public-user-details' }), user_controller_1.UserController.getUserDetailsById);
+// Admin update a user
+router.patch('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(user_validation_1.UserValidation.adminUpdateUserZodSchema), user_controller_1.UserController.updateUserByAdmin);
+// Admin soft delete a user
+router.delete('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.deleteUser);
 exports.UserRoutes = router;

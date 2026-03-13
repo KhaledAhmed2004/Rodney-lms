@@ -23,11 +23,6 @@ const legalPageSchema = new Schema<ILegalPage, LegalPageModel>(
   { timestamps: true },
 );
 
-// Statics
-legalPageSchema.statics.isExistBySlug = async function (slug: string) {
-  return await this.findOne({ slug });
-};
-
 export const LegalPage = model<ILegalPage, LegalPageModel>(
   'LegalPage',
   legalPageSchema,

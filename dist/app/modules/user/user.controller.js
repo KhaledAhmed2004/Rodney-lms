@@ -29,6 +29,8 @@ const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const user_service_1 = require("./user.service");
 const user_1 = require("../../../enums/user");
+const ExportBuilder_1 = __importDefault(require("../../builder/ExportBuilder"));
+const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const createUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userData = __rest(req.body, []);
     const result = yield user_service_1.UserService.createUserToDB(userData);
@@ -111,6 +113,57 @@ const getUserDetailsById = (0, catchAsync_1.default)((req, res) => __awaiter(voi
         data: result,
     });
 }));
+const updateUserByAdmin = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    const result = yield user_service_1.UserService.updateUserByAdmin(id, req.body);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'User updated successfully',
+        data: result,
+    });
+}));
+const deleteUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    const requesterId = req.user.id;
+    if (id === requesterId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Cannot delete your own account');
+    }
+    yield user_service_1.UserService.updateUserStatus(id, user_1.USER_STATUS.DELETE);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'User deleted successfully',
+    });
+}));
+const exportUsers = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const users = yield user_service_1.UserService.exportUsers(req.query);
+    const format = req.query.format === 'xlsx' ? 'excel' : 'csv';
+    const filename = `users-export-${new Date().toISOString().slice(0, 10)}`;
+    yield new ExportBuilder_1.default(users)
+        .format(format)
+        .columns([
+        { key: 'name', header: 'Name', width: 20 },
+        { key: 'email', header: 'Email', width: 30 },
+        { key: 'status', header: 'Status', width: 12 },
+        { key: 'role', header: 'Role', width: 12 },
+        { key: 'verified', header: 'Verified', width: 10 },
+        { key: 'enrollmentCount', header: 'Enrolled Courses', width: 16 },
+        { key: 'lastActiveDate', header: 'Last Active', width: 18 },
+        { key: 'createdAt', header: 'Joined Date', width: 18 },
+    ])
+        .dateFormat('DD/MM/YYYY')
+        .sendResponse(res, filename);
+}));
+const getUserStats = (0, catchAsync_1.default)((_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield user_service_1.UserService.getUserStats();
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'User stats retrieved successfully',
+        data: result,
+    });
+}));
 exports.UserController = {
     createUser,
     getUserProfile,
@@ -120,4 +173,8 @@ exports.UserController = {
     unblockUser,
     getUserById,
     getUserDetailsById,
+    updateUserByAdmin,
+    deleteUser,
+    exportUsers,
+    getUserStats,
 };

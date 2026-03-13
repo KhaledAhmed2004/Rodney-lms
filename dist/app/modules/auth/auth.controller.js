@@ -32,6 +32,17 @@ const auth_service_1 = require("./auth.service");
 const verifyEmail = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const verifyData = __rest(req.body, []);
     const result = yield auth_service_1.AuthService.verifyEmailToDB(verifyData);
+    // Set refresh token cookie if auto-login tokens returned (new user verification)
+    const tokens = typeof result.data === 'object' && result.data !== null
+        ? result.data.tokens
+        : null;
+    if (tokens === null || tokens === void 0 ? void 0 : tokens.refreshToken) {
+        res.cookie('refreshToken', tokens.refreshToken, {
+            httpOnly: true,
+            secure: config_1.default.node_env === 'production',
+            sameSite: 'lax',
+        });
+    }
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,

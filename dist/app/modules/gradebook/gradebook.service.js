@@ -14,9 +14,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GradebookService = void 0;
 const http_status_codes_1 = require("http-status-codes");
+const mongoose_1 = require("mongoose");
+const escape_string_regexp_1 = __importDefault(require("escape-string-regexp"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
 const enrollmentHelper_1 = require("../../helpers/enrollmentHelper");
+const enrollment_model_1 = require("../enrollment/enrollment.model");
+const enrollment_interface_1 = require("../enrollment/enrollment.interface");
+const gradebook_interface_1 = require("./gradebook.interface");
 const gradebook_model_1 = require("./gradebook.model");
 const getGradesByCourse = (courseId, query) => __awaiter(void 0, void 0, void 0, function* () {
     const gradeQuery = new QueryBuilder_1.default(gradebook_model_1.Grade.find({ course: courseId })
@@ -143,6 +148,150 @@ const getMyGrades = (studentId, query) => __awaiter(void 0, void 0, void 0, func
     const pagination = yield gradeQuery.getPaginationInfo();
     return { pagination, data };
 });
+const buildGradebookMatchConditions = (query) => {
+    const conditions = {};
+    if (query.status) {
+        conditions.status = query.status;
+    }
+    else {
+        conditions.status = enrollment_interface_1.ENROLLMENT_STATUS.ACTIVE;
+    }
+    if (query.courseId) {
+        conditions.course = new mongoose_1.Types.ObjectId(String(query.courseId));
+    }
+    return conditions;
+};
+const buildGradebookPipeline = (query) => {
+    const matchConditions = buildGradebookMatchConditions(query);
+    const pipeline = [
+        { $match: matchConditions },
+        // Lookup student info
+        {
+            $lookup: {
+                from: 'users',
+                localField: 'student',
+                foreignField: '_id',
+                as: 'studentInfo',
+            },
+        },
+        { $unwind: '$studentInfo' },
+        { $match: { 'studentInfo.status': { $ne: 'DELETE' } } },
+        // Lookup course info
+        {
+            $lookup: {
+                from: 'courses',
+                localField: 'course',
+                foreignField: '_id',
+                as: 'courseInfo',
+            },
+        },
+        { $unwind: '$courseInfo' },
+        // Lookup quiz grades (pipeline lookup for filtered join)
+        {
+            $lookup: {
+                from: 'grades',
+                let: { studentId: '$student', courseId: '$course' },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ['$student', '$$studentId'] },
+                                    { $eq: ['$course', '$$courseId'] },
+                                    { $eq: ['$assessmentType', gradebook_interface_1.ASSESSMENT_TYPE.QUIZ] },
+                                    { $eq: ['$status', gradebook_interface_1.GRADE_STATUS.GRADED] },
+                                ],
+                            },
+                        },
+                    },
+                    {
+                        $project: {
+                            title: '$assessmentTitle',
+                            percentage: 1,
+                            _id: 0,
+                        },
+                    },
+                    { $sort: { title: 1 } },
+                ],
+                as: 'quizzes',
+            },
+        },
+        // Calculate overall quiz % and flatten fields
+        {
+            $addFields: {
+                overallQuizPercentage: {
+                    $cond: [
+                        { $gt: [{ $size: '$quizzes' }, 0] },
+                        { $round: [{ $avg: '$quizzes.percentage' }, 2] },
+                        0,
+                    ],
+                },
+            },
+        },
+        // Project final shape
+        {
+            $project: {
+                _id: 1,
+                studentName: '$studentInfo.name',
+                studentEmail: '$studentInfo.email',
+                studentAvatar: '$studentInfo.profilePicture',
+                courseTitle: '$courseInfo.title',
+                quizzes: 1,
+                overallQuizPercentage: 1,
+                completionPercentage: '$progress.completionPercentage',
+                enrolledAt: 1,
+            },
+        },
+    ];
+    // Search filter (after lookups)
+    if (query.searchTerm) {
+        const sanitized = (0, escape_string_regexp_1.default)(String(query.searchTerm));
+        pipeline.push({
+            $match: {
+                $or: [
+                    { studentName: { $regex: sanitized, $options: 'i' } },
+                    { studentEmail: { $regex: sanitized, $options: 'i' } },
+                ],
+            },
+        });
+    }
+    return pipeline;
+};
+const getAllStudentGradebook = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d, _e;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const pipeline = buildGradebookPipeline(query);
+    // Add $facet for pagination
+    pipeline.push({
+        $facet: {
+            data: [
+                { $sort: { completionPercentage: -1 } },
+                { $skip: skip },
+                { $limit: limit },
+            ],
+            total: [{ $count: 'count' }],
+        },
+    });
+    const result = yield enrollment_model_1.Enrollment.aggregate(pipeline);
+    const data = (_b = (_a = result[0]) === null || _a === void 0 ? void 0 : _a.data) !== null && _b !== void 0 ? _b : [];
+    const total = (_e = (_d = (_c = result[0]) === null || _c === void 0 ? void 0 : _c.total[0]) === null || _d === void 0 ? void 0 : _d.count) !== null && _e !== void 0 ? _e : 0;
+    const totalPage = Math.ceil(total / limit);
+    return {
+        pagination: { page, limit, totalPage, total },
+        data,
+    };
+});
+const exportStudentGradebook = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    const pipeline = buildGradebookPipeline(query);
+    pipeline.push({ $sort: { studentName: 1 } });
+    const data = yield enrollment_model_1.Enrollment.aggregate(pipeline);
+    // Format quizzes array into readable string for export
+    return data.map(row => (Object.assign(Object.assign({}, row), { quizScores: row.quizzes
+            .map((q) => `${q.title}: ${q.percentage}%`)
+            .join(', ') || 'N/A' })));
+});
 exports.GradebookService = {
     getGradesByCourse,
     getGradesByStudent,
@@ -151,4 +300,6 @@ exports.GradebookService = {
     submitAssignment,
     getAssignmentsByCourse,
     getMyGrades,
+    getAllStudentGradebook,
+    exportStudentGradebook,
 };
