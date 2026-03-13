@@ -24,7 +24,7 @@ router.post('/reset-password', (0, validateRequest_1.default)(auth_validation_1.
 // Change Password
 router.post('/change-password', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.STUDENT), (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createChangePasswordZodSchema), auth_controller_1.AuthController.changePassword);
 // Resend Verification Email
-router.post('/resend-verify-email', auth_controller_1.AuthController.resendVerifyEmail);
+router.post('/resend-verify-email', (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createResendVerifyEmailZodSchema), auth_controller_1.AuthController.resendVerifyEmail);
 // Refresh Token
 router.post('/refresh-token', (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createRefreshTokenZodSchema), auth_controller_1.AuthController.refreshToken);
 exports.AuthRoutes = router;

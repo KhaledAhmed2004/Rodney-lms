@@ -40,4 +40,7 @@ resetTokenSchema.statics.isExpireToken = async function (
   return !!resetToken;
 };
 
+// Auto-delete expired tokens
+resetTokenSchema.index({ expireAt: 1 }, { expireAfterSeconds: 0 });
+
 export const ResetToken = model<IResetToken, ResetTokenModel>('Token', resetTokenSchema);

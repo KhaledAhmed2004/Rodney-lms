@@ -2,7 +2,7 @@
 
 **Project:** Enterprise Backend Template
 **Authentication:** JWT
-**Last Updated:** 2025-11-25
+**Last Updated:** 2026-03-14
 
 ---
 
@@ -25,7 +25,7 @@ This application implements a comprehensive authentication system:
 
 - **Local Authentication**: Email/password with JWT tokens
 - **Password Reset**: Secure token-based password recovery
-- **Role-Based Access Control**: Admin, Seller, Buyer roles
+- **Role-Based Access Control**: Super Admin, Student roles
 - **Email Verification**: Confirm email addresses
 
 ### Authentication Stack
@@ -193,7 +193,7 @@ const register = z.object({
       .regex(/[A-Z]/, 'Need uppercase letter')
       .regex(/[a-z]/, 'Need lowercase letter')
       .regex(/[0-9]/, 'Need number'),
-    role: z.nativeEnum(USER_ROLE).default(USER_ROLE.BUYER),
+    role: z.nativeEnum(USER_ROLE).default(USER_ROLE.STUDENT),
   }),
 });
 ```
@@ -480,14 +480,14 @@ const isPasswordValid = await user.comparePassword(payload.password);
        ▼
 ┌────────────────────┐
 │  ResetToken Model  │ 4. Save hashed token
-│ .create()          │    - user, token, expiresAt (1 hour)
+│ .create()          │    - user, token, expiresAt (5 minutes)
 └──────┬─────────────┘
        │
        ▼
 ┌────────────────────┐
 │  Email Service     │ 5. Send reset email
 │ sendEmail()        │    - Reset link with plain token
-└──────┬─────────────┘    - Expires in 1 hour
+└──────┬─────────────┘    - Expires in 5 minutes
        │
        ▼
 ┌────────────┐
@@ -497,7 +497,7 @@ const isPasswordValid = await user.comparePassword(payload.password);
        ▼
 ┌────────────┐
 │   Client   │ 7. POST /api/v1/auth/reset-password
-└──────┬─────┘    { token, newPassword }
+└──────┬─────┘    { token, newPassword, confirmPassword }
        │
        ▼
 ┌────────────────────┐
@@ -544,11 +544,11 @@ const forgotPassword = async (email: string) => {
   const resetToken = crypto.randomBytes(32).toString('hex');
   const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
 
-  // 3. Save token (expires in 1 hour)
+  // 3. Save token (expires in 5 minutes)
   await ResetToken.create({
     user: user._id,
     token: hashedToken,
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
   });
 
   // 4. Send email
@@ -739,11 +739,11 @@ router.get('/products', ProductController.getAll);
 // Protected route (any authenticated user)
 router.get('/profile', auth(), UserController.getMyProfile);
 
-// Role-based route (only admins)
-router.delete('/users/:id', auth(USER_ROLE.ADMIN), UserController.deleteUser);
+// Role-based route (only super admins)
+router.delete('/users/:id', auth(USER_ROLE.SUPER_ADMIN), UserController.deleteUser);
 
 // Multiple roles allowed
-router.post('/products', auth(USER_ROLE.ADMIN, USER_ROLE.SELLER), ProductController.create);
+router.post('/courses', auth(USER_ROLE.SUPER_ADMIN), CourseController.create);
 ```
 
 ### Token Refresh Flow
@@ -798,33 +798,29 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
 **User Roles**: `src/app/modules/user/user.interface.ts`
 ```typescript
 export enum USER_ROLE {
-  ADMIN = 'admin',
-  SELLER = 'seller',
-  BUYER = 'buyer',
+  SUPER_ADMIN = 'super_admin',
+  STUDENT = 'student',
 }
 ```
 
 ### Permission Matrix
 
-| Endpoint | Admin | Seller | Buyer | Public |
-|----------|-------|--------|-------|--------|
+| Endpoint | Super Admin | Student | Public |
+|----------|-------------|---------|--------|
 | **Auth** |
-| POST /register | ✅ | ✅ | ✅ | ✅ |
-| POST /login | ✅ | ✅ | ✅ | ✅ |
-| POST /forgot-password | ✅ | ✅ | ✅ | ✅ |
+| POST /register | ✅ | ✅ | ✅ |
+| POST /login | ✅ | ✅ | ✅ |
+| POST /forgot-password | ✅ | ✅ | ✅ |
 | **Users** |
-| GET /users | ✅ | ❌ | ❌ | ❌ |
-| GET /users/:id | ✅ | ✅* | ✅* | ❌ |
-| PATCH /users/:id | ✅ | ✅* | ✅* | ❌ |
-| DELETE /users/:id | ✅ | ❌ | ❌ | ❌ |
-| **Products** |
-| GET /products | ✅ | ✅ | ✅ | ✅ |
-| POST /products | ✅ | ✅ | ❌ | ❌ |
-| PATCH /products/:id | ✅ | ✅* | ❌ | ❌ |
-| DELETE /products/:id | ✅ | ✅* | ❌ | ❌ |
-| **Payments** |
-| POST /payments | ✅ | ❌ | ✅ | ❌ |
-| GET /payments | ✅ | ✅* | ✅* | ❌ |
+| GET /users | ✅ | ❌ | ❌ |
+| GET /users/:id | ✅ | ✅* | ❌ |
+| PATCH /users/:id | ✅ | ✅* | ❌ |
+| DELETE /users/:id | ✅ | ❌ | ❌ |
+| **Courses** |
+| GET /courses | ✅ | ✅ | ✅ |
+| POST /courses | ✅ | ❌ | ❌ |
+| PATCH /courses/:id | ✅ | ❌ | ❌ |
+| DELETE /courses/:id | ✅ | ❌ | ❌ |
 
 *\* = Only own resources*
 
@@ -845,8 +841,8 @@ const updateProduct = catchAsync(async (req: Request, res: Response) => {
   }
 
   // 2. Check ownership (unless admin)
-  if (req.user.role !== USER_ROLE.ADMIN && product.seller.toString() !== userId.toString()) {
-    throw new ApiError(403, 'You can only update your own products');
+  if (req.user.role !== USER_ROLE.SUPER_ADMIN && resource.owner.toString() !== userId.toString()) {
+    throw new ApiError(403, 'You can only update your own resources');
   }
 
   // 3. Update product
@@ -912,16 +908,39 @@ res.cookie('accessToken', token, {
 
 **Protect against brute force:**
 ```typescript
+// Login: 10 requests per 15 minutes
 router.post(
   '/login',
-  rateLimit({ maxRequests: 5, windowMs: 15 * 60 * 1000 }), // 5 attempts per 15 min
+  rateLimit({ maxRequests: 10, windowMs: 15 * 60 * 1000 }),
   AuthController.login
 );
 
+// Forget password: 3 requests per 15 minutes
 router.post(
-  '/forgot-password',
-  rateLimit({ maxRequests: 3, windowMs: 60 * 60 * 1000 }), // 3 per hour
-  AuthController.forgotPassword
+  '/forget-password',
+  rateLimit({ maxRequests: 3, windowMs: 15 * 60 * 1000 }),
+  AuthController.forgetPassword
+);
+
+// Verify email: 5 requests per 15 minutes
+router.post(
+  '/verify-email',
+  rateLimit({ maxRequests: 5, windowMs: 15 * 60 * 1000 }),
+  AuthController.verifyEmail
+);
+
+// Resend verify email: 3 requests per 15 minutes
+router.post(
+  '/resend-verify-email',
+  rateLimit({ maxRequests: 3, windowMs: 15 * 60 * 1000 }),
+  AuthController.resendVerifyEmail
+);
+
+// Reset password: 5 requests per 15 minutes
+router.post(
+  '/reset-password',
+  rateLimit({ maxRequests: 5, windowMs: 15 * 60 * 1000 }),
+  AuthController.resetPassword
 );
 ```
 
@@ -960,7 +979,7 @@ throw new ApiError(401, 'Invalid email or password');
 **Recommended values:**
 - Access token: 15 minutes - 1 day
 - Refresh token: 7 - 30 days
-- Reset token: 15 minutes - 1 hour
+- Reset token: 5 - 15 minutes
 
 ### 8. HTTPS Only
 
@@ -985,8 +1004,8 @@ if (config.env === 'production') {
 1. **Auth Method**: Local (email/password)
 2. **JWT Tokens**: Access (short-lived) + Refresh (long-lived)
 3. **Secure Password**: bcrypt hashing with 12 rounds
-4. **RBAC**: Admin, Seller, Buyer roles with permission matrix
-5. **Password Reset**: Crypto tokens with 1-hour expiration
+4. **RBAC**: Super Admin, Student roles with permission matrix
+5. **Password Reset**: Crypto tokens with 5-minute expiration
 6. **Auth Middleware**: Verifies JWT + checks role permissions
 7. **Security**: httpOnly cookies, rate limiting, input validation
 

@@ -19,13 +19,33 @@ import { ResetToken } from './resetToken/resetToken.model';
 import { User } from '../user/user.model';
 import { USER_STATUS } from '../../../enums/user';
 
+// Generate access + refresh token pair
+const generateTokenPair = (user: { _id: unknown; role: string; email: string }) => {
+  const payload = { id: user._id, role: user.role, email: user.email };
+  const accessToken = jwtHelper.createToken(
+    payload,
+    config.jwt.jwt_secret as Secret,
+    config.jwt.jwt_expire_in as string
+  );
+  const refreshToken = jwtHelper.createToken(
+    payload,
+    config.jwt.jwt_refresh_secret as Secret,
+    config.jwt.jwt_refresh_expire_in as string
+  );
+  return { accessToken, refreshToken };
+};
+
 const loginUserFromDB = async (
   payload: ILoginData & { deviceToken?: string }
 ) => {
   const { email, password, deviceToken } = payload;
   const isExistUser = await User.findOne({ email }).select('+password');
+
+  // Generic message to prevent user enumeration
+  const invalidCredentials = 'Invalid email or password';
+
   if (!isExistUser) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
+    throw new ApiError(StatusCodes.BAD_REQUEST, invalidCredentials);
   }
 
   if (!isExistUser.verified) {
@@ -38,38 +58,25 @@ const loginUserFromDB = async (
   if (isExistUser.status === USER_STATUS.DELETE) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      'Your account has been deactivated. Contact support.'
+      invalidCredentials
     );
   }
 
-  if (!password) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Password is required!');
+  if (
+    !password ||
+    !(await User.isMatchPassword(password, isExistUser.password))
+  ) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, invalidCredentials);
   }
 
-  if (!(await User.isMatchPassword(password, isExistUser.password))) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Password is incorrect!');
-  }
+  const tokens = generateTokenPair(isExistUser);
 
-  // JWT: access token
-  const accessToken = jwtHelper.createToken(
-    { id: isExistUser._id, role: isExistUser.role, email: isExistUser.email },
-    config.jwt.jwt_secret as Secret,
-    config.jwt.jwt_expire_in as string
-  );
-
-  // JWT: refresh token
-  const refreshToken = jwtHelper.createToken(
-    { id: isExistUser._id, role: isExistUser.role, email: isExistUser.email },
-    config.jwt.jwt_refresh_secret as Secret,
-    config.jwt.jwt_refresh_expire_in as string
-  );
-
-  // ✅ save device token
+  // save device token
   if (deviceToken) {
     await User.addDeviceToken(isExistUser._id.toString(), deviceToken);
   }
 
-  return { tokens: { accessToken, refreshToken } };
+  return { tokens };
 };
 
 // logout
@@ -81,11 +88,11 @@ const logoutUserFromDB = async (user: JwtPayload, deviceToken: string) => {
   await User.removeDeviceToken(user.id, deviceToken);
 };
 
-//forget password
+//forget password — silent success to prevent user enumeration
 const forgetPasswordToDB = async (email: string) => {
   const isExistUser = await User.isExistUserByEmail(email);
   if (!isExistUser) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
+    return; // Silent return — don't reveal if email exists
   }
 
   //send mail
@@ -142,19 +149,10 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
     );
 
     // Auto-login: generate tokens after email verification
-    const accessToken = jwtHelper.createToken(
-      { id: isExistUser._id, role: isExistUser.role, email: isExistUser.email },
-      config.jwt.jwt_secret as Secret,
-      config.jwt.jwt_expire_in as string
-    );
-    const refreshToken = jwtHelper.createToken(
-      { id: isExistUser._id, role: isExistUser.role, email: isExistUser.email },
-      config.jwt.jwt_refresh_secret as Secret,
-      config.jwt.jwt_refresh_expire_in as string
-    );
+    const tokens = generateTokenPair(isExistUser);
 
     message = 'Email verified successfully';
-    data = { tokens: { accessToken, refreshToken } };
+    data = { tokens };
   } else {
     await User.findOneAndUpdate(
       { _id: isExistUser._id },
@@ -181,12 +179,9 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
   return { data, message };
 };
 
-//forget password
-const resetPasswordToDB = async (
-  token: string,
-  payload: IAuthResetPassword
-) => {
-  const { newPassword, confirmPassword } = payload;
+//reset password
+const resetPasswordToDB = async (payload: IAuthResetPassword) => {
+  const { token, newPassword, confirmPassword } = payload;
   //isExist token
   const isExistToken = await ResetToken.isExistToken(token);
   if (!isExistToken) {
@@ -233,9 +228,10 @@ const resetPasswordToDB = async (
     },
   };
 
-  await User.findOneAndUpdate({ _id: isExistToken.user }, updateData, {
-    new: true,
-  });
+  await User.findOneAndUpdate({ _id: isExistToken.user }, updateData);
+
+  // Invalidate used reset token
+  await ResetToken.deleteOne({ token });
 };
 
 const changePasswordToDB = async (
@@ -249,11 +245,8 @@ const changePasswordToDB = async (
   }
 
   //current password match
-  if (
-    currentPassword &&
-    !(await User.isMatchPassword(currentPassword, isExistUser.password))
-  ) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Password is incorrect');
+  if (!(await User.isMatchPassword(currentPassword, isExistUser.password))) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Current password is incorrect');
   }
 
   //newPassword and current password
@@ -280,7 +273,7 @@ const changePasswordToDB = async (
   const updateData = {
     password: hashPassword,
   };
-  await User.findOneAndUpdate({ _id: user.id }, updateData, { new: true });
+  await User.findOneAndUpdate({ _id: user.id }, updateData);
 };
 
 const resendVerifyEmailToDB = async (email: string) => {
@@ -312,21 +305,10 @@ const refreshTokenToDB = async (token: string) => {
     );
   }
 
-  // Issue new access token
-  const accessToken = jwtHelper.createToken(
-    { id: user._id, role: user.role, email: user.email },
-    config.jwt.jwt_secret as Secret,
-    config.jwt.jwt_expire_in as string
-  );
+  // Issue new token pair (rotate refresh token)
+  const tokens = generateTokenPair(user);
 
-  // Optionally rotate refresh token
-  const newRefreshToken = jwtHelper.createToken(
-    { id: user._id, role: user.role, email: user.email },
-    config.jwt.jwt_refresh_secret as Secret,
-    config.jwt.jwt_refresh_expire_in as string
-  );
-
-  return { tokens: { accessToken, refreshToken: newRefreshToken } };
+  return { tokens };
 };
 
 export const AuthService = {

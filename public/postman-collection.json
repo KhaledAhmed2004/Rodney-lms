@@ -202,6 +202,9 @@
             {
               "name": "Reset Password",
               "request": {
+                "auth": {
+                  "type": "noauth"
+                },
                 "method": "POST",
                 "header": [
                   {
@@ -211,13 +214,14 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"newPassword\": \"NewPassword123!\",\n  \"confirmPassword\": \"NewPassword123!\"\n}"
+                  "raw": "{\n  \"token\": \"reset-token-from-email-link\",\n  \"newPassword\": \"NewPassword123!\",\n  \"confirmPassword\": \"NewPassword123!\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/reset-password",
                   "host": ["{{baseUrl}}"],
                   "path": ["auth", "reset-password"]
-                }
+                },
+                "description": "Reset password using token from email link. Token is sent in body, NOT in Authorization header. Password must be 8-128 chars."
               },
               "response": []
             },
@@ -2144,38 +2148,6 @@
                   "response": []
                 },
                 {
-                  "name": "Get All Published Courses",
-                  "request": {
-                    "method": "GET",
-                    "header": [],
-                    "url": {
-                      "raw": "{{baseUrl}}/courses?page=1&limit=10&searchTerm=&sort=-createdAt",
-                      "host": ["{{baseUrl}}"],
-                      "path": ["courses"],
-                      "query": [
-                        {
-                          "key": "page",
-                          "value": "1"
-                        },
-                        {
-                          "key": "limit",
-                          "value": "10"
-                        },
-                        {
-                          "key": "searchTerm",
-                          "value": ""
-                        },
-                        {
-                          "key": "sort",
-                          "value": "-createdAt"
-                        }
-                      ]
-                    },
-                    "description": "Get all published courses with pagination and search. Public endpoint."
-                  },
-                  "response": []
-                },
-                {
                   "name": "Get Course by ID or Slug",
                   "request": {
                     "method": "GET",
@@ -4004,7 +3976,7 @@
                   "host": ["{{baseUrl}}"],
                   "path": ["legal"]
                 },
-                "description": "Create a new legal page (e.g., Terms of Service, Privacy Policy). Requires SUPER_ADMIN role."
+                "description": "Create a new legal page (e.g., Terms of Service, Privacy Policy). Requires SUPER_ADMIN role. Content is optional — can create with just title and add content later."
               },
               "response": []
             },
@@ -4071,7 +4043,7 @@
                     }
                   ]
                 },
-                "description": "Update a legal page by slug. Requires SUPER_ADMIN role."
+                "description": "Update a legal page by slug. Requires SUPER_ADMIN role. Title update korle slug auto-regenerate hoy. Duplicate title dile 409 CONFLICT."
               },
               "response": []
             },

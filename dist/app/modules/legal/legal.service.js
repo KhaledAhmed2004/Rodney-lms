@@ -26,29 +26,43 @@ const generateSlug = (title) => __awaiter(void 0, void 0, void 0, function* () {
     return slug;
 });
 const createLegalPage = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!payload.title) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Title is required');
+    }
     const slug = yield generateSlug(payload.title);
-    const result = yield legal_model_1.LegalPage.create(Object.assign(Object.assign({}, payload), { slug }));
+    yield legal_model_1.LegalPage.create(Object.assign(Object.assign({}, payload), { slug }));
+    const result = yield legal_model_1.LegalPage.findOne({ slug }).select('slug title content createdAt updatedAt');
     return result;
 });
 const getAll = () => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield legal_model_1.LegalPage.find()
-        .select('slug title updatedAt')
+        .select('-_id slug title updatedAt')
         .sort({ title: 1 });
     return result;
 });
 const getBySlug = (slug) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield legal_model_1.LegalPage.findOne({ slug });
+    const result = yield legal_model_1.LegalPage.findOne({ slug }).select('slug title content createdAt updatedAt');
     if (!result) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Legal page not found');
     }
     return result;
 });
 const updateBySlug = (slug, payload) => __awaiter(void 0, void 0, void 0, function* () {
-    const existing = yield legal_model_1.LegalPage.findOne({ slug });
-    if (!existing) {
+    const updateData = {};
+    if (payload.title) {
+        const newSlug = yield generateSlug(payload.title);
+        updateData.title = payload.title;
+        updateData.slug = newSlug;
+    }
+    if (payload.content) {
+        updateData.content = payload.content;
+    }
+    const result = yield legal_model_1.LegalPage.findOneAndUpdate({ slug }, updateData, {
+        new: true,
+    }).select('slug title content updatedAt');
+    if (!result) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Legal page not found');
     }
-    const result = yield legal_model_1.LegalPage.findOneAndUpdate({ slug }, payload, { new: true });
     return result;
 });
 const deleteBySlug = (slug) => __awaiter(void 0, void 0, void 0, function* () {

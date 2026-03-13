@@ -46,6 +46,5 @@ const sendVerificationOTP = (email) => __awaiter(void 0, void 0, void 0, functio
         otp,
     });
     yield emailHelper_1.emailHelper.sendEmail(emailData);
-    return { otp };
 });
 exports.sendVerificationOTP = sendVerificationOTP;

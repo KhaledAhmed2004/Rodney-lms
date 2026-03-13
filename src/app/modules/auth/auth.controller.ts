@@ -1,10 +1,17 @@
-import { Request, Response } from 'express';
+import { CookieOptions, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import config from '../../../config';
 import catchAsync from '../../../shared/catchAsync';
 import sendResponse from '../../../shared/sendResponse';
 import { AuthService } from './auth.service';
 import { JwtPayload } from 'jsonwebtoken';
+
+const REFRESH_TOKEN_COOKIE: CookieOptions = {
+  httpOnly: true,
+  secure: config.node_env === 'production',
+  sameSite: 'lax' as const,
+  path: '/',
+};
 
 const verifyEmail = catchAsync(async (req: Request, res: Response) => {
   const { ...verifyData } = req.body;
@@ -16,11 +23,7 @@ const verifyEmail = catchAsync(async (req: Request, res: Response) => {
       ? (result.data as { tokens: { accessToken: string; refreshToken: string } }).tokens
       : null;
   if (tokens?.refreshToken) {
-    res.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      secure: config.node_env === 'production',
-      sameSite: 'lax' as const,
-    });
+    res.cookie('refreshToken', tokens.refreshToken, REFRESH_TOKEN_COOKIE);
   }
 
   sendResponse(res, {
@@ -37,11 +40,7 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
 
   // Set refresh token in httpOnly cookie for better security
   if (result?.tokens?.refreshToken) {
-    res.cookie('refreshToken', result.tokens.refreshToken, {
-      httpOnly: true,
-      secure: config.node_env === 'production',
-      sameSite: 'lax' as const,
-    });
+    res.cookie('refreshToken', result.tokens.refreshToken, REFRESH_TOKEN_COOKIE);
   }
 
   sendResponse(res, {
@@ -54,18 +53,12 @@ const loginUser = catchAsync(async (req: Request, res: Response) => {
 
 const logoutUser = catchAsync(async (req: Request, res: Response) => {
   const { deviceToken } = req.body;
-  console.log('deviceToken', deviceToken);
   const user = req.user as JwtPayload;
 
   await AuthService.logoutUserFromDB(user, deviceToken);
 
   // Clear refresh token cookie on logout
-  res.clearCookie('refreshToken', {
-    httpOnly: true,
-    secure: config.node_env === 'production',
-    sameSite: 'lax' as const,
-    path: '/',
-  });
+  res.clearCookie('refreshToken', REFRESH_TOKEN_COOKIE);
 
   sendResponse(res, {
     success: true,
@@ -76,27 +69,23 @@ const logoutUser = catchAsync(async (req: Request, res: Response) => {
 
 const forgetPassword = catchAsync(async (req: Request, res: Response) => {
   const email = req.body.email;
-  const result = await AuthService.forgetPasswordToDB(email);
+  await AuthService.forgetPasswordToDB(email);
 
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
     message:
       'Please check your email. We have sent you a one-time passcode (OTP).',
-    data: result,
   });
 });
 
 const resetPassword = catchAsync(async (req: Request, res: Response) => {
-  const token = req.headers.authorization;
-  const { ...resetData } = req.body;
-  const result = await AuthService.resetPasswordToDB(token!, resetData);
+  await AuthService.resetPasswordToDB(req.body);
 
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
     message: 'Your password has been successfully reset.',
-    data: result,
   });
 });
 
@@ -114,13 +103,12 @@ const changePassword = catchAsync(async (req: Request, res: Response) => {
 
 const resendVerifyEmail = catchAsync(async (req: Request, res: Response) => {
   const { email } = req.body;
-  const result = await AuthService.resendVerifyEmailToDB(email);
+  await AuthService.resendVerifyEmailToDB(email);
 
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
     message: 'Verification code has been resent to your email.',
-    data: result,
   });
 });
 
@@ -134,12 +122,7 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
 
   // Rotate refresh token in httpOnly cookie
   if (result?.tokens?.refreshToken) {
-    res.cookie('refreshToken', result.tokens.refreshToken, {
-      httpOnly: true,
-      secure: config.node_env === 'production',
-      sameSite: 'lax' as const,
-      path: '/',
-    });
+    res.cookie('refreshToken', result.tokens.refreshToken, REFRESH_TOKEN_COOKIE);
   }
 
   sendResponse(res, {

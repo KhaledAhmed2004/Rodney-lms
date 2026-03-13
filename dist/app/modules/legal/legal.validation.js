@@ -5,7 +5,7 @@ const zod_1 = require("zod");
 const createLegalPage = zod_1.z.object({
     body: zod_1.z.object({
         title: zod_1.z.string({ required_error: 'Title is required' }).min(1).max(200),
-        content: zod_1.z.string({ required_error: 'Content is required' }).min(1),
+        content: zod_1.z.string().min(1).optional(),
     }),
 });
 const updateLegalPage = zod_1.z.object({
@@ -17,4 +17,9 @@ const updateLegalPage = zod_1.z.object({
         content: zod_1.z.string().min(1).optional(),
     }),
 });
-exports.LegalValidation = { createLegalPage, updateLegalPage };
+const deleteLegalPage = zod_1.z.object({
+    params: zod_1.z.object({
+        slug: zod_1.z.string({ required_error: 'Slug is required' }),
+    }),
+});
+exports.LegalValidation = { createLegalPage, updateLegalPage, deleteLegalPage };

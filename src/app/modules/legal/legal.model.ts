@@ -17,7 +17,7 @@ const legalPageSchema = new Schema<ILegalPage, LegalPageModel>(
     },
     content: {
       type: String,
-      required: true,
+      default: '',
     },
   },
   { timestamps: true },

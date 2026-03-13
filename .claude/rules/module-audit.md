@@ -22,5 +22,10 @@ paths:
 - Summary section e fixed count update koro (e.g. "6/14 fixed")
 - Immediate action / should fix / discuss with stakeholder categorize koro
 
+## Token Optimization
+- **Plan file e audit content duplicate koro na** — plan file e shudhu implementation steps likho, audit content directly audit doc e jabe
+- **Same file bar bar read koro na** — ekbar read kore shob info note koro, por batch edit koro
+- **Explore agent 1 tai enough** — pura module ekta agent e read kore audit table generate koro
+
 ## Output Location
 - `docs/module-audit/[module]-audit.md`

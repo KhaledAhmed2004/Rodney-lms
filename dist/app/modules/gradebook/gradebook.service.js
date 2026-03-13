@@ -23,81 +23,6 @@ const enrollment_model_1 = require("../enrollment/enrollment.model");
 const enrollment_interface_1 = require("../enrollment/enrollment.interface");
 const gradebook_interface_1 = require("./gradebook.interface");
 const gradebook_model_1 = require("./gradebook.model");
-const getGradesByCourse = (courseId, query) => __awaiter(void 0, void 0, void 0, function* () {
-    const gradeQuery = new QueryBuilder_1.default(gradebook_model_1.Grade.find({ course: courseId })
-        .populate('student', 'name email profilePicture')
-        .populate('gradedBy', 'name'), query)
-        .filter()
-        .sort()
-        .paginate();
-    const data = yield gradeQuery.modelQuery;
-    const pagination = yield gradeQuery.getPaginationInfo();
-    return { pagination, data };
-});
-const getGradesByStudent = (studentId, query) => __awaiter(void 0, void 0, void 0, function* () {
-    const gradeQuery = new QueryBuilder_1.default(gradebook_model_1.Grade.find({ student: studentId }).populate('course', 'title slug'), query)
-        .filter()
-        .sort()
-        .paginate();
-    const data = yield gradeQuery.modelQuery;
-    const pagination = yield gradeQuery.getPaginationInfo();
-    return { pagination, data };
-});
-const getCourseSummary = (courseId) => __awaiter(void 0, void 0, void 0, function* () {
-    const grades = yield gradebook_model_1.Grade.find({ course: courseId, status: 'GRADED' });
-    if (grades.length === 0) {
-        return {
-            totalGrades: 0,
-            averagePercentage: 0,
-            passCount: 0,
-            failCount: 0,
-            gpaDistribution: {},
-        };
-    }
-    const totalGrades = grades.length;
-    const avgPercentage = grades.reduce((sum, g) => sum + g.percentage, 0) / totalGrades;
-    const passCount = grades.filter(g => g.percentage >= 60).length;
-    const failCount = totalGrades - passCount;
-    // GPA distribution
-    const gpaDistribution = {
-        'A (90-100)': grades.filter(g => g.percentage >= 90).length,
-        'B (80-89)': grades.filter(g => g.percentage >= 80 && g.percentage < 90)
-            .length,
-        'C (70-79)': grades.filter(g => g.percentage >= 70 && g.percentage < 80)
-            .length,
-        'D (60-69)': grades.filter(g => g.percentage >= 60 && g.percentage < 70)
-            .length,
-        'F (<60)': grades.filter(g => g.percentage < 60).length,
-    };
-    return {
-        totalGrades,
-        averagePercentage: Math.round(avgPercentage * 100) / 100,
-        passCount,
-        failCount,
-        gpaDistribution,
-    };
-});
-const updateGrade = (gradeId, adminId, payload) => __awaiter(void 0, void 0, void 0, function* () {
-    const grade = yield gradebook_model_1.Grade.findById(gradeId);
-    if (!grade) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Grade not found');
-    }
-    const updateData = Object.assign({}, payload);
-    if (payload.score !== undefined) {
-        updateData.percentage =
-            grade.maxScore > 0
-                ? Math.round((payload.score / grade.maxScore) * 100)
-                : 0;
-    }
-    if (payload.status === 'GRADED') {
-        updateData.gradedBy = adminId;
-        updateData.gradedAt = new Date();
-    }
-    const result = yield gradebook_model_1.Grade.findByIdAndUpdate(gradeId, updateData, {
-        new: true,
-    });
-    return result;
-});
 const submitAssignment = (lessonId, studentId, courseId, content, attachments) => __awaiter(void 0, void 0, void 0, function* () {
     // Verify enrollment
     const enrollment = yield enrollmentHelper_1.EnrollmentHelper.verifyEnrollment(studentId, courseId);
@@ -127,17 +52,6 @@ const submitAssignment = (lessonId, studentId, courseId, content, attachments) =
         attachments: attachmentData,
     });
     return submission;
-});
-const getAssignmentsByCourse = (courseId, query) => __awaiter(void 0, void 0, void 0, function* () {
-    const submissionQuery = new QueryBuilder_1.default(gradebook_model_1.AssignmentSubmission.find({ course: courseId })
-        .populate('student', 'name email profilePicture')
-        .populate('lesson', 'title'), query)
-        .filter()
-        .sort()
-        .paginate();
-    const data = yield submissionQuery.modelQuery;
-    const pagination = yield submissionQuery.getPaginationInfo();
-    return { pagination, data };
 });
 const getMyGrades = (studentId, query) => __awaiter(void 0, void 0, void 0, function* () {
     const gradeQuery = new QueryBuilder_1.default(gradebook_model_1.Grade.find({ student: studentId }).populate('course', 'title slug thumbnail'), query)
@@ -288,17 +202,12 @@ const exportStudentGradebook = (query) => __awaiter(void 0, void 0, void 0, func
     pipeline.push({ $sort: { studentName: 1 } });
     const data = yield enrollment_model_1.Enrollment.aggregate(pipeline);
     // Format quizzes array into readable string for export
-    return data.map(row => (Object.assign(Object.assign({}, row), { quizScores: row.quizzes
-            .map((q) => `${q.title}: ${q.percentage}%`)
+    return data.map((row) => (Object.assign(Object.assign({}, row), { quizScores: row.quizzes
+            .map(q => `${q.title}: ${q.percentage}%`)
             .join(', ') || 'N/A' })));
 });
 exports.GradebookService = {
-    getGradesByCourse,
-    getGradesByStudent,
-    getCourseSummary,
-    updateGrade,
     submitAssignment,
-    getAssignmentsByCourse,
     getMyGrades,
     getAllStudentGradebook,
     exportStudentGradebook,

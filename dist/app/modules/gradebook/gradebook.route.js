@@ -15,12 +15,6 @@ const router = express_1.default.Router();
 router.get('/my-grades', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), gradebook_controller_1.GradebookController.getMyGrades);
 router.post('/assignments/:lessonId/submit', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), (0, validateRequest_1.default)(gradebook_validation_1.GradebookValidation.submitAssignment), gradebook_controller_1.GradebookController.submitAssignment);
 // Admin routes
-router.get('/courses/:courseId', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), gradebook_controller_1.GradebookController.getGradesByCourse);
-router.get('/courses/:courseId/summary', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), gradebook_controller_1.GradebookController.getCourseSummary);
-// Student gradebook list + export (MUST be before /students/:studentId)
 router.get('/students', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), gradebook_controller_1.GradebookController.getAllStudentGradebook);
 router.get('/students/export', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), gradebook_controller_1.GradebookController.exportStudentGradebook);
-router.get('/students/:studentId', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.STUDENT), gradebook_controller_1.GradebookController.getGradesByStudent);
-router.patch('/grades/:gradeId', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(gradebook_validation_1.GradebookValidation.updateGrade), gradebook_controller_1.GradebookController.updateGrade);
-router.get('/assignments/course/:courseId', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), gradebook_controller_1.GradebookController.getAssignmentsByCourse);
 exports.GradebookRoutes = router;

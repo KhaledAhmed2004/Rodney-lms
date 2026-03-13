@@ -20,5 +20,5 @@ router.post('/', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validat
 // Update a legal page by slug
 router.patch('/:slug', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(legal_validation_1.LegalValidation.updateLegalPage), legal_controller_1.LegalController.updateBySlug);
 // Delete a legal page by slug
-router.delete('/:slug', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), legal_controller_1.LegalController.deleteBySlug);
+router.delete('/:slug', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(legal_validation_1.LegalValidation.deleteLegalPage), legal_controller_1.LegalController.deleteBySlug);
 exports.LegalRoutes = router;

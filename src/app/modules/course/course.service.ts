@@ -96,7 +96,9 @@ const createCourse = async (payload: Partial<ICourse>): Promise<ICourse> => {
 
 const getAllCourses = async (query: Record<string, unknown>) => {
   const courseQuery = new QueryBuilder(
-    Course.find({ status: COURSE_STATUS.PUBLISHED }),
+    Course.find({ status: COURSE_STATUS.PUBLISHED }).select(
+      'title thumbnail description totalLessons averageRating enrollmentCount'
+    ),
     query
   )
     .search(['title', 'description'])

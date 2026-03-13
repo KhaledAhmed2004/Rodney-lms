@@ -131,10 +131,10 @@ const verifyEmailToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
     }
     return { data, message };
 });
-//forget password
-const resetPasswordToDB = (token, payload) => __awaiter(void 0, void 0, void 0, function* () {
+//reset password
+const resetPasswordToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    const { newPassword, confirmPassword } = payload;
+    const { token, newPassword, confirmPassword } = payload;
     //isExist token
     const isExistToken = yield resetToken_model_1.ResetToken.isExistToken(token);
     if (!isExistToken) {

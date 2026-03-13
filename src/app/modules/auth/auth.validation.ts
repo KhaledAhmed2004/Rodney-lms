@@ -1,28 +1,44 @@
 import { z } from 'zod';
 
+// Shared schemas
+const emailSchema = z
+  .string({ required_error: 'Email is required' })
+  .email('Invalid email format')
+  .toLowerCase()
+  .trim();
+
+const passwordSchema = z
+  .string({ required_error: 'Password is required' })
+  .min(8, 'Password must be at least 8 characters')
+  .max(128);
+
 const createVerifyEmailZodSchema = z.object({
   body: z.object({
-    email: z.string({ required_error: 'Email is required' }),
+    email: emailSchema,
     oneTimeCode: z.number({ required_error: 'One time code is required' }),
   }),
 });
 
 const createLoginZodSchema = z.object({
   body: z.object({
-    email: z.string({ required_error: 'Email is required' }),
-    password: z.string({ required_error: 'Password is required' }).min(1, 'Password is required'),
+    email: emailSchema,
+    password: z
+      .string({ required_error: 'Password is required' })
+      .min(1, 'Password is required')
+      .max(128),
   }),
 });
 
 const createForgetPasswordZodSchema = z.object({
   body: z.object({
-    email: z.string({ required_error: 'Email is required' }),
+    email: emailSchema,
   }),
 });
 
 const createResetPasswordZodSchema = z.object({
   body: z.object({
-    newPassword: z.string({ required_error: 'Password is required' }),
+    token: z.string({ required_error: 'Reset token is required' }),
+    newPassword: passwordSchema,
     confirmPassword: z.string({
       required_error: 'Confirm Password is required',
     }),
@@ -34,7 +50,7 @@ const createChangePasswordZodSchema = z.object({
     currentPassword: z.string({
       required_error: 'Current Password is required',
     }),
-    newPassword: z.string({ required_error: 'New Password is required' }),
+    newPassword: passwordSchema,
     confirmPassword: z.string({
       required_error: 'Confirm Password is required',
     }),
@@ -50,6 +66,12 @@ const createRefreshTokenZodSchema = z.object({
     .optional(),
 });
 
+const createResendVerifyEmailZodSchema = z.object({
+  body: z.object({
+    email: emailSchema,
+  }),
+});
+
 export const AuthValidation = {
   createVerifyEmailZodSchema,
   createForgetPasswordZodSchema,
@@ -57,4 +79,5 @@ export const AuthValidation = {
   createResetPasswordZodSchema,
   createChangePasswordZodSchema,
   createRefreshTokenZodSchema,
+  createResendVerifyEmailZodSchema,
 };

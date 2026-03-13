@@ -84,7 +84,7 @@ const createCourse = (payload) => __awaiter(void 0, void 0, void 0, function* ()
     return result;
 });
 const getAllCourses = (query) => __awaiter(void 0, void 0, void 0, function* () {
-    const courseQuery = new QueryBuilder_1.default(course_model_1.Course.find({ status: course_interface_1.COURSE_STATUS.PUBLISHED }), query)
+    const courseQuery = new QueryBuilder_1.default(course_model_1.Course.find({ status: course_interface_1.COURSE_STATUS.PUBLISHED }).select('title thumbnail description totalLessons averageRating enrollmentCount'), query)
         .search(['title', 'description'])
         .filter()
         .sort()

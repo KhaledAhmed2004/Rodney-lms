@@ -89,23 +89,19 @@ const logoutUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
 }));
 const forgetPassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const email = req.body.email;
-    const result = yield auth_service_1.AuthService.forgetPasswordToDB(email);
+    yield auth_service_1.AuthService.forgetPasswordToDB(email);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
         message: 'Please check your email. We have sent you a one-time passcode (OTP).',
-        data: result,
     });
 }));
 const resetPassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const token = req.headers.authorization;
-    const resetData = __rest(req.body, []);
-    const result = yield auth_service_1.AuthService.resetPasswordToDB(token, resetData);
+    yield auth_service_1.AuthService.resetPasswordToDB(req.body);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
         message: 'Your password has been successfully reset.',
-        data: result,
     });
 }));
 const changePassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -120,12 +116,11 @@ const changePassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
 }));
 const resendVerifyEmail = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email } = req.body;
-    const result = yield auth_service_1.AuthService.resendVerifyEmailToDB(email);
+    yield auth_service_1.AuthService.resendVerifyEmailToDB(email);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
         message: 'Verification code has been resent to your email.',
-        data: result,
     });
 }));
 const refreshToken = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

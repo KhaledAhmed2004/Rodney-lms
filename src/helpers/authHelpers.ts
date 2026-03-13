@@ -38,5 +38,4 @@ export const sendVerificationOTP = async (email: string) => {
   });
   await emailHelper.sendEmail(emailData);
 
-  return { otp };
 };

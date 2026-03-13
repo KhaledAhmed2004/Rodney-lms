@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+const crypto_1 = __importDefault(require("crypto"));
 const generateOTP = () => {
-    return Math.floor(Math.random() * (9999 - 1000 + 1) + 1000);
+    return crypto_1.default.randomInt(100000, 999999);
 };
 exports.default = generateOTP;
