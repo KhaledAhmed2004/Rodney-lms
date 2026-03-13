@@ -3,7 +3,7 @@ import { z } from 'zod';
 const createLegalPage = z.object({
   body: z.object({
     title: z.string({ required_error: 'Title is required' }).min(1).max(200),
-    content: z.string().min(1).optional(),
+    content: z.string().optional(),
   }),
 });
 
