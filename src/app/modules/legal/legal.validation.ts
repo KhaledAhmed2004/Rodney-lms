@@ -12,7 +12,8 @@ const updateLegalPage = z.object({
     slug: z.string({ required_error: 'Slug is required' }),
   }),
   body: z.object({
-    content: z.string({ required_error: 'Content is required' }).min(1),
+    title: z.string().min(1).max(200).optional(),
+    content: z.string().min(1).optional(),
   }),
 });
 

@@ -67,12 +67,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/users",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users"]
                 },
                 "description": "Register a new student account. Password must include upper, lower, number, special char and be 8+ chars."
               },
@@ -94,13 +90,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/login",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "login"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "login"]
                 },
                 "description": "Login with email and password. Returns access and refresh tokens."
               },
@@ -136,13 +127,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/auth/logout",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "logout"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "logout"]
                 }
               },
               "response": []
@@ -163,13 +149,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/forget-password",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "forget-password"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "forget-password"]
                 }
               },
               "response": []
@@ -190,13 +171,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/verify-email",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "verify-email"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "verify-email"]
                 }
               },
               "response": []
@@ -217,13 +193,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/resend-verify-email",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "resend-verify-email"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "resend-verify-email"]
                 }
               },
               "response": []
@@ -244,13 +215,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/reset-password",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "reset-password"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "reset-password"]
                 }
               },
               "response": []
@@ -275,13 +241,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/change-password",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "change-password"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "change-password"]
                 }
               },
               "response": []
@@ -307,13 +268,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/refresh-token",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "refresh-token"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "refresh-token"]
                 },
                 "description": "Body is optional if refresh token is sent via cookies."
               },
@@ -331,12 +287,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/courses?page=1&limit=50",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "courses"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["courses"],
                   "query": [
                     {
                       "key": "page",
@@ -372,13 +324,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/enrollments/bulk",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "enrollments",
-                    "bulk"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["enrollments", "bulk"]
                 },
                 "description": "Bulk enroll in multiple courses during onboarding. Auth: STUDENT."
               },
@@ -401,13 +348,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/student/home",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "student",
-                    "home"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["student", "home"]
                 },
                 "description": "Aggregated home data: points, streak, enrolled courses, recent badges. Auth: STUDENT."
               },
@@ -425,13 +367,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gamification/leaderboard?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "leaderboard"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "leaderboard"],
                   "query": [
                     {
                       "key": "page",
@@ -454,12 +391,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/courses?page=1&limit=10&sort=-createdAt",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "courses"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["courses"],
                   "query": [
                     {
                       "key": "page",
@@ -491,12 +424,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/courses?page=1&limit=10&searchTerm=&sort=-createdAt",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "courses"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["courses"],
                   "query": [
                     {
                       "key": "page",
@@ -533,13 +462,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/enrollments/my-courses?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "enrollments",
-                    "my-courses"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["enrollments", "my-courses"],
                   "query": [
                     {
                       "key": "page",
@@ -567,13 +491,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/courses/:identifier",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "courses",
-                    ":identifier"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["courses", ":identifier"],
                   "variable": [
                     {
                       "key": "identifier",
@@ -593,9 +512,7 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId/lessons",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
+                  "host": ["{{baseUrl}}"],
                   "path": [
                     "courses",
                     ":courseId",
@@ -630,15 +547,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/courses/:courseId/lessons/:lessonId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "courses",
-                    ":courseId",
-                    "lessons",
-                    ":lessonId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["courses", ":courseId", "lessons", ":lessonId"],
                   "variable": [
                     {
                       "key": "courseId",
@@ -674,12 +584,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/enrollments",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "enrollments"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["enrollments"]
                 },
                 "description": "Enroll in a single course. Auth: STUDENT."
               },
@@ -697,9 +603,7 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/enrollments/:enrollmentId/lessons/:lessonId/complete",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
+                  "host": ["{{baseUrl}}"],
                   "path": [
                     "enrollments",
                     ":enrollmentId",
@@ -734,14 +638,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/:id/student-view",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    ":id",
-                    "student-view"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", ":id", "student-view"],
                   "variable": [
                     {
                       "key": "id",
@@ -765,14 +663,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/:id/attempts",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    ":id",
-                    "attempts"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", ":id", "attempts"],
                   "variable": [
                     {
                       "key": "id",
@@ -804,15 +696,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/attempts/:attemptId/submit",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    "attempts",
-                    ":attemptId",
-                    "submit"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", "attempts", ":attemptId", "submit"],
                   "variable": [
                     {
                       "key": "attemptId",
@@ -836,14 +721,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/attempts/:attemptId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    "attempts",
-                    ":attemptId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", "attempts", ":attemptId"],
                   "variable": [
                     {
                       "key": "attemptId",
@@ -875,15 +754,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/gradebook/assignments/:lessonId/submit",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gradebook",
-                    "assignments",
-                    ":lessonId",
-                    "submit"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gradebook", "assignments", ":lessonId", "submit"],
                   "variable": [
                     {
                       "key": "lessonId",
@@ -912,13 +784,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/student/progress",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "student",
-                    "progress"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["student", "progress"]
                 },
                 "description": "Overall progress: completion %, points, streak, topic progress. Auth: STUDENT."
               },
@@ -936,13 +803,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/activity/calendar",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "activity",
-                    "calendar"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["activity", "calendar"]
                 },
                 "description": "30-day activity calendar. Auth: STUDENT."
               },
@@ -960,13 +822,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/activity/streak",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "activity",
-                    "streak"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["activity", "streak"]
                 },
                 "description": "Current and longest streak. Auth: STUDENT."
               },
@@ -984,13 +841,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/my-attempts?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    "my-attempts"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", "my-attempts"],
                   "query": [
                     {
                       "key": "page",
@@ -1018,13 +870,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gradebook/my-grades?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gradebook",
-                    "my-grades"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gradebook", "my-grades"],
                   "query": [
                     {
                       "key": "page",
@@ -1057,13 +904,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gamification/my-badges",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "my-badges"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "my-badges"]
                 },
                 "description": "Get all earned badges. Auth: STUDENT."
               },
@@ -1081,13 +923,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gamification/my-points",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "my-points"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "my-points"]
                 },
                 "description": "Total points and points history. Auth: STUDENT."
               },
@@ -1105,13 +942,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gamification/my-summary",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "my-summary"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "my-summary"]
                 },
                 "description": "Points + top badge + total badges summary. Auth: STUDENT."
               },
@@ -1129,13 +961,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gamification/badges?page=1&limit=20",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "badges"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "badges"],
                   "query": [
                     {
                       "key": "page",
@@ -1183,13 +1010,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/community/posts",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "community",
-                    "posts"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts"]
                 },
                 "description": "Create post with optional image. Auth required."
               },
@@ -1207,13 +1029,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/community/posts?page=1&limit=10&sort=-createdAt",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "community",
-                    "posts"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts"],
                   "query": [
                     {
                       "key": "page",
@@ -1245,14 +1062,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/community/posts/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "community",
-                    "posts",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -1276,14 +1087,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/community/posts/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "community",
-                    "posts",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -1307,15 +1112,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/community/posts/:id/like",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "community",
-                    "posts",
-                    ":id",
-                    "like"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts", ":id", "like"],
                   "variable": [
                     {
                       "key": "id",
@@ -1347,15 +1145,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/community/posts/:id/replies",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "community",
-                    "posts",
-                    ":id",
-                    "replies"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts", ":id", "replies"],
                   "variable": [
                     {
                       "key": "id",
@@ -1379,14 +1170,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/community/replies/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "community",
-                    "replies",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "replies", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -1415,12 +1200,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/notifications?page=1&limit=20",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "notifications"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["notifications"],
                   "query": [
                     {
                       "key": "page",
@@ -1448,13 +1229,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/notifications/read-all",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "notifications",
-                    "read-all"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["notifications", "read-all"]
                 }
               },
               "response": []
@@ -1471,14 +1247,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/notifications/:id/read",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "notifications",
-                    ":id",
-                    "read"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["notifications", ":id", "read"],
                   "variable": [
                     {
                       "key": "id",
@@ -1506,13 +1276,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/users/profile",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "profile"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "profile"]
                 }
               },
               "response": []
@@ -1564,13 +1329,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/users/profile",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "profile"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "profile"]
                 },
                 "description": "Supports file upload for profilePicture."
               },
@@ -1588,13 +1348,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gamification/my-summary",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "my-summary"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "my-summary"]
                 },
                 "description": "Points, streak, top badge for profile. Auth: STUDENT."
               },
@@ -1612,13 +1367,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/activity/streak",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "activity",
-                    "streak"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["activity", "streak"]
                 },
                 "description": "Current and longest streak. Auth: STUDENT."
               },
@@ -1631,12 +1381,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/legal",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "legal"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["legal"]
                 },
                 "description": "List all published legal pages. Public."
               },
@@ -1649,13 +1395,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/legal/:slug",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "legal",
-                    ":slug"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["legal", ":slug"],
                   "variable": [
                     {
                       "key": "slug",
@@ -1679,13 +1420,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/feedback/my-reviews?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "feedback",
-                    "my-reviews"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["feedback", "my-reviews"],
                   "query": [
                     {
                       "key": "page",
@@ -1721,12 +1457,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/feedback",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "feedback"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["feedback"]
                 },
                 "description": "Submit a course review (1-5 rating). Auth: STUDENT."
               },
@@ -1749,13 +1481,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/chats/:otherUserId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "chats",
-                    ":otherUserId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["chats", ":otherUserId"],
                   "variable": [
                     {
                       "key": "otherUserId",
@@ -1780,12 +1507,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/chats",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "chats"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["chats"]
                 },
                 "description": "All chats for authenticated user. Auth required."
               },
@@ -1836,12 +1559,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/messages",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "messages"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["messages"]
                 },
                 "description": "Send message with optional attachments. Max 10 files total. Auth required."
               },
@@ -1859,13 +1578,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/messages/:id?page=1&limit=50",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "messages",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["messages", ":id"],
                   "query": [
                     {
                       "key": "page",
@@ -1899,15 +1613,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/messages/chat/:chatId/read",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "messages",
-                    "chat",
-                    ":chatId",
-                    "read"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["messages", "chat", ":chatId", "read"],
                   "variable": [
                     {
                       "key": "chatId",
@@ -1926,14 +1633,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/users/:id/user",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    ":id",
-                    "user"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", ":id", "user"],
                   "variable": [
                     {
                       "key": "id",
@@ -1972,13 +1673,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/login",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "login"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "login"]
                 },
                 "description": "Admin login using collection variables {{adminEmail}} and {{adminPassword}}."
               },
@@ -2014,13 +1710,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/auth/logout",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "logout"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "logout"]
                 },
                 "description": "Logout the currently authenticated admin."
               },
@@ -2046,13 +1737,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/change-password",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "change-password"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "change-password"]
                 },
                 "description": "Change the authenticated admin's password."
               },
@@ -2074,13 +1760,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/refresh-token",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "refresh-token"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "refresh-token"]
                 },
                 "description": "Obtain a new access token using the refresh token."
               },
@@ -2103,13 +1784,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard/summary",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "dashboard",
-                    "summary"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["dashboard", "summary"]
                 },
                 "description": "Get dashboard summary including total users, courses, enrollments, and completion rate. Requires SUPER_ADMIN role."
               },
@@ -2127,13 +1803,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard/trends",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "dashboard",
-                    "trends"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["dashboard", "trends"]
                 },
                 "description": "Get time-series trend data for the dashboard. Requires SUPER_ADMIN role."
               },
@@ -2151,13 +1822,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/dashboard/recent-activity",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "dashboard",
-                    "recent-activity"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["dashboard", "recent-activity"]
                 },
                 "description": "Get recent platform activity for the admin dashboard. Requires SUPER_ADMIN role."
               },
@@ -2180,13 +1846,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/users/stats",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "stats"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "stats"]
                 },
                 "description": "Get student management stats — totalStudents and activeStudents (role:STUDENT only, deleted excluded) with monthly growth metrics (thisPeriodCount, lastPeriodCount, growth%, growthType). Requires SUPER_ADMIN role."
               },
@@ -2204,12 +1865,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/users?page=1&limit=10&searchTerm=&sort=-createdAt",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users"],
                   "query": [
                     { "key": "page", "value": "1" },
                     { "key": "limit", "value": "10" },
@@ -2235,13 +1892,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/users/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -2265,14 +1917,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/users/:id/block",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    ":id",
-                    "block"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", ":id", "block"],
                   "variable": [
                     {
                       "key": "id",
@@ -2296,14 +1942,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/users/:id/unblock",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    ":id",
-                    "unblock"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", ":id", "unblock"],
                   "variable": [
                     {
                       "key": "id",
@@ -2454,12 +2094,8 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/courses",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "courses"
-                      ]
+                      "host": ["{{baseUrl}}"],
+                      "path": ["courses"]
                     },
                     "description": "Create a new course with thumbnail upload. Requires SUPER_ADMIN role."
                   },
@@ -2477,13 +2113,8 @@
                     ],
                     "url": {
                       "raw": "{{baseUrl}}/courses/manage?page=1&limit=10&searchTerm=&sort=-createdAt&status=",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "courses",
-                        "manage"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["courses", "manage"],
                       "query": [
                         {
                           "key": "page",
@@ -2519,12 +2150,8 @@
                     "header": [],
                     "url": {
                       "raw": "{{baseUrl}}/courses?page=1&limit=10&searchTerm=&sort=-createdAt",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "courses"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["courses"],
                       "query": [
                         {
                           "key": "page",
@@ -2555,13 +2182,8 @@
                     "header": [],
                     "url": {
                       "raw": "{{baseUrl}}/courses/:identifier",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "courses",
-                        ":identifier"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["courses", ":identifier"],
                       "variable": [
                         {
                           "key": "identifier",
@@ -2616,13 +2238,8 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "courses",
-                        ":courseId"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["courses", ":courseId"],
                       "variable": [
                         {
                           "key": "courseId",
@@ -2646,13 +2263,8 @@
                     ],
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "courses",
-                        ":courseId"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["courses", ":courseId"],
                       "variable": [
                         {
                           "key": "courseId",
@@ -2689,14 +2301,8 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId/modules",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "courses",
-                        ":courseId",
-                        "modules"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["courses", ":courseId", "modules"],
                       "variable": [
                         {
                           "key": "courseId",
@@ -2728,15 +2334,8 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId/modules/reorder",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "courses",
-                        ":courseId",
-                        "modules",
-                        "reorder"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["courses", ":courseId", "modules", "reorder"],
                       "variable": [
                         {
                           "key": "courseId",
@@ -2768,15 +2367,8 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "courses",
-                        ":courseId",
-                        "modules",
-                        ":moduleId"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["courses", ":courseId", "modules", ":moduleId"],
                       "variable": [
                         {
                           "key": "courseId",
@@ -2804,15 +2396,8 @@
                     ],
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "courses",
-                        ":courseId",
-                        "modules",
-                        ":moduleId"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["courses", ":courseId", "modules", ":moduleId"],
                       "variable": [
                         {
                           "key": "courseId",
@@ -2909,9 +2494,7 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId/lessons",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
+                      "host": ["{{baseUrl}}"],
                       "path": [
                         "courses",
                         ":courseId",
@@ -2941,9 +2524,7 @@
                     "header": [],
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId/lessons",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
+                      "host": ["{{baseUrl}}"],
                       "path": [
                         "courses",
                         ":courseId",
@@ -2978,15 +2559,8 @@
                     ],
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId/lessons/:lessonId",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
-                      "path": [
-                        "courses",
-                        ":courseId",
-                        "lessons",
-                        ":lessonId"
-                      ],
+                      "host": ["{{baseUrl}}"],
+                      "path": ["courses", ":courseId", "lessons", ":lessonId"],
                       "variable": [
                         {
                           "key": "courseId",
@@ -3022,9 +2596,7 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId/lessons/reorder",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
+                      "host": ["{{baseUrl}}"],
                       "path": [
                         "courses",
                         ":courseId",
@@ -3121,9 +2693,7 @@
                     },
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId/lessons/:lessonId",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
+                      "host": ["{{baseUrl}}"],
                       "path": [
                         "courses",
                         ":courseId",
@@ -3163,9 +2733,7 @@
                     ],
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId/modules/:moduleId/lessons/:lessonId",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
+                      "host": ["{{baseUrl}}"],
                       "path": [
                         "courses",
                         ":courseId",
@@ -3205,9 +2773,7 @@
                     ],
                     "url": {
                       "raw": "{{baseUrl}}/courses/:courseId/lessons/:lessonId/visibility",
-                      "host": [
-                        "{{baseUrl}}"
-                      ],
+                      "host": ["{{baseUrl}}"],
                       "path": [
                         "courses",
                         ":courseId",
@@ -3249,12 +2815,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/enrollments?page=1&limit=10&sort=-createdAt",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "enrollments"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["enrollments"],
                   "query": [
                     {
                       "key": "page",
@@ -3294,14 +2856,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/enrollments/:id/status",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "enrollments",
-                    ":id",
-                    "status"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["enrollments", ":id", "status"],
                   "variable": [
                     {
                       "key": "id",
@@ -3325,15 +2881,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/enrollments/course/:courseId/students?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "enrollments",
-                    "course",
-                    ":courseId",
-                    "students"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["enrollments", "course", ":courseId", "students"],
                   "query": [
                     {
                       "key": "page",
@@ -3372,13 +2921,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gradebook/students?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gradebook",
-                    "students"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gradebook", "students"],
                   "query": [
                     {
                       "key": "page",
@@ -3421,14 +2965,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gradebook/students/export?format=csv",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gradebook",
-                    "students",
-                    "export"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gradebook", "students", "export"],
                   "query": [
                     {
                       "key": "format",
@@ -3467,13 +3005,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/community/posts?page=1&limit=10&sort=-createdAt",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "community",
-                    "posts"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts"],
                   "query": [
                     {
                       "key": "page",
@@ -3505,14 +3038,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/community/posts/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "community",
-                    "posts",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -3536,14 +3063,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/community/replies/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "community",
-                    "replies",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "replies", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -3567,14 +3088,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/community/admin/flagged?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "community",
-                    "admin",
-                    "flagged"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "admin", "flagged"],
                   "query": [
                     {
                       "key": "page",
@@ -3615,12 +3130,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/quizzes",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes"]
                 },
                 "description": "Create a new quiz for a course. Requires SUPER_ADMIN role."
               },
@@ -3638,14 +3149,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/course/:courseId?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    "course",
-                    ":courseId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", "course", ":courseId"],
                   "query": [
                     {
                       "key": "page",
@@ -3679,13 +3184,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -3717,13 +3217,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -3747,13 +3242,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -3785,14 +3275,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/:id/questions",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    ":id",
-                    "questions"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", ":id", "questions"],
                   "variable": [
                     {
                       "key": "id",
@@ -3824,15 +3308,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/:id/questions/:questionId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    ":id",
-                    "questions",
-                    ":questionId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", ":id", "questions", ":questionId"],
                   "variable": [
                     {
                       "key": "id",
@@ -3860,15 +3337,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/:id/questions/:questionId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    ":id",
-                    "questions",
-                    ":questionId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", ":id", "questions", ":questionId"],
                   "variable": [
                     {
                       "key": "id",
@@ -3904,15 +3374,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/:id/questions/reorder",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    ":id",
-                    "questions",
-                    "reorder"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", ":id", "questions", "reorder"],
                   "variable": [
                     {
                       "key": "id",
@@ -3936,14 +3399,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/:id/attempts?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "quizzes",
-                    ":id",
-                    "attempts"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["quizzes", ":id", "attempts"],
                   "query": [
                     {
                       "key": "page",
@@ -3982,13 +3439,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/notifications/admin?page=1&limit=20",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "notifications",
-                    "admin"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["notifications", "admin"],
                   "query": [
                     {
                       "key": "page",
@@ -4016,14 +3468,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/notifications/admin/read-all",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "notifications",
-                    "admin",
-                    "read-all"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["notifications", "admin", "read-all"]
                 },
                 "description": "Mark all admin notifications as read. Requires SUPER_ADMIN role."
               },
@@ -4041,15 +3487,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/notifications/admin/:id/read",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "notifications",
-                    "admin",
-                    ":id",
-                    "read"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["notifications", "admin", ":id", "read"],
                   "variable": [
                     {
                       "key": "id",
@@ -4078,13 +3517,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/analytics/user-engagement",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "analytics",
-                    "user-engagement"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["analytics", "user-engagement"]
                 },
                 "description": "Get user engagement analytics data. Requires SUPER_ADMIN role."
               },
@@ -4102,13 +3536,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/analytics/course-completion",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "analytics",
-                    "course-completion"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["analytics", "course-completion"]
                 },
                 "description": "Get course completion analytics data. Requires SUPER_ADMIN role."
               },
@@ -4126,13 +3555,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/analytics/quiz-performance",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "analytics",
-                    "quiz-performance"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["analytics", "quiz-performance"]
                 },
                 "description": "Get quiz performance analytics data. Requires SUPER_ADMIN role."
               },
@@ -4150,14 +3574,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/analytics/courses/:courseId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "analytics",
-                    "courses",
-                    ":courseId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["analytics", "courses", ":courseId"],
                   "variable": [
                     {
                       "key": "courseId",
@@ -4181,14 +3599,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/analytics/students/:studentId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "analytics",
-                    "students",
-                    ":studentId"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["analytics", "students", ":studentId"],
                   "variable": [
                     {
                       "key": "studentId",
@@ -4217,14 +3629,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/feedback/admin/all?page=1&limit=10&sort=-createdAt",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "feedback",
-                    "admin",
-                    "all"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["feedback", "admin", "all"],
                   "query": [
                     {
                       "key": "page",
@@ -4256,14 +3662,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/feedback/:id/publish",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "feedback",
-                    ":id",
-                    "publish"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["feedback", ":id", "publish"],
                   "variable": [
                     {
                       "key": "id",
@@ -4295,14 +3695,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/feedback/:id/respond",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "feedback",
-                    ":id",
-                    "respond"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["feedback", ":id", "respond"],
                   "variable": [
                     {
                       "key": "id",
@@ -4326,13 +3720,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/feedback/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "feedback",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["feedback", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -4401,13 +3790,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/gamification/badges",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "badges"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "badges"]
                 },
                 "description": "Create a new badge with icon upload. Requires SUPER_ADMIN role."
               },
@@ -4425,13 +3809,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gamification/badges?page=1&limit=20",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "badges"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "badges"],
                   "query": [
                     {
                       "key": "page",
@@ -4484,14 +3863,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/gamification/badges/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "badges",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "badges", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -4515,14 +3888,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gamification/badges/:id",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "badges",
-                    ":id"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "badges", ":id"],
                   "variable": [
                     {
                       "key": "id",
@@ -4554,14 +3921,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/gamification/points/adjust",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "points",
-                    "adjust"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "points", "adjust"]
                 },
                 "description": "Manually adjust a student's gamification points. Requires SUPER_ADMIN role."
               },
@@ -4579,14 +3940,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gamification/admin/stats",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "admin",
-                    "stats"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "admin", "stats"]
                 },
                 "description": "Get overall gamification statistics. Requires SUPER_ADMIN role."
               },
@@ -4604,13 +3959,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/gamification/leaderboard?page=1&limit=10",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "gamification",
-                    "leaderboard"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["gamification", "leaderboard"],
                   "query": [
                     {
                       "key": "page",
@@ -4647,16 +3997,12 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"slug\": \"terms-of-service\",\n  \"title\": \"Terms of Service\",\n  \"content\": \"<h1>Terms of Service</h1><p>Welcome to our platform. By using our services, you agree to the following terms and conditions...</p>\",\n  \"isPublished\": true\n}"
+                  "raw": "{\n  \"title\": \"Terms of Service\",\n  \"content\": \"<h1>Terms of Service</h1><p>Welcome to our platform. By using our services, you agree to the following terms and conditions...</p>\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/legal",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "legal"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["legal"]
                 },
                 "description": "Create a new legal page (e.g., Terms of Service, Privacy Policy). Requires SUPER_ADMIN role."
               },
@@ -4669,12 +4015,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/legal",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "legal"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["legal"]
                 },
                 "description": "Get all legal pages. Public endpoint."
               },
@@ -4687,13 +4029,8 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/legal/:slug",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "legal",
-                    ":slug"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["legal", ":slug"],
                   "variable": [
                     {
                       "key": "slug",
@@ -4721,17 +4058,12 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"title\": \"Updated Terms of Service\",\n  \"content\": \"<h1>Updated Terms</h1><p>These updated terms govern your use of our platform...</p>\",\n  \"isPublished\": true\n}"
+                  "raw": "{\n  \"title\": \"Updated Terms of Service\",\n  \"content\": \"<h1>Updated Terms</h1><p>These updated terms govern your use of our platform...</p>\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/legal/:slug",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "legal",
-                    ":slug"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["legal", ":slug"],
                   "variable": [
                     {
                       "key": "slug",
@@ -4755,13 +4087,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/legal/:slug",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "legal",
-                    ":slug"
-                  ],
+                  "host": ["{{baseUrl}}"],
+                  "path": ["legal", ":slug"],
                   "variable": [
                     {
                       "key": "slug",
@@ -4790,13 +4117,8 @@
                 ],
                 "url": {
                   "raw": "{{baseUrl}}/users/profile",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "profile"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "profile"]
                 },
                 "description": "Get the authenticated user's own profile."
               },
@@ -4849,13 +4171,8 @@
                 },
                 "url": {
                   "raw": "{{baseUrl}}/users/profile",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "profile"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "profile"]
                 },
                 "description": "Update the authenticated user's profile with optional profile picture upload."
               },

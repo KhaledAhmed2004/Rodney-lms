@@ -165,15 +165,17 @@ Legal module review — full code audit. Module ta legal pages (Terms of Service
 
 ```json
 {
+  "title": "Updated Terms of Service",
   "content": "<h1>Updated Terms...</h1>"
 }
 ```
 
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
-| content | string | Yes | min 1, NO max limit ⚠️ |
+| title | string | No | min 1, max 200. Title change korle slug auto-regenerate hoy |
+| content | string | No | min 1, NO max limit ⚠️ |
 
-> Title update allowed na — slug = title = identity. Title change korte chaile delete + recreate.
+> Title update korle slug regenerate hoy. Duplicate title dile 409 CONFLICT.
 
 **Response (200):**
 
@@ -183,13 +185,10 @@ Legal module review — full code audit. Module ta legal pages (Terms of Service
   "statusCode": 200,
   "message": "Legal page updated successfully",
   "data": {
-    "_id": "665a1b2c3d4e5f6a7b8c9d0e",
-    "slug": "terms-of-service",
-    "title": "Terms of Service",
+    "slug": "updated-terms-of-service",
+    "title": "Updated Terms of Service",
     "content": "<h1>Updated Terms...</h1>",
-    "createdAt": "2026-03-13T10:00:00.000Z",
-    "updatedAt": "2026-03-13T12:00:00.000Z",
-    "__v": 0
+    "updatedAt": "2026-03-13T12:00:00.000Z"
   }
 }
 ```
@@ -199,6 +198,7 @@ Legal module review — full code audit. Module ta legal pages (Terms of Service
 | Status | Message | When |
 |--------|---------|------|
 | 404 | Legal page not found | Slug doesn't exist |
+| 409 | A legal page with this title already exists | Duplicate title/slug |
 
 ---
 
@@ -263,9 +263,8 @@ Legal module review — full code audit. Module ta legal pages (Terms of Service
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
 | params.slug | string | Yes | — |
-| body.content | string | Yes | min(1) — ⚠️ no max |
-
-> Title update not allowed — slug = title = identity. Title change korte chaile delete + recreate.
+| body.title | string | No | min(1), max(200). Title change korle slug auto-regenerate |
+| body.content | string | No | min(1) — ⚠️ no max |
 
 **Delete (`deleteLegalPage`):**
 
@@ -281,7 +280,7 @@ Legal module review — full code audit. Module ta legal pages (Terms of Service
 
 | # | Issue | File:Line | Details | Fix |
 |---|-------|-----------|---------|-----|
-| 1 | ~~**Title update doesn't regenerate slug**~~ | `service.ts`, `validation.ts` | **FIXED** — Update e title change allow kora hoy na. Shudhu content update hoy. Slug = title = identity. Title change korte chaile delete + recreate. Service e shudhu `content` pick kora hoy, baki fields ignore. | ✅ Fixed |
+| 1 | ~~**Title update doesn't regenerate slug**~~ | `service.ts`, `validation.ts` | **FIXED** — Title update korle slug auto-regenerate hoy. `generateSlug()` reuse kora hoy — duplicate title dile 409 CONFLICT. Response e `_id`, `__v` exclude, shudhu `slug title content updatedAt` return hoy | ✅ Fixed |
 | 2 | **No content sanitization (XSS risk)** | `service.ts:22-24` | Content raw store hocche. Legal pages likely HTML/rich text. Frontend e render korle XSS attack possible | Server-side HTML sanitize koro (e.g. `sanitize-html` / `DOMPurify`) before storing, or ensure frontend sanitizes |
 | 3 | **No content max length** | `validation.ts:6,16` | Content e kono `.max()` nei — keu 100MB string pathale DB te store hobe. DoS vector | `z.string().max(500000)` or similar limit add koro |
 

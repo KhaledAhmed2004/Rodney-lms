@@ -23,8 +23,11 @@ const createLegalPage = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Title is required');
   }
   const slug = await generateSlug(payload.title);
-  const result = await LegalPage.create({ ...payload, slug });
-  return result;
+  await LegalPage.create({ ...payload, slug });
+  const result = await LegalPage.findOne({ slug }).select(
+    'slug title content createdAt updatedAt',
+  );
+  return result as ILegalPage;
 };
 
 const getAll = async (): Promise<ILegalPage[]> => {
@@ -35,7 +38,9 @@ const getAll = async (): Promise<ILegalPage[]> => {
 };
 
 const getBySlug = async (slug: string): Promise<ILegalPage> => {
-  const result = await LegalPage.findOne({ slug });
+  const result = await LegalPage.findOne({ slug }).select(
+    'slug title content createdAt updatedAt',
+  );
   if (!result) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');
   }
@@ -46,13 +51,20 @@ const updateBySlug = async (
   slug: string,
   payload: Partial<ILegalPage>,
 ): Promise<ILegalPage> => {
-  const { content } = payload;
+  const updateData: Partial<ILegalPage> = {};
 
-  const result = await LegalPage.findOneAndUpdate(
-    { slug },
-    { content },
-    { new: true },
-  );
+  if (payload.title) {
+    const newSlug = await generateSlug(payload.title);
+    updateData.title = payload.title;
+    updateData.slug = newSlug;
+  }
+  if (payload.content) {
+    updateData.content = payload.content;
+  }
+
+  const result = await LegalPage.findOneAndUpdate({ slug }, updateData, {
+    new: true,
+  }).select('slug title content updatedAt');
   if (!result) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');
   }
