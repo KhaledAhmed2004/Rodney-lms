@@ -8,6 +8,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -21,6 +32,7 @@ const escape_string_regexp_1 = __importDefault(require("escape-string-regexp"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
 const fileHandler_1 = require("../../middlewares/fileHandler");
+const enrollment_model_1 = require("../enrollment/enrollment.model");
 const course_interface_1 = require("./course.interface");
 const course_model_1 = require("./course.model");
 // ==================== HELPERS ====================
@@ -461,6 +473,68 @@ const reorderLessons = (courseId, moduleId, lessonOrder) => __awaiter(void 0, vo
     yield course_model_1.Lesson.bulkWrite(bulkOps);
     return course_model_1.Lesson.find({ courseId, moduleId }).sort({ order: 1 });
 });
+const getStudentCourseDetail = (identifier, studentId) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    // Round 1: Fetch course (only PUBLISHED)
+    const isObjectId = mongoose_1.Types.ObjectId.isValid(identifier);
+    const courseFilter = Object.assign(Object.assign({}, (isObjectId ? { _id: identifier } : { slug: identifier })), { status: course_interface_1.COURSE_STATUS.PUBLISHED });
+    const course = yield course_model_1.Course.findOne(courseFilter)
+        .select('title slug thumbnail description modules totalLessons totalDuration averageRating ratingsCount enrollmentCount')
+        .lean();
+    if (!course) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Course not found');
+    }
+    // Round 2: Visible lessons + enrollment in parallel
+    const [lessons, enrollment] = yield Promise.all([
+        course_model_1.Lesson.find({ courseId: course._id, isVisible: true })
+            .select('title type order moduleId video.duration')
+            .sort({ order: 1 })
+            .lean(),
+        enrollment_model_1.Enrollment.findOne({
+            course: course._id,
+            student: new mongoose_1.Types.ObjectId(studentId),
+        })
+            .select('status progress.completionPercentage progress.completedLessons progress.lastAccessedLesson enrolledAt')
+            .lean(),
+    ]);
+    // Group lessons by module → build curriculum
+    const lessonsByModule = {};
+    for (const lesson of lessons) {
+        const mid = lesson.moduleId;
+        if (!lessonsByModule[mid])
+            lessonsByModule[mid] = [];
+        lessonsByModule[mid].push({
+            _id: String(lesson._id),
+            title: lesson.title,
+            type: lesson.type,
+            order: lesson.order,
+            duration: (_b = (_a = lesson.video) === null || _a === void 0 ? void 0 : _a.duration) !== null && _b !== void 0 ? _b : null,
+        });
+    }
+    const curriculum = course.modules
+        .sort((a, b) => a.order - b.order)
+        .map((mod) => ({
+        moduleId: mod.moduleId,
+        title: mod.title,
+        order: mod.order,
+        lessons: lessonsByModule[mod.moduleId] || [],
+    }));
+    // Shape enrollment
+    const enrollmentData = enrollment
+        ? {
+            enrollmentId: String(enrollment._id),
+            status: enrollment.status,
+            completionPercentage: enrollment.progress.completionPercentage,
+            completedLessons: enrollment.progress.completedLessons.map(String),
+            lastAccessedLesson: enrollment.progress.lastAccessedLesson
+                ? String(enrollment.progress.lastAccessedLesson)
+                : null,
+            enrolledAt: enrollment.enrolledAt,
+        }
+        : null;
+    const { modules: _modules } = course, courseData = __rest(course, ["modules"]);
+    return Object.assign(Object.assign({}, courseData), { curriculum, enrollment: enrollmentData });
+});
 const browseCourses = (studentId, query) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d, _e;
     const page = Number(query.page) || 1;
@@ -556,6 +630,7 @@ exports.CourseService = {
     createCourse,
     getAllCourses,
     browseCourses,
+    getStudentCourseDetail,
     getAdminCourses,
     getCourseByIdentifier,
     updateCourse,

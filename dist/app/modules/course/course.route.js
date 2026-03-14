@@ -20,6 +20,8 @@ router.get('/', course_controller_1.CourseController.getAllCourses);
 router.get('/manage', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), course_controller_1.CourseController.getAdminCourses);
 // Browse courses with enrollment status (student)
 router.get('/browse', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), course_controller_1.CourseController.browseCourses);
+// Get course detail for student (with enrollment + curriculum)
+router.get('/:identifier/student-detail', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), course_controller_1.CourseController.getStudentCourseDetail);
 // Get course by ID or slug (public)
 router.get('/:identifier', course_controller_1.CourseController.getCourseByIdentifier);
 // Update course (admin only)

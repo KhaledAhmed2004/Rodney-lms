@@ -49,7 +49,7 @@ const updateUserZodSchema = z.object({
       .string()
       .regex(passwordRegex, 'Password must include upper, lower, number, special and be 8+ chars')
       .optional(),
-    profilePicture: z.string().optional(),
+    profilePicture: z.string().min(1).optional(),
   }),
 });
 

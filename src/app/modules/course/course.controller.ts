@@ -55,6 +55,24 @@ const getAdminCourses = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getStudentCourseDetail = catchAsync(
+  async (req: Request, res: Response) => {
+    const { identifier } = req.params;
+    const userId = (req.user as JwtPayload).id;
+    const result = await CourseService.getStudentCourseDetail(
+      identifier,
+      userId,
+    );
+
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: 'Course detail retrieved successfully',
+      data: result,
+    });
+  },
+);
+
 const getCourseByIdentifier = catchAsync(
   async (req: Request, res: Response) => {
     const { identifier } = req.params;
@@ -256,6 +274,7 @@ export const CourseController = {
   createCourse,
   getAllCourses,
   browseCourses,
+  getStudentCourseDetail,
   getAdminCourses,
   getCourseByIdentifier,
   updateCourse,

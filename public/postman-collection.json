@@ -486,6 +486,32 @@
               "response": []
             },
             {
+              "name": "Get Student Course Detail",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/courses/:identifier/student-detail",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["courses", ":identifier", "student-detail"],
+                  "variable": [
+                    {
+                      "key": "identifier",
+                      "value": "COURSE_ID_OR_SLUG",
+                      "description": "Course ObjectId or slug"
+                    }
+                  ]
+                },
+                "description": "Auth: STUDENT. Returns course detail with curriculum (visible lessons only) and enrollment progress. enrollment is null if not enrolled."
+              },
+              "response": []
+            },
+            {
               "name": "Get Lessons by Module",
               "request": {
                 "method": "GET",

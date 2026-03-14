@@ -18,7 +18,7 @@ const user_1 = require("../../../enums/user");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const emailHelper_1 = require("../../../helpers/emailHelper");
 const emailTemplate_1 = require("../../../shared/emailTemplate");
-const unlinkFile_1 = __importDefault(require("../../../shared/unlinkFile"));
+const fileHandler_1 = require("../../middlewares/fileHandler");
 const generateOTP_1 = __importDefault(require("../../../util/generateOTP"));
 const user_model_1 = require("./user.model");
 const enrollment_model_1 = require("../enrollment/enrollment.model");
@@ -69,13 +69,8 @@ const updateProfileToDB = (user, payload) => __awaiter(void 0, void 0, void 0, f
     if (!isExistUser) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
     }
-    // //unlink file here
-    // if (payload.image) {
-    //   unlinkFile(isExistUser.image);
-    // }
-    //unlink file here
-    if (payload.profilePicture) {
-        (0, unlinkFile_1.default)(isExistUser.profilePicture);
+    if (payload.profilePicture && isExistUser.profilePicture) {
+        yield (0, fileHandler_1.deleteFile)(isExistUser.profilePicture);
     }
     // Student-specific fields to exclude for non-student roles
     const studentOnlyFields = '-averageRating -ratingsCount -achievements -totalPoints -streak -onboardingCompleted -deviceTokens';

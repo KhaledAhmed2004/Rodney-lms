@@ -49,7 +49,7 @@ const updateUserZodSchema = zod_1.z.object({
             .string()
             .regex(passwordRegex, 'Password must include upper, lower, number, special and be 8+ chars')
             .optional(),
-        profilePicture: zod_1.z.string().optional(),
+        profilePicture: zod_1.z.string().min(1).optional(),
     }),
 });
 const adminUpdateUserZodSchema = zod_1.z.object({

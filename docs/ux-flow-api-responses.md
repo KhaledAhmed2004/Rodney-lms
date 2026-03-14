@@ -534,7 +534,64 @@ Auth: None
 
 ---
 
-### 5.2 Get Lessons by Module
+### 5.2 Get Student Course Detail
+
+```
+GET /courses/:identifier/student-detail
+Auth: Bearer {{accessToken}} (STUDENT)
+```
+
+**Response (enrolled):**
+```json
+{
+  "success": true,
+  "message": "Course detail retrieved successfully",
+  "data": {
+    "_id": "664a...",
+    "title": "Introduction to Web Development",
+    "slug": "introduction-to-web-development",
+    "thumbnail": "https://cdn.example.com/thumb.jpg",
+    "description": "A comprehensive course...",
+    "totalLessons": 24,
+    "totalDuration": 3600,
+    "averageRating": 4.5,
+    "ratingsCount": 42,
+    "enrollmentCount": 150,
+    "curriculum": [
+      {
+        "moduleId": "uuid-1",
+        "title": "Module 1: Getting Started",
+        "order": 0,
+        "lessons": [
+          { "_id": "664c...", "title": "Introduction to HTML", "type": "VIDEO", "order": 0, "duration": 600 },
+          { "_id": "664d...", "title": "Key Concepts", "type": "READING", "order": 1, "duration": null }
+        ]
+      }
+    ],
+    "enrollment": {
+      "enrollmentId": "665a...",
+      "status": "ACTIVE",
+      "completionPercentage": 45,
+      "completedLessons": ["664c..."],
+      "lastAccessedLesson": "664c...",
+      "enrolledAt": "2026-03-10T10:00:00Z"
+    }
+  }
+}
+```
+
+**Response (not enrolled):** Same shape but `"enrollment": null`.
+
+> **Notes:**
+> - Only PUBLISHED courses returned, 404 for DRAFT/SCHEDULED
+> - Only `isVisible: true` lessons in curriculum
+> - No video URLs, content, or attachments — use `GET /courses/:courseId/lessons/:lessonId` for full lesson
+> - `duration` flattened from `video.duration`, `null` for non-video lessons
+> - `completedLessons` as string[] for easy `includes()` check
+
+---
+
+### 5.3 Get Lessons by Module
 
 ```
 GET /courses/:courseId/modules/:moduleId/lessons
@@ -569,7 +626,7 @@ Auth: None
 
 ---
 
-### 5.3 Get Lesson by ID
+### 5.4 Get Lesson by ID
 
 ```
 GET /courses/:courseId/lessons/:lessonId
@@ -607,7 +664,7 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.4 Enroll in Course
+### 5.5 Enroll in Course
 
 ```
 POST /enrollments
@@ -644,7 +701,7 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.5 Mark Lesson Complete
+### 5.6 Mark Lesson Complete
 
 ```
 POST /enrollments/:enrollmentId/lessons/:lessonId/complete
@@ -671,7 +728,7 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.6 Get Quiz (Student View)
+### 5.7 Get Quiz (Student View)
 
 ```
 GET /quizzes/:id/student-view
@@ -737,7 +794,7 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.7 Start Quiz Attempt
+### 5.8 Start Quiz Attempt
 
 ```
 POST /quizzes/:id/attempts
@@ -764,7 +821,7 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.8 Submit Quiz Answers
+### 5.9 Submit Quiz Answers
 
 ```
 PATCH /quizzes/attempts/:attemptId/submit
@@ -832,7 +889,7 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.9 View Quiz Result
+### 5.10 View Quiz Result
 
 ```
 GET /quizzes/attempts/:attemptId
@@ -878,7 +935,7 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.10 Submit Assignment
+### 5.11 Submit Assignment
 
 ```
 POST /gradebook/assignments/:lessonId/submit

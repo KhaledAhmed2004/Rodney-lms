@@ -58,6 +58,17 @@ const getAdminCourses = (0, catchAsync_1.default)((req, res) => __awaiter(void 0
         data: result.data,
     });
 }));
+const getStudentCourseDetail = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { identifier } = req.params;
+    const userId = req.user.id;
+    const result = yield course_service_1.CourseService.getStudentCourseDetail(identifier, userId);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Course detail retrieved successfully',
+        data: result,
+    });
+}));
 const getCourseByIdentifier = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { identifier } = req.params;
     const result = yield course_service_1.CourseService.getCourseByIdentifier(identifier);
@@ -202,6 +213,7 @@ exports.CourseController = {
     createCourse,
     getAllCourses,
     browseCourses,
+    getStudentCourseDetail,
     getAdminCourses,
     getCourseByIdentifier,
     updateCourse,

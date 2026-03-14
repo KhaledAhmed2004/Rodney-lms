@@ -34,6 +34,13 @@ router.get(
   CourseController.browseCourses,
 );
 
+// Get course detail for student (with enrollment + curriculum)
+router.get(
+  '/:identifier/student-detail',
+  auth(USER_ROLES.STUDENT),
+  CourseController.getStudentCourseDetail,
+);
+
 // Get course by ID or slug (public)
 router.get('/:identifier', CourseController.getCourseByIdentifier);
 

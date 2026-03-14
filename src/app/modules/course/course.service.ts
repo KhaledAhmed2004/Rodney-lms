@@ -6,6 +6,7 @@ import escapeRegex from 'escape-string-regexp';
 import ApiError from '../../../errors/ApiError';
 import QueryBuilder from '../../builder/QueryBuilder';
 import { deleteFile } from '../../middlewares/fileHandler';
+import { Enrollment } from '../enrollment/enrollment.model';
 import {
   ICourse,
   ILesson,
@@ -615,6 +616,89 @@ const reorderLessons = async (
   return Lesson.find({ courseId, moduleId }).sort({ order: 1 });
 };
 
+const getStudentCourseDetail = async (
+  identifier: string,
+  studentId: string
+) => {
+  // Round 1: Fetch course (only PUBLISHED)
+  const isObjectId = Types.ObjectId.isValid(identifier);
+  const courseFilter = {
+    ...(isObjectId ? { _id: identifier } : { slug: identifier }),
+    status: COURSE_STATUS.PUBLISHED,
+  };
+
+  const course = await Course.findOne(courseFilter)
+    .select(
+      'title slug thumbnail description modules totalLessons totalDuration averageRating ratingsCount enrollmentCount'
+    )
+    .lean();
+
+  if (!course) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Course not found');
+  }
+
+  // Round 2: Visible lessons + enrollment in parallel
+  const [lessons, enrollment] = await Promise.all([
+    Lesson.find({ courseId: course._id, isVisible: true })
+      .select('title type order moduleId video.duration')
+      .sort({ order: 1 })
+      .lean(),
+    Enrollment.findOne({
+      course: course._id,
+      student: new Types.ObjectId(studentId),
+    })
+      .select(
+        'status progress.completionPercentage progress.completedLessons progress.lastAccessedLesson enrolledAt'
+      )
+      .lean(),
+  ]);
+
+  // Group lessons by module → build curriculum
+  const lessonsByModule: Record<
+    string,
+    { _id: string; title: string; type: string; order: number; duration: number | null }[]
+  > = {};
+
+  for (const lesson of lessons) {
+    const mid = lesson.moduleId;
+    if (!lessonsByModule[mid]) lessonsByModule[mid] = [];
+    lessonsByModule[mid].push({
+      _id: String(lesson._id),
+      title: lesson.title,
+      type: lesson.type,
+      order: lesson.order,
+      duration: lesson.video?.duration ?? null,
+    });
+  }
+
+  const curriculum = course.modules
+    .sort((a, b) => a.order - b.order)
+    .map((mod) => ({
+      moduleId: mod.moduleId,
+      title: mod.title,
+      order: mod.order,
+      lessons: lessonsByModule[mod.moduleId] || [],
+    }));
+
+  // Shape enrollment
+  const enrollmentData = enrollment
+    ? {
+        enrollmentId: String(enrollment._id),
+        status: enrollment.status,
+        completionPercentage: enrollment.progress.completionPercentage,
+        completedLessons: enrollment.progress.completedLessons.map(String),
+        lastAccessedLesson: enrollment.progress.lastAccessedLesson
+          ? String(enrollment.progress.lastAccessedLesson)
+          : null,
+        enrolledAt: enrollment.enrolledAt,
+      }
+    : null;
+
+  const { modules: _modules, ...courseData } = course;
+
+  return { ...courseData, curriculum, enrollment: enrollmentData };
+};
+
 const browseCourses = async (
   studentId: string,
   query: Record<string, unknown>
@@ -718,6 +802,7 @@ export const CourseService = {
   createCourse,
   getAllCourses,
   browseCourses,
+  getStudentCourseDetail,
   getAdminCourses,
   getCourseByIdentifier,
   updateCourse,
