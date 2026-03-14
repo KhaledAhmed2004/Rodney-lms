@@ -42,4 +42,6 @@ resetTokenSchema.statics.isExpireToken = function (token) {
         return !!resetToken;
     });
 };
+// Auto-delete expired tokens
+resetTokenSchema.index({ expireAt: 1 }, { expireAfterSeconds: 0 });
 exports.ResetToken = (0, mongoose_1.model)('Token', resetTokenSchema);

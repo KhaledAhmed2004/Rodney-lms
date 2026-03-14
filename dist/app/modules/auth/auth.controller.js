@@ -29,6 +29,12 @@ const config_1 = __importDefault(require("../../../config"));
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const auth_service_1 = require("./auth.service");
+const REFRESH_TOKEN_COOKIE = {
+    httpOnly: true,
+    secure: config_1.default.node_env === 'production',
+    sameSite: 'lax',
+    path: '/',
+};
 const verifyEmail = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const verifyData = __rest(req.body, []);
     const result = yield auth_service_1.AuthService.verifyEmailToDB(verifyData);
@@ -37,11 +43,7 @@ const verifyEmail = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
         ? result.data.tokens
         : null;
     if (tokens === null || tokens === void 0 ? void 0 : tokens.refreshToken) {
-        res.cookie('refreshToken', tokens.refreshToken, {
-            httpOnly: true,
-            secure: config_1.default.node_env === 'production',
-            sameSite: 'lax',
-        });
+        res.cookie('refreshToken', tokens.refreshToken, REFRESH_TOKEN_COOKIE);
     }
     (0, sendResponse_1.default)(res, {
         success: true,
@@ -56,11 +58,7 @@ const loginUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void
     const result = yield auth_service_1.AuthService.loginUserFromDB(loginData);
     // Set refresh token in httpOnly cookie for better security
     if ((_a = result === null || result === void 0 ? void 0 : result.tokens) === null || _a === void 0 ? void 0 : _a.refreshToken) {
-        res.cookie('refreshToken', result.tokens.refreshToken, {
-            httpOnly: true,
-            secure: config_1.default.node_env === 'production',
-            sameSite: 'lax',
-        });
+        res.cookie('refreshToken', result.tokens.refreshToken, REFRESH_TOKEN_COOKIE);
     }
     (0, sendResponse_1.default)(res, {
         success: true,
@@ -71,16 +69,10 @@ const loginUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void
 }));
 const logoutUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { deviceToken } = req.body;
-    console.log('deviceToken', deviceToken);
     const user = req.user;
     yield auth_service_1.AuthService.logoutUserFromDB(user, deviceToken);
     // Clear refresh token cookie on logout
-    res.clearCookie('refreshToken', {
-        httpOnly: true,
-        secure: config_1.default.node_env === 'production',
-        sameSite: 'lax',
-        path: '/',
-    });
+    res.clearCookie('refreshToken', REFRESH_TOKEN_COOKIE);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -132,12 +124,7 @@ const refreshToken = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
     const result = yield auth_service_1.AuthService.refreshTokenToDB(token);
     // Rotate refresh token in httpOnly cookie
     if ((_c = result === null || result === void 0 ? void 0 : result.tokens) === null || _c === void 0 ? void 0 : _c.refreshToken) {
-        res.cookie('refreshToken', result.tokens.refreshToken, {
-            httpOnly: true,
-            secure: config_1.default.node_env === 'production',
-            sameSite: 'lax',
-            path: '/',
-        });
+        res.cookie('refreshToken', result.tokens.refreshToken, REFRESH_TOKEN_COOKIE);
     }
     (0, sendResponse_1.default)(res, {
         success: true,

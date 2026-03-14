@@ -1,9 +1,3 @@
-export enum QUIZ_STATUS {
-  DRAFT = 'DRAFT',
-  PUBLISHED = 'PUBLISHED',
-  ARCHIVED = 'ARCHIVED',
-}
-
 export enum QUESTION_TYPE {
   MCQ = 'MCQ',
   TRUE_FALSE = 'TRUE_FALSE',

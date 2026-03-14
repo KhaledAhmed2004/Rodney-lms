@@ -26,33 +26,37 @@ const generateOTP_1 = __importDefault(require("../../../util/generateOTP"));
 const resetToken_model_1 = require("./resetToken/resetToken.model");
 const user_model_1 = require("../user/user.model");
 const user_1 = require("../../../enums/user");
+// Generate access + refresh token pair
+const generateTokenPair = (user) => {
+    const payload = { id: user._id, role: user.role, email: user.email };
+    const accessToken = jwtHelper_1.jwtHelper.createToken(payload, config_1.default.jwt.jwt_secret, config_1.default.jwt.jwt_expire_in);
+    const refreshToken = jwtHelper_1.jwtHelper.createToken(payload, config_1.default.jwt.jwt_refresh_secret, config_1.default.jwt.jwt_refresh_expire_in);
+    return { accessToken, refreshToken };
+};
 const loginUserFromDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, password, deviceToken } = payload;
     const isExistUser = yield user_model_1.User.findOne({ email }).select('+password');
+    // Generic message to prevent user enumeration
+    const invalidCredentials = 'Invalid email or password';
     if (!isExistUser) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, invalidCredentials);
     }
     if (!isExistUser.verified) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Please verify your account, then try to login again');
     }
     if (isExistUser.status === user_1.USER_STATUS.DELETE) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Your account has been deactivated. Contact support.');
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, invalidCredentials);
     }
-    if (!password) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Password is required!');
+    if (!password ||
+        !(yield user_model_1.User.isMatchPassword(password, isExistUser.password))) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, invalidCredentials);
     }
-    if (!(yield user_model_1.User.isMatchPassword(password, isExistUser.password))) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Password is incorrect!');
-    }
-    // JWT: access token
-    const accessToken = jwtHelper_1.jwtHelper.createToken({ id: isExistUser._id, role: isExistUser.role, email: isExistUser.email }, config_1.default.jwt.jwt_secret, config_1.default.jwt.jwt_expire_in);
-    // JWT: refresh token
-    const refreshToken = jwtHelper_1.jwtHelper.createToken({ id: isExistUser._id, role: isExistUser.role, email: isExistUser.email }, config_1.default.jwt.jwt_refresh_secret, config_1.default.jwt.jwt_refresh_expire_in);
-    // ✅ save device token
+    const tokens = generateTokenPair(isExistUser);
+    // save device token
     if (deviceToken) {
         yield user_model_1.User.addDeviceToken(isExistUser._id.toString(), deviceToken);
     }
-    return { tokens: { accessToken, refreshToken } };
+    return { tokens };
 });
 // logout
 const logoutUserFromDB = (user, deviceToken) => __awaiter(void 0, void 0, void 0, function* () {
@@ -61,11 +65,11 @@ const logoutUserFromDB = (user, deviceToken) => __awaiter(void 0, void 0, void 0
     }
     yield user_model_1.User.removeDeviceToken(user.id, deviceToken);
 });
-//forget password
+//forget password — silent success to prevent user enumeration
 const forgetPasswordToDB = (email) => __awaiter(void 0, void 0, void 0, function* () {
     const isExistUser = yield user_model_1.User.isExistUserByEmail(email);
     if (!isExistUser) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
+        return; // Silent return — don't reveal if email exists
     }
     //send mail
     const otp = (0, generateOTP_1.default)();
@@ -105,10 +109,9 @@ const verifyEmailToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
     if (!isExistUser.verified) {
         yield user_model_1.User.findOneAndUpdate({ _id: isExistUser._id }, { verified: true, authentication: { oneTimeCode: null, expireAt: null } });
         // Auto-login: generate tokens after email verification
-        const accessToken = jwtHelper_1.jwtHelper.createToken({ id: isExistUser._id, role: isExistUser.role, email: isExistUser.email }, config_1.default.jwt.jwt_secret, config_1.default.jwt.jwt_expire_in);
-        const refreshToken = jwtHelper_1.jwtHelper.createToken({ id: isExistUser._id, role: isExistUser.role, email: isExistUser.email }, config_1.default.jwt.jwt_refresh_secret, config_1.default.jwt.jwt_refresh_expire_in);
+        const tokens = generateTokenPair(isExistUser);
         message = 'Email verified successfully';
-        data = { tokens: { accessToken, refreshToken } };
+        data = { tokens };
     }
     else {
         yield user_model_1.User.findOneAndUpdate({ _id: isExistUser._id }, {
@@ -161,9 +164,9 @@ const resetPasswordToDB = (payload) => __awaiter(void 0, void 0, void 0, functio
             isResetPassword: false,
         },
     };
-    yield user_model_1.User.findOneAndUpdate({ _id: isExistToken.user }, updateData, {
-        new: true,
-    });
+    yield user_model_1.User.findOneAndUpdate({ _id: isExistToken.user }, updateData);
+    // Invalidate used reset token
+    yield resetToken_model_1.ResetToken.deleteOne({ token });
 });
 const changePasswordToDB = (user, payload) => __awaiter(void 0, void 0, void 0, function* () {
     const { currentPassword, newPassword, confirmPassword } = payload;
@@ -172,9 +175,8 @@ const changePasswordToDB = (user, payload) => __awaiter(void 0, void 0, void 0, 
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
     }
     //current password match
-    if (currentPassword &&
-        !(yield user_model_1.User.isMatchPassword(currentPassword, isExistUser.password))) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Password is incorrect');
+    if (!(yield user_model_1.User.isMatchPassword(currentPassword, isExistUser.password))) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Current password is incorrect');
     }
     //newPassword and current password
     if (currentPassword === newPassword) {
@@ -189,7 +191,7 @@ const changePasswordToDB = (user, payload) => __awaiter(void 0, void 0, void 0, 
     const updateData = {
         password: hashPassword,
     };
-    yield user_model_1.User.findOneAndUpdate({ _id: user.id }, updateData, { new: true });
+    yield user_model_1.User.findOneAndUpdate({ _id: user.id }, updateData);
 });
 const resendVerifyEmailToDB = (email) => __awaiter(void 0, void 0, void 0, function* () {
     return (0, authHelpers_1.sendVerificationOTP)(email);
@@ -209,11 +211,9 @@ const refreshTokenToDB = (token) => __awaiter(void 0, void 0, void 0, function* 
     if (user.status === user_1.USER_STATUS.DELETE) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Your account has been deactivated. Contact support.');
     }
-    // Issue new access token
-    const accessToken = jwtHelper_1.jwtHelper.createToken({ id: user._id, role: user.role, email: user.email }, config_1.default.jwt.jwt_secret, config_1.default.jwt.jwt_expire_in);
-    // Optionally rotate refresh token
-    const newRefreshToken = jwtHelper_1.jwtHelper.createToken({ id: user._id, role: user.role, email: user.email }, config_1.default.jwt.jwt_refresh_secret, config_1.default.jwt.jwt_refresh_expire_in);
-    return { tokens: { accessToken, refreshToken: newRefreshToken } };
+    // Issue new token pair (rotate refresh token)
+    const tokens = generateTokenPair(user);
+    return { tokens };
 });
 exports.AuthService = {
     verifyEmailToDB,

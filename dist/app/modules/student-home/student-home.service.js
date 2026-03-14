@@ -12,14 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudentHomeService = void 0;
 const enrollment_model_1 = require("../enrollment/enrollment.model");
 const quiz_model_1 = require("../quiz/quiz.model");
-const activity_model_1 = require("../activity/activity.model");
 const gamification_model_1 = require("../gamification/gamification.model");
 const gamification_model_2 = require("../gamification/gamification.model");
 const user_model_1 = require("../user/user.model");
 const getHome = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
-    const [user, enrolledCourses, recentBadges, totalPointsResult, todayActivity,] = yield Promise.all([
-        user_model_1.User.findById(studentId).select('streak totalPoints'),
+    var _a, _b, _c, _d, _e;
+    const [user, enrolledCourses, recentBadges, totalPointsResult, quizStats] = yield Promise.all([
+        user_model_1.User.findById(studentId).select('name streak totalPoints'),
         enrollment_model_1.Enrollment.find({
             student: studentId,
             status: { $in: ['ACTIVE', 'COMPLETED'] },
@@ -35,17 +34,36 @@ const getHome = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
             { $match: { student: studentId } },
             { $group: { _id: null, total: { $sum: '$points' } } },
         ]),
-        (() => {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            return activity_model_1.DailyActivity.findOne({ student: studentId, date: today });
-        })(),
+        quiz_model_1.QuizAttempt.aggregate([
+            { $match: { student: studentId, status: 'COMPLETED' } },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: 1 },
+                    passed: { $sum: { $cond: ['$passed', 1, 0] } },
+                },
+            },
+        ]),
     ]);
+    // Calculate course progress (average completion across all courses)
+    const totalCourses = enrolledCourses.length;
+    const courseProgress = totalCourses > 0
+        ? Math.round(enrolledCourses.reduce((sum, e) => sum + e.progress.completionPercentage, 0) / totalCourses)
+        : 0;
+    // Calculate quiz progress
+    const quizTotal = ((_a = quizStats[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
+    const quizPassed = ((_b = quizStats[0]) === null || _b === void 0 ? void 0 : _b.passed) || 0;
+    const quizPercentage = quizTotal > 0 ? Math.round((quizPassed / quizTotal) * 100) : 0;
     return {
-        points: ((_a = totalPointsResult[0]) === null || _a === void 0 ? void 0 : _a.total) || (user === null || user === void 0 ? void 0 : user.totalPoints) || 0,
+        name: (user === null || user === void 0 ? void 0 : user.name) || '',
+        points: ((_c = totalPointsResult[0]) === null || _c === void 0 ? void 0 : _c.total) || (user === null || user === void 0 ? void 0 : user.totalPoints) || 0,
         streak: {
-            current: ((_b = user === null || user === void 0 ? void 0 : user.streak) === null || _b === void 0 ? void 0 : _b.current) || 0,
-            longest: ((_c = user === null || user === void 0 ? void 0 : user.streak) === null || _c === void 0 ? void 0 : _c.longest) || 0,
+            current: ((_d = user === null || user === void 0 ? void 0 : user.streak) === null || _d === void 0 ? void 0 : _d.current) || 0,
+            longest: ((_e = user === null || user === void 0 ? void 0 : user.streak) === null || _e === void 0 ? void 0 : _e.longest) || 0,
+        },
+        yourProgress: {
+            courseProgress,
+            quizProgress: quizPercentage,
         },
         enrolledCourses: enrolledCourses.map((e) => ({
             enrollmentId: e._id,
@@ -62,7 +80,6 @@ const getHome = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
             icon: sb.badge.icon,
             earnedAt: sb.earnedAt,
         })),
-        todayActive: !!todayActivity,
     };
 });
 const getProgress = (studentId) => __awaiter(void 0, void 0, void 0, function* () {

@@ -17,6 +17,7 @@ const http_status_codes_1 = require("http-status-codes");
 const mongoose_1 = require("mongoose");
 const crypto_1 = __importDefault(require("crypto"));
 const slugify_1 = __importDefault(require("slugify"));
+const escape_string_regexp_1 = __importDefault(require("escape-string-regexp"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
 const fileHandler_1 = require("../../middlewares/fileHandler");
@@ -460,9 +461,101 @@ const reorderLessons = (courseId, moduleId, lessonOrder) => __awaiter(void 0, vo
     yield course_model_1.Lesson.bulkWrite(bulkOps);
     return course_model_1.Lesson.find({ courseId, moduleId }).sort({ order: 1 });
 });
+const browseCourses = (studentId, query) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d, _e;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const matchConditions = {
+        status: course_interface_1.COURSE_STATUS.PUBLISHED,
+    };
+    if (query.searchTerm) {
+        const sanitized = (0, escape_string_regexp_1.default)(String(query.searchTerm));
+        matchConditions.$or = [
+            { title: { $regex: sanitized, $options: 'i' } },
+            { description: { $regex: sanitized, $options: 'i' } },
+        ];
+    }
+    const pipeline = [
+        { $match: matchConditions },
+        {
+            $lookup: {
+                from: 'enrollments',
+                let: { courseId: '$_id' },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ['$course', '$$courseId'] },
+                                    { $eq: ['$student', new mongoose_1.Types.ObjectId(studentId)] },
+                                ],
+                            },
+                        },
+                    },
+                    { $limit: 1 },
+                    {
+                        $project: {
+                            enrollmentId: '$_id',
+                            status: 1,
+                            completionPercentage: '$progress.completionPercentage',
+                            _id: 0,
+                        },
+                    },
+                ],
+                as: 'enrollmentData',
+            },
+        },
+        {
+            $addFields: {
+                enrollment: {
+                    $cond: {
+                        if: { $gt: [{ $size: '$enrollmentData' }, 0] },
+                        then: { $arrayElemAt: ['$enrollmentData', 0] },
+                        else: null,
+                    },
+                },
+            },
+        },
+        {
+            $project: {
+                title: 1,
+                thumbnail: 1,
+                description: 1,
+                totalLessons: 1,
+                averageRating: 1,
+                enrollmentCount: 1,
+                enrollment: 1,
+            },
+        },
+        {
+            $facet: {
+                data: [
+                    { $sort: { createdAt: -1 } },
+                    { $skip: skip },
+                    { $limit: limit },
+                ],
+                total: [{ $count: 'count' }],
+            },
+        },
+    ];
+    const result = yield course_model_1.Course.aggregate(pipeline);
+    const data = (_b = (_a = result[0]) === null || _a === void 0 ? void 0 : _a.data) !== null && _b !== void 0 ? _b : [];
+    const total = (_e = (_d = (_c = result[0]) === null || _c === void 0 ? void 0 : _c.total[0]) === null || _d === void 0 ? void 0 : _d.count) !== null && _e !== void 0 ? _e : 0;
+    return {
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPage: Math.ceil(total / limit),
+        },
+        data,
+    };
+});
 exports.CourseService = {
     createCourse,
     getAllCourses,
+    browseCourses,
     getAdminCourses,
     getCourseByIdentifier,
     updateCourse,

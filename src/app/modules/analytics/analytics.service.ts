@@ -100,24 +100,13 @@ const getQuizPerformance = async () => {
 };
 
 const getCourseAnalytics = async (courseId: string) => {
-  const [enrollmentStats, quizStats, progressDistribution] = await Promise.all([
+  const [enrollmentStats, progressDistribution] = await Promise.all([
     Enrollment.aggregate([
       { $match: { course: courseId } },
       {
         $group: {
           _id: '$status',
           count: { $sum: 1 },
-        },
-      },
-    ]),
-    QuizAttempt.aggregate([
-      { $match: { course: courseId, status: 'COMPLETED' } },
-      {
-        $group: {
-          _id: null,
-          avgScore: { $avg: '$percentage' },
-          totalAttempts: { $sum: 1 },
-          passCount: { $sum: { $cond: [{ $eq: ['$passed', true] }, 1, 0] } },
         },
       },
     ]),
@@ -136,7 +125,6 @@ const getCourseAnalytics = async (courseId: string) => {
 
   return {
     enrollmentStats,
-    quizStats: quizStats[0] || null,
     progressDistribution,
   };
 };

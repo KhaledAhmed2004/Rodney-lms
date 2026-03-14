@@ -37,6 +37,17 @@ const getAllCourses = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, 
         data: result.data,
     });
 }));
+const browseCourses = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user.id;
+    const result = yield course_service_1.CourseService.browseCourses(userId, req.query);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Courses retrieved successfully',
+        pagination: result.pagination,
+        data: result.data,
+    });
+}));
 const getAdminCourses = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield course_service_1.CourseService.getAdminCourses(req.query);
     (0, sendResponse_1.default)(res, {
@@ -190,6 +201,7 @@ const toggleLessonVisibility = (0, catchAsync_1.default)((req, res) => __awaiter
 exports.CourseController = {
     createCourse,
     getAllCourses,
+    browseCourses,
     getAdminCourses,
     getCourseByIdentifier,
     updateCourse,

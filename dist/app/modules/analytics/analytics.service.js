@@ -97,24 +97,13 @@ const getQuizPerformance = () => __awaiter(void 0, void 0, void 0, function* () 
     return quizStats;
 });
 const getCourseAnalytics = (courseId) => __awaiter(void 0, void 0, void 0, function* () {
-    const [enrollmentStats, quizStats, progressDistribution] = yield Promise.all([
+    const [enrollmentStats, progressDistribution] = yield Promise.all([
         enrollment_model_1.Enrollment.aggregate([
             { $match: { course: courseId } },
             {
                 $group: {
                     _id: '$status',
                     count: { $sum: 1 },
-                },
-            },
-        ]),
-        quiz_model_1.QuizAttempt.aggregate([
-            { $match: { course: courseId, status: 'COMPLETED' } },
-            {
-                $group: {
-                    _id: null,
-                    avgScore: { $avg: '$percentage' },
-                    totalAttempts: { $sum: 1 },
-                    passCount: { $sum: { $cond: [{ $eq: ['$passed', true] }, 1, 0] } },
                 },
             },
         ]),
@@ -132,7 +121,6 @@ const getCourseAnalytics = (courseId) => __awaiter(void 0, void 0, void 0, funct
     ]);
     return {
         enrollmentStats,
-        quizStats: quizStats[0] || null,
         progressDistribution,
     };
 });

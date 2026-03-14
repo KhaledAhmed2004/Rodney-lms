@@ -27,8 +27,8 @@ const createQuiz = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
         data: result,
     });
 }));
-const getQuizzesByCourse = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield quiz_service_1.QuizService.getQuizzesByCourse(req.params.courseId, req.query);
+const getAllQuizzes = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield quiz_service_1.QuizService.getAllQuizzes(req.query);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -162,7 +162,7 @@ const getMyAttempts = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, 
 }));
 exports.QuizController = {
     createQuiz,
-    getQuizzesByCourse,
+    getAllQuizzes,
     getQuizById,
     updateQuiz,
     deleteQuiz,

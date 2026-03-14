@@ -33,7 +33,7 @@ const bulkEnroll = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.CREATED,
-        message: 'Enrolled in courses successfully',
+        message: `Enrolled in ${result.enrolledCount} course(s) successfully`,
         data: result,
     });
 }));

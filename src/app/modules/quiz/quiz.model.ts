@@ -4,7 +4,6 @@ import {
   QuizModel,
   IQuizAttempt,
   QuizAttemptModel,
-  QUIZ_STATUS,
   QUESTION_TYPE,
   ATTEMPT_STATUS,
 } from './quiz.interface';
@@ -54,15 +53,6 @@ const SettingsSchema = new Schema(
 // ==================== QUIZ SCHEMA ====================
 const quizSchema = new Schema<IQuiz, QuizModel>(
   {
-    course: {
-      type: Schema.Types.ObjectId,
-      ref: 'Course',
-      required: true,
-    },
-    lesson: {
-      type: Schema.Types.ObjectId,
-      ref: 'Lesson',
-    },
     title: { type: String, required: true, trim: true },
     description: { type: String },
     questions: { type: [QuestionSchema], default: [] },
@@ -70,19 +60,10 @@ const quizSchema = new Schema<IQuiz, QuizModel>(
       type: SettingsSchema,
       default: {},
     },
-    status: {
-      type: String,
-      enum: Object.values(QUIZ_STATUS),
-      default: QUIZ_STATUS.DRAFT,
-    },
     totalMarks: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
-
-quizSchema.index({ course: 1 });
-quizSchema.index({ lesson: 1 });
-quizSchema.index({ status: 1 });
 
 quizSchema.statics.isExistById = async function (id: string) {
   return await this.findById(id);
@@ -115,16 +96,6 @@ const quizAttemptSchema = new Schema<IQuizAttempt, QuizAttemptModel>(
       ref: 'User',
       required: true,
     },
-    course: {
-      type: Schema.Types.ObjectId,
-      ref: 'Course',
-      required: true,
-    },
-    enrollment: {
-      type: Schema.Types.ObjectId,
-      ref: 'Enrollment',
-      required: true,
-    },
     answers: { type: [StudentAnswerSchema], default: [] },
     score: { type: Number, default: 0 },
     maxScore: { type: Number, default: 0 },
@@ -144,8 +115,6 @@ const quizAttemptSchema = new Schema<IQuizAttempt, QuizAttemptModel>(
 );
 
 quizAttemptSchema.index({ quiz: 1, student: 1 });
-quizAttemptSchema.index({ student: 1, course: 1 });
-quizAttemptSchema.index({ enrollment: 1 });
 
 export const QuizAttempt = model<IQuizAttempt, QuizAttemptModel>(
   'QuizAttempt',

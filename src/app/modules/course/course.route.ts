@@ -27,6 +27,13 @@ router.get(
   CourseController.getAdminCourses,
 );
 
+// Browse courses with enrollment status (student)
+router.get(
+  '/browse',
+  auth(USER_ROLES.STUDENT),
+  CourseController.browseCourses,
+);
+
 // Get course by ID or slug (public)
 router.get('/:identifier', CourseController.getCourseByIdentifier);
 

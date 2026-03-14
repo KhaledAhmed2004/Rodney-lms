@@ -38,7 +38,8 @@
       "Bash(rm -rf bruno/)",
       "Bash(rm -f scripts/bruno-setup.js scripts/postman-to-bruno.js)",
       "Bash(npm uninstall:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Read(//d/web/ projects/office-sta/rodney/src/app/modules/**)"
     ],
     "additionalDirectories": [
       "d:\\web projects\\office-sta\\rodney\\.claude",

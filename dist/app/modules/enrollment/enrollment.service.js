@@ -43,25 +43,30 @@ const enrollInCourse = (studentId, courseId) => __awaiter(void 0, void 0, void 0
     return result;
 });
 const bulkEnroll = (studentId, courseIds) => __awaiter(void 0, void 0, void 0, function* () {
-    const results = [];
+    let enrolledCount = 0;
+    let skippedCount = 0;
     for (const courseId of courseIds) {
         // Skip if already enrolled
         const existing = yield enrollment_model_1.Enrollment.findOne({
             student: studentId,
             course: courseId,
         });
-        if (existing)
+        if (existing) {
+            skippedCount++;
             continue;
+        }
         const course = yield course_model_1.Course.findById(courseId);
-        if (!course || course.status !== 'PUBLISHED')
+        if (!course || course.status !== 'PUBLISHED') {
+            skippedCount++;
             continue;
-        const enrollment = yield enrollment_model_1.Enrollment.create({
+        }
+        yield enrollment_model_1.Enrollment.create({
             student: studentId,
             course: courseId,
         });
-        results.push(enrollment);
+        enrolledCount++;
     }
-    return results;
+    return { enrolledCount, skippedCount };
 });
 const getAllEnrollments = (query) => __awaiter(void 0, void 0, void 0, function* () {
     const enrollmentQuery = new QueryBuilder_1.default(enrollment_model_1.Enrollment.find()

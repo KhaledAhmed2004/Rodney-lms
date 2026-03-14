@@ -47,11 +47,7 @@ router.post(
   QuizController.createQuiz,
 );
 
-router.get(
-  '/course/:courseId',
-  auth(USER_ROLES.SUPER_ADMIN),
-  QuizController.getQuizzesByCourse,
-);
+router.get('/', auth(USER_ROLES.SUPER_ADMIN), QuizController.getAllQuizzes);
 
 router.get('/:id', auth(USER_ROLES.SUPER_ADMIN), QuizController.getQuizById);
 

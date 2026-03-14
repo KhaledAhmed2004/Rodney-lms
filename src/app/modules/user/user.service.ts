@@ -5,7 +5,7 @@ import { USER_ROLES, USER_STATUS } from '../../../enums/user';
 import ApiError from '../../../errors/ApiError';
 import { emailHelper } from '../../../helpers/emailHelper';
 import { emailTemplate } from '../../../shared/emailTemplate';
-import unlinkFile from '../../../shared/unlinkFile';
+import { deleteFile } from '../../middlewares/fileHandler';
 import generateOTP from '../../../util/generateOTP';
 import { User } from './user.model';
 import { IUser } from './user.interface';
@@ -88,7 +88,7 @@ const updateProfileToDB = async (
 
   //unlink file here
   if (payload.profilePicture) {
-    unlinkFile(isExistUser.profilePicture);
+    await deleteFile(isExistUser.profilePicture);
   }
 
   // Student-specific fields to exclude for non-student roles

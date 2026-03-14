@@ -1,12 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ATTEMPT_STATUS = exports.QUESTION_TYPE = exports.QUIZ_STATUS = void 0;
-var QUIZ_STATUS;
-(function (QUIZ_STATUS) {
-    QUIZ_STATUS["DRAFT"] = "DRAFT";
-    QUIZ_STATUS["PUBLISHED"] = "PUBLISHED";
-    QUIZ_STATUS["ARCHIVED"] = "ARCHIVED";
-})(QUIZ_STATUS || (exports.QUIZ_STATUS = QUIZ_STATUS = {}));
+exports.ATTEMPT_STATUS = exports.QUESTION_TYPE = void 0;
 var QUESTION_TYPE;
 (function (QUESTION_TYPE) {
     QUESTION_TYPE["MCQ"] = "MCQ";

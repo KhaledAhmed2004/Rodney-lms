@@ -19,7 +19,7 @@ router.patch('/attempts/:attemptId/submit', (0, auth_1.default)(user_1.USER_ROLE
 router.get('/attempts/:attemptId', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), quiz_controller_1.QuizController.getAttemptById);
 // ==================== ADMIN ROUTES ====================
 router.post('/', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(quiz_validation_1.QuizValidation.createQuiz), quiz_controller_1.QuizController.createQuiz);
-router.get('/course/:courseId', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), quiz_controller_1.QuizController.getQuizzesByCourse);
+router.get('/', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), quiz_controller_1.QuizController.getAllQuizzes);
 router.get('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), quiz_controller_1.QuizController.getQuizById);
 router.patch('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(quiz_validation_1.QuizValidation.updateQuiz), quiz_controller_1.QuizController.updateQuiz);
 router.delete('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), quiz_controller_1.QuizController.deleteQuiz);

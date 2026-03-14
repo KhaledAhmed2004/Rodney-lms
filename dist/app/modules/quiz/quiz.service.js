@@ -17,30 +17,27 @@ const crypto_1 = __importDefault(require("crypto"));
 const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
-const enrollmentHelper_1 = require("../../helpers/enrollmentHelper");
 const quiz_interface_1 = require("./quiz.interface");
 const quiz_model_1 = require("./quiz.model");
 // ==================== ADMIN SERVICES ====================
 const createQuiz = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     const quizData = {
-        course: payload.courseId,
         title: payload.title,
         description: payload.description,
         settings: payload.settings,
-        status: payload.status || quiz_interface_1.QUIZ_STATUS.DRAFT,
     };
-    if (payload.lessonId) {
-        quizData.lesson = payload.lessonId;
-    }
     if (payload.questions && Array.isArray(payload.questions)) {
-        quizData.questions = payload.questions;
-        quizData.totalMarks = payload.questions.reduce((sum, q) => sum + (q.marks || 1), 0);
+        quizData.questions = payload.questions.map((q, index) => {
+            var _a;
+            return (Object.assign(Object.assign({}, q), { questionId: q.questionId || crypto_1.default.randomUUID(), order: (_a = q.order) !== null && _a !== void 0 ? _a : index }));
+        });
+        quizData.totalMarks = quizData.questions.reduce((sum, q) => sum + (q.marks || 1), 0);
     }
     const result = yield quiz_model_1.Quiz.create(quizData);
     return result;
 });
-const getQuizzesByCourse = (courseId, query) => __awaiter(void 0, void 0, void 0, function* () {
-    const quizQuery = new QueryBuilder_1.default(quiz_model_1.Quiz.find({ course: courseId }), query)
+const getAllQuizzes = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    const quizQuery = new QueryBuilder_1.default(quiz_model_1.Quiz.find(), query)
         .search(['title'])
         .filter()
         .sort()
@@ -156,11 +153,6 @@ const getStudentView = (quizId, studentId) => __awaiter(void 0, void 0, void 0, 
     if (!quiz) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Quiz not found');
     }
-    if (quiz.status !== quiz_interface_1.QUIZ_STATUS.PUBLISHED) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Quiz is not available');
-    }
-    // Verify enrollment
-    yield enrollmentHelper_1.EnrollmentHelper.verifyEnrollment(studentId, quiz.course.toString());
     // Strip correct answers
     const sanitizedQuestions = quiz.questions.map(q => ({
         questionId: q.questionId,
@@ -194,11 +186,6 @@ const startAttempt = (quizId, studentId) => __awaiter(void 0, void 0, void 0, fu
     if (!quiz) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Quiz not found');
     }
-    if (quiz.status !== quiz_interface_1.QUIZ_STATUS.PUBLISHED) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Quiz is not available');
-    }
-    // Verify enrollment
-    const enrollment = yield enrollmentHelper_1.EnrollmentHelper.verifyEnrollment(studentId, quiz.course.toString());
     // Check max attempts
     if (quiz.settings.maxAttempts > 0) {
         const attemptCount = yield quiz_model_1.QuizAttempt.countDocuments({
@@ -223,8 +210,6 @@ const startAttempt = (quizId, studentId) => __awaiter(void 0, void 0, void 0, fu
     const attempt = yield quiz_model_1.QuizAttempt.create({
         quiz: quizId,
         student: studentId,
-        course: quiz.course,
-        enrollment: enrollment._id,
         maxScore: quiz.totalMarks,
         attemptNumber,
     });
@@ -309,8 +294,7 @@ const getAttemptById = (attemptId) => __awaiter(void 0, void 0, void 0, function
 });
 const getMyAttempts = (studentId, query) => __awaiter(void 0, void 0, void 0, function* () {
     const attemptQuery = new QueryBuilder_1.default(quiz_model_1.QuizAttempt.find({ student: studentId })
-        .populate('quiz', 'title totalMarks')
-        .populate('course', 'title'), query)
+        .populate('quiz', 'title totalMarks'), query)
         .filter()
         .sort()
         .paginate();
@@ -320,7 +304,7 @@ const getMyAttempts = (studentId, query) => __awaiter(void 0, void 0, void 0, fu
 });
 exports.QuizService = {
     createQuiz,
-    getQuizzesByCourse,
+    getAllQuizzes,
     getQuizById,
     updateQuiz,
     deleteQuiz,

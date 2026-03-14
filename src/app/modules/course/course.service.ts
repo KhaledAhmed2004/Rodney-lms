@@ -1,7 +1,8 @@
 import { StatusCodes } from 'http-status-codes';
-import { Types } from 'mongoose';
+import { PipelineStage, Types } from 'mongoose';
 import crypto from 'crypto';
 import slugify from 'slugify';
+import escapeRegex from 'escape-string-regexp';
 import ApiError from '../../../errors/ApiError';
 import QueryBuilder from '../../builder/QueryBuilder';
 import { deleteFile } from '../../middlewares/fileHandler';
@@ -614,9 +615,109 @@ const reorderLessons = async (
   return Lesson.find({ courseId, moduleId }).sort({ order: 1 });
 };
 
+const browseCourses = async (
+  studentId: string,
+  query: Record<string, unknown>
+) => {
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const matchConditions: Record<string, unknown> = {
+    status: COURSE_STATUS.PUBLISHED,
+  };
+
+  if (query.searchTerm) {
+    const sanitized = escapeRegex(String(query.searchTerm));
+    matchConditions.$or = [
+      { title: { $regex: sanitized, $options: 'i' } },
+      { description: { $regex: sanitized, $options: 'i' } },
+    ];
+  }
+
+  const pipeline: PipelineStage[] = [
+    { $match: matchConditions },
+    {
+      $lookup: {
+        from: 'enrollments',
+        let: { courseId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$course', '$$courseId'] },
+                  { $eq: ['$student', new Types.ObjectId(studentId)] },
+                ],
+              },
+            },
+          },
+          { $limit: 1 },
+          {
+            $project: {
+              enrollmentId: '$_id',
+              status: 1,
+              completionPercentage: '$progress.completionPercentage',
+              _id: 0,
+            },
+          },
+        ],
+        as: 'enrollmentData',
+      },
+    },
+    {
+      $addFields: {
+        enrollment: {
+          $cond: {
+            if: { $gt: [{ $size: '$enrollmentData' }, 0] },
+            then: { $arrayElemAt: ['$enrollmentData', 0] },
+            else: null,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        title: 1,
+        thumbnail: 1,
+        description: 1,
+        totalLessons: 1,
+        averageRating: 1,
+        enrollmentCount: 1,
+        enrollment: 1,
+      },
+    },
+    {
+      $facet: {
+        data: [
+          { $sort: { createdAt: -1 as const } },
+          { $skip: skip },
+          { $limit: limit },
+        ],
+        total: [{ $count: 'count' }],
+      },
+    },
+  ];
+
+  const result = await Course.aggregate(pipeline);
+  const data = result[0]?.data ?? [];
+  const total = result[0]?.total[0]?.count ?? 0;
+
+  return {
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+    data,
+  };
+};
+
 export const CourseService = {
   createCourse,
   getAllCourses,
+  browseCourses,
   getAdminCourses,
   getCourseByIdentifier,
   updateCourse,

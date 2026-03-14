@@ -5,7 +5,7 @@ const zod_1 = require("zod");
 const createLegalPage = zod_1.z.object({
     body: zod_1.z.object({
         title: zod_1.z.string({ required_error: 'Title is required' }).min(1).max(200),
-        content: zod_1.z.string().min(1).optional(),
+        content: zod_1.z.string().optional(),
     }),
 });
 const updateLegalPage = zod_1.z.object({

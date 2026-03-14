@@ -17,11 +17,8 @@ const createQuiz = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getQuizzesByCourse = catchAsync(async (req: Request, res: Response) => {
-  const result = await QuizService.getQuizzesByCourse(
-    req.params.courseId,
-    req.query,
-  );
+const getAllQuizzes = catchAsync(async (req: Request, res: Response) => {
+  const result = await QuizService.getAllQuizzes(req.query);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -184,7 +181,7 @@ const getMyAttempts = catchAsync(async (req: Request, res: Response) => {
 
 export const QuizController = {
   createQuiz,
-  getQuizzesByCourse,
+  getAllQuizzes,
   getQuizById,
   updateQuiz,
   deleteQuiz,

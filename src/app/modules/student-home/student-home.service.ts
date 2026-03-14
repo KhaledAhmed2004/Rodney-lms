@@ -1,46 +1,68 @@
 import { Enrollment } from '../enrollment/enrollment.model';
 import { QuizAttempt } from '../quiz/quiz.model';
-import { DailyActivity } from '../activity/activity.model';
 import { StudentBadge } from '../gamification/gamification.model';
 import { PointsLedger } from '../gamification/gamification.model';
 import { User } from '../user/user.model';
 
 const getHome = async (studentId: string) => {
-  const [
-    user,
-    enrolledCourses,
-    recentBadges,
-    totalPointsResult,
-    todayActivity,
-  ] = await Promise.all([
-    User.findById(studentId).select('streak totalPoints'),
-    Enrollment.find({
-      student: studentId,
-      status: { $in: ['ACTIVE', 'COMPLETED'] },
-    })
-      .populate('course', 'title slug thumbnail totalLessons')
-      .sort({ 'progress.lastAccessedAt': -1 })
-      .limit(10),
-    StudentBadge.find({ student: studentId })
-      .populate('badge', 'name icon')
-      .sort({ earnedAt: -1 })
-      .limit(5),
-    PointsLedger.aggregate([
-      { $match: { student: studentId } },
-      { $group: { _id: null, total: { $sum: '$points' } } },
-    ]),
-    (() => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return DailyActivity.findOne({ student: studentId, date: today });
-    })(),
-  ]);
+  const [user, enrolledCourses, recentBadges, totalPointsResult, quizStats] =
+    await Promise.all([
+      User.findById(studentId).select('name streak totalPoints'),
+      Enrollment.find({
+        student: studentId,
+        status: { $in: ['ACTIVE', 'COMPLETED'] },
+      })
+        .populate('course', 'title slug thumbnail totalLessons')
+        .sort({ 'progress.lastAccessedAt': -1 })
+        .limit(10),
+      StudentBadge.find({ student: studentId })
+        .populate('badge', 'name icon')
+        .sort({ earnedAt: -1 })
+        .limit(5),
+      PointsLedger.aggregate([
+        { $match: { student: studentId } },
+        { $group: { _id: null, total: { $sum: '$points' } } },
+      ]),
+      QuizAttempt.aggregate([
+        { $match: { student: studentId, status: 'COMPLETED' } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            passed: { $sum: { $cond: ['$passed', 1, 0] } },
+          },
+        },
+      ]),
+    ]);
+
+  // Calculate course progress (average completion across all courses)
+  const totalCourses = enrolledCourses.length;
+  const courseProgress =
+    totalCourses > 0
+      ? Math.round(
+          enrolledCourses.reduce(
+            (sum: number, e: any) => sum + e.progress.completionPercentage,
+            0,
+          ) / totalCourses,
+        )
+      : 0;
+
+  // Calculate quiz progress
+  const quizTotal = quizStats[0]?.total || 0;
+  const quizPassed = quizStats[0]?.passed || 0;
+  const quizPercentage =
+    quizTotal > 0 ? Math.round((quizPassed / quizTotal) * 100) : 0;
 
   return {
+    name: (user as any)?.name || '',
     points: totalPointsResult[0]?.total || (user as any)?.totalPoints || 0,
     streak: {
       current: (user as any)?.streak?.current || 0,
       longest: (user as any)?.streak?.longest || 0,
+    },
+    yourProgress: {
+      courseProgress,
+      quizProgress: quizPercentage,
     },
     enrolledCourses: enrolledCourses.map((e: any) => ({
       enrollmentId: e._id,
@@ -57,7 +79,6 @@ const getHome = async (studentId: string) => {
       icon: sb.badge.icon,
       earnedAt: sb.earnedAt,
     })),
-    todayActive: !!todayActivity,
   };
 };
 

@@ -27,7 +27,7 @@ const bulkEnroll = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.CREATED,
-    message: 'Enrolled in courses successfully',
+    message: `Enrolled in ${result.enrolledCount} course(s) successfully`,
     data: result,
   });
 });

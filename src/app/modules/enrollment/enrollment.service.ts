@@ -42,8 +42,9 @@ const enrollInCourse = async (
 const bulkEnroll = async (
   studentId: string,
   courseIds: string[],
-): Promise<IEnrollment[]> => {
-  const results: IEnrollment[] = [];
+): Promise<{ enrolledCount: number; skippedCount: number }> => {
+  let enrolledCount = 0;
+  let skippedCount = 0;
 
   for (const courseId of courseIds) {
     // Skip if already enrolled
@@ -51,19 +52,25 @@ const bulkEnroll = async (
       student: studentId,
       course: courseId,
     });
-    if (existing) continue;
+    if (existing) {
+      skippedCount++;
+      continue;
+    }
 
     const course = await Course.findById(courseId);
-    if (!course || course.status !== 'PUBLISHED') continue;
+    if (!course || course.status !== 'PUBLISHED') {
+      skippedCount++;
+      continue;
+    }
 
-    const enrollment = await Enrollment.create({
+    await Enrollment.create({
       student: studentId,
       course: courseId,
     });
-    results.push(enrollment);
+    enrolledCount++;
   }
 
-  return results;
+  return { enrolledCount, skippedCount };
 };
 
 const getAllEnrollments = async (query: Record<string, unknown>) => {

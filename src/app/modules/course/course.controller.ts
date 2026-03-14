@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
+import { JwtPayload } from 'jsonwebtoken';
 import catchAsync from '../../../shared/catchAsync';
 import sendResponse from '../../../shared/sendResponse';
 import { CourseService } from './course.service';
@@ -19,6 +20,19 @@ const createCourse = catchAsync(async (req: Request, res: Response) => {
 
 const getAllCourses = catchAsync(async (req: Request, res: Response) => {
   const result = await CourseService.getAllCourses(req.query);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Courses retrieved successfully',
+    pagination: result.pagination,
+    data: result.data,
+  });
+});
+
+const browseCourses = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req.user as JwtPayload).id;
+  const result = await CourseService.browseCourses(userId, req.query);
 
   sendResponse(res, {
     success: true,
@@ -241,6 +255,7 @@ const toggleLessonVisibility = catchAsync(
 export const CourseController = {
   createCourse,
   getAllCourses,
+  browseCourses,
   getAdminCourses,
   getCourseByIdentifier,
   updateCourse,

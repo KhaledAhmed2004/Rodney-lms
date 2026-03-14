@@ -44,15 +44,6 @@ const SettingsSchema = new mongoose_1.Schema({
 }, { _id: false });
 // ==================== QUIZ SCHEMA ====================
 const quizSchema = new mongoose_1.Schema({
-    course: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'Course',
-        required: true,
-    },
-    lesson: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'Lesson',
-    },
     title: { type: String, required: true, trim: true },
     description: { type: String },
     questions: { type: [QuestionSchema], default: [] },
@@ -60,16 +51,8 @@ const quizSchema = new mongoose_1.Schema({
         type: SettingsSchema,
         default: {},
     },
-    status: {
-        type: String,
-        enum: Object.values(quiz_interface_1.QUIZ_STATUS),
-        default: quiz_interface_1.QUIZ_STATUS.DRAFT,
-    },
     totalMarks: { type: Number, default: 0 },
 }, { timestamps: true });
-quizSchema.index({ course: 1 });
-quizSchema.index({ lesson: 1 });
-quizSchema.index({ status: 1 });
 quizSchema.statics.isExistById = function (id) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield this.findById(id);
@@ -96,16 +79,6 @@ const quizAttemptSchema = new mongoose_1.Schema({
         ref: 'User',
         required: true,
     },
-    course: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'Course',
-        required: true,
-    },
-    enrollment: {
-        type: mongoose_1.Schema.Types.ObjectId,
-        ref: 'Enrollment',
-        required: true,
-    },
     answers: { type: [StudentAnswerSchema], default: [] },
     score: { type: Number, default: 0 },
     maxScore: { type: Number, default: 0 },
@@ -122,6 +95,4 @@ const quizAttemptSchema = new mongoose_1.Schema({
     },
 }, { timestamps: true });
 quizAttemptSchema.index({ quiz: 1, student: 1 });
-quizAttemptSchema.index({ student: 1, course: 1 });
-quizAttemptSchema.index({ enrollment: 1 });
 exports.QuizAttempt = (0, mongoose_1.model)('QuizAttempt', quizAttemptSchema);

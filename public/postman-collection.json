@@ -63,7 +63,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"1998-05-15\",\n  \"location\": \"Dhaka, Bangladesh\",\n  \"phone\": \"+8801712345678\"\n}"
+                  "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"1998-05-15\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/users",
@@ -422,14 +422,19 @@
           "name": "4. Browse Courses Screen",
           "item": [
             {
-              "name": "Get All Published Courses",
+              "name": "Browse Courses (with enrollment status)",
               "request": {
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
                 "url": {
-                  "raw": "{{baseUrl}}/courses?page=1&limit=10&searchTerm=&sort=-createdAt",
+                  "raw": "{{baseUrl}}/courses/browse?page=1&limit=10&searchTerm=&sort=-createdAt",
                   "host": ["{{baseUrl}}"],
-                  "path": ["courses"],
+                  "path": ["courses", "browse"],
                   "query": [
                     {
                       "key": "page",
@@ -442,7 +447,7 @@
                     {
                       "key": "searchTerm",
                       "value": "",
-                      "description": "Search by title"
+                      "description": "Search by title or description"
                     },
                     {
                       "key": "sort",
@@ -450,36 +455,7 @@
                     }
                   ]
                 },
-                "description": "Browse and search published courses. Public endpoint."
-              },
-              "response": []
-            },
-            {
-              "name": "Get My Enrolled Courses",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/enrollments/my-courses?page=1&limit=10",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["enrollments", "my-courses"],
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "10"
-                    }
-                  ]
-                },
-                "description": "Get enrolled courses with progress. Auth: STUDENT."
+                "description": "Browse all published courses with student's enrollment status. Enrolled courses include enrollment details, non-enrolled return enrollment: null. Auth: STUDENT."
               },
               "response": []
             }
@@ -3098,19 +3074,19 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"courseId\": \"COURSE_ID\",\n  \"title\": \"Module 1 Quiz\",\n  \"description\": \"Test your knowledge\",\n  \"settings\": {\n    \"timeLimit\": 30,\n    \"maxAttempts\": 3,\n    \"passingScore\": 70,\n    \"shuffleQuestions\": true,\n    \"shuffleOptions\": true,\n    \"showResults\": true\n  },\n  \"status\": \"DRAFT\"\n}"
+                  "raw": "{\n  \"title\": \"Module 1 Quiz\",\n  \"description\": \"Test your knowledge of JavaScript fundamentals\",\n  \"settings\": {\n    \"timeLimit\": 30,\n    \"maxAttempts\": 3,\n    \"passingScore\": 70,\n    \"shuffleQuestions\": true,\n    \"shuffleOptions\": true,\n    \"showResults\": true\n  },\n  \"questions\": [\n    {\n      \"type\": \"MCQ\",\n      \"text\": \"What is Node.js?\",\n      \"options\": [\n        { \"optionId\": \"A\", \"text\": \"A runtime environment\", \"isCorrect\": true },\n        { \"optionId\": \"B\", \"text\": \"A database\", \"isCorrect\": false },\n        { \"optionId\": \"C\", \"text\": \"A CSS framework\", \"isCorrect\": false },\n        { \"optionId\": \"D\", \"text\": \"A text editor\", \"isCorrect\": false }\n      ],\n      \"marks\": 5,\n      \"explanation\": \"Node.js is a JavaScript runtime built on Chrome's V8 engine.\",\n      \"order\": 0\n    },\n    {\n      \"type\": \"TRUE_FALSE\",\n      \"text\": \"JavaScript is a statically typed language.\",\n      \"options\": [\n        { \"optionId\": \"TRUE\", \"text\": \"True\", \"isCorrect\": false },\n        { \"optionId\": \"FALSE\", \"text\": \"False\", \"isCorrect\": true }\n      ],\n      \"marks\": 2,\n      \"explanation\": \"JavaScript is dynamically typed, not statically typed.\",\n      \"order\": 1\n    },\n    {\n      \"type\": \"SHORT_ANSWER\",\n      \"text\": \"Explain the difference between let, const, and var in JavaScript.\",\n      \"marks\": 10,\n      \"explanation\": \"let and const are block-scoped (ES6+), var is function-scoped. const cannot be reassigned after declaration.\",\n      \"order\": 2\n    }\n  ],\n\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/quizzes",
                   "host": ["{{baseUrl}}"],
                   "path": ["quizzes"]
                 },
-                "description": "Create a new quiz for a course. Requires SUPER_ADMIN role."
+                "description": "Create a new quiz with questions in a single request. Supports 3 question types: MCQ (multiple choice with options), TRUE_FALSE (2 options: True/False), SHORT_ANSWER (descriptive, no options — requires manual grading). Requires SUPER_ADMIN role."
               },
               "response": []
             },
             {
-              "name": "Get Quizzes by Course",
+              "name": "Get All Quizzes",
               "request": {
                 "method": "GET",
                 "header": [
@@ -3120,9 +3096,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/quizzes/course/:courseId?page=1&limit=10",
+                  "raw": "{{baseUrl}}/quizzes?page=1&limit=10&searchTerm=",
                   "host": ["{{baseUrl}}"],
-                  "path": ["quizzes", "course", ":courseId"],
+                  "path": ["quizzes"],
                   "query": [
                     {
                       "key": "page",
@@ -3131,16 +3107,15 @@
                     {
                       "key": "limit",
                       "value": "10"
-                    }
-                  ],
-                  "variable": [
+                    },
                     {
-                      "key": "courseId",
-                      "value": "COURSE_ID"
+                      "key": "searchTerm",
+                      "value": "",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "Get all quizzes for a specific course. Requires SUPER_ADMIN role."
+                "description": "Get all quizzes with pagination and search. Requires SUPER_ADMIN role."
               },
               "response": []
             },
@@ -3185,7 +3160,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"title\": \"Updated Quiz Title\",\n  \"status\": \"PUBLISHED\",\n  \"settings\": {\n    \"timeLimit\": 45\n  }\n}"
+                  "raw": "{\n  \"title\": \"Updated Quiz Title\",\n  \"settings\": {\n    \"timeLimit\": 45\n  }\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/quizzes/:id",
@@ -3256,7 +3231,7 @@
                     }
                   ]
                 },
-                "description": "Add a question to a quiz. Requires SUPER_ADMIN role."
+                "description": "Add a single question to an existing quiz. Requires SUPER_ADMIN role. Supports MCQ, TRUE_FALSE, and SHORT_ANSWER types."
               },
               "response": []
             },

@@ -2,11 +2,9 @@ import crypto from 'crypto';
 import { StatusCodes } from 'http-status-codes';
 import ApiError from '../../../errors/ApiError';
 import QueryBuilder from '../../builder/QueryBuilder';
-import { EnrollmentHelper } from '../../helpers/enrollmentHelper';
 import {
   IQuiz,
   IQuizAttempt,
-  QUIZ_STATUS,
   QUESTION_TYPE,
 } from './quiz.interface';
 import { Quiz, QuizAttempt } from './quiz.model';
@@ -15,20 +13,18 @@ import { Quiz, QuizAttempt } from './quiz.model';
 
 const createQuiz = async (payload: Record<string, unknown>): Promise<IQuiz> => {
   const quizData: Record<string, unknown> = {
-    course: payload.courseId,
     title: payload.title,
     description: payload.description,
     settings: payload.settings,
-    status: payload.status || QUIZ_STATUS.DRAFT,
   };
 
-  if (payload.lessonId) {
-    quizData.lesson = payload.lessonId;
-  }
-
   if (payload.questions && Array.isArray(payload.questions)) {
-    quizData.questions = payload.questions;
-    quizData.totalMarks = (payload.questions as any[]).reduce(
+    quizData.questions = (payload.questions as any[]).map((q, index) => ({
+      ...q,
+      questionId: q.questionId || crypto.randomUUID(),
+      order: q.order ?? index,
+    }));
+    quizData.totalMarks = (quizData.questions as any[]).reduce(
       (sum: number, q: any) => sum + (q.marks || 1),
       0,
     );
@@ -38,11 +34,8 @@ const createQuiz = async (payload: Record<string, unknown>): Promise<IQuiz> => {
   return result;
 };
 
-const getQuizzesByCourse = async (
-  courseId: string,
-  query: Record<string, unknown>,
-) => {
-  const quizQuery = new QueryBuilder(Quiz.find({ course: courseId }), query)
+const getAllQuizzes = async (query: Record<string, unknown>) => {
+  const quizQuery = new QueryBuilder(Quiz.find(), query)
     .search(['title'])
     .filter()
     .sort()
@@ -229,13 +222,6 @@ const getStudentView = async (
   if (!quiz) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Quiz not found');
   }
-  if (quiz.status !== QUIZ_STATUS.PUBLISHED) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Quiz is not available');
-  }
-
-  // Verify enrollment
-  await EnrollmentHelper.verifyEnrollment(studentId, quiz.course.toString());
-
   // Strip correct answers
   const sanitizedQuestions = quiz.questions.map(q => ({
     questionId: q.questionId,
@@ -274,16 +260,6 @@ const startAttempt = async (
   if (!quiz) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Quiz not found');
   }
-  if (quiz.status !== QUIZ_STATUS.PUBLISHED) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Quiz is not available');
-  }
-
-  // Verify enrollment
-  const enrollment = await EnrollmentHelper.verifyEnrollment(
-    studentId,
-    quiz.course.toString(),
-  );
-
   // Check max attempts
   if (quiz.settings.maxAttempts > 0) {
     const attemptCount = await QuizAttempt.countDocuments({
@@ -312,8 +288,6 @@ const startAttempt = async (
   const attempt = await QuizAttempt.create({
     quiz: quizId,
     student: studentId,
-    course: quiz.course,
-    enrollment: (enrollment as any)._id,
     maxScore: quiz.totalMarks,
     attemptNumber,
   });
@@ -433,8 +407,7 @@ const getMyAttempts = async (
 ) => {
   const attemptQuery = new QueryBuilder(
     QuizAttempt.find({ student: studentId })
-      .populate('quiz', 'title totalMarks')
-      .populate('course', 'title'),
+      .populate('quiz', 'title totalMarks'),
     query,
   )
     .filter()
@@ -448,7 +421,7 @@ const getMyAttempts = async (
 
 export const QuizService = {
   createQuiz,
-  getQuizzesByCourse,
+  getAllQuizzes,
   getQuizById,
   updateQuiz,
   deleteQuiz,

@@ -28,13 +28,23 @@ const settingsSchema = z.object({
 
 const createQuiz = z.object({
   body: z.object({
-    courseId: z.string({ required_error: 'Course ID is required' }),
-    lessonId: z.string().optional(),
     title: z.string({ required_error: 'Title is required' }).min(1).max(200),
     description: z.string().max(5000).optional(),
-    questions: z.array(questionSchema).optional(),
+    questions: z
+      .array(
+        z.object({
+          type: z.enum(['MCQ', 'TRUE_FALSE', 'SHORT_ANSWER']),
+          text: z.string().min(1),
+          options: z.array(optionSchema).optional(),
+          correctAnswer: z.string().optional(),
+          marks: z.number().min(0).default(1),
+          explanation: z.string().optional(),
+          questionId: z.string().optional(),
+          order: z.number().min(0).optional(),
+        }),
+      )
+      .optional(),
     settings: settingsSchema.optional(),
-    status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
   }),
 });
 
@@ -46,7 +56,6 @@ const updateQuiz = z.object({
     title: z.string().min(1).max(200).optional(),
     description: z.string().max(5000).optional(),
     settings: settingsSchema.optional(),
-    status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
   }),
 });
 

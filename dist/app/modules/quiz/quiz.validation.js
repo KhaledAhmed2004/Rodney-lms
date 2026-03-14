@@ -27,13 +27,21 @@ const settingsSchema = zod_1.z.object({
 });
 const createQuiz = zod_1.z.object({
     body: zod_1.z.object({
-        courseId: zod_1.z.string({ required_error: 'Course ID is required' }),
-        lessonId: zod_1.z.string().optional(),
         title: zod_1.z.string({ required_error: 'Title is required' }).min(1).max(200),
         description: zod_1.z.string().max(5000).optional(),
-        questions: zod_1.z.array(questionSchema).optional(),
+        questions: zod_1.z
+            .array(zod_1.z.object({
+            type: zod_1.z.enum(['MCQ', 'TRUE_FALSE', 'SHORT_ANSWER']),
+            text: zod_1.z.string().min(1),
+            options: zod_1.z.array(optionSchema).optional(),
+            correctAnswer: zod_1.z.string().optional(),
+            marks: zod_1.z.number().min(0).default(1),
+            explanation: zod_1.z.string().optional(),
+            questionId: zod_1.z.string().optional(),
+            order: zod_1.z.number().min(0).optional(),
+        }))
+            .optional(),
         settings: settingsSchema.optional(),
-        status: zod_1.z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
     }),
 });
 const updateQuiz = zod_1.z.object({
@@ -44,7 +52,6 @@ const updateQuiz = zod_1.z.object({
         title: zod_1.z.string().min(1).max(200).optional(),
         description: zod_1.z.string().max(5000).optional(),
         settings: settingsSchema.optional(),
-        status: zod_1.z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
     }),
 });
 const addQuestion = zod_1.z.object({

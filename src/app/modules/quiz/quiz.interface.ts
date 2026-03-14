@@ -1,11 +1,5 @@
 import { Model, Types } from 'mongoose';
 
-export enum QUIZ_STATUS {
-  DRAFT = 'DRAFT',
-  PUBLISHED = 'PUBLISHED',
-  ARCHIVED = 'ARCHIVED',
-}
-
 export enum QUESTION_TYPE {
   MCQ = 'MCQ',
   TRUE_FALSE = 'TRUE_FALSE',
@@ -45,13 +39,10 @@ export type IQuizSettings = {
 };
 
 export type IQuiz = {
-  course: Types.ObjectId;
-  lesson?: Types.ObjectId;
   title: string;
   description?: string;
   questions: IQuestion[];
   settings: IQuizSettings;
-  status: QUIZ_STATUS;
   totalMarks: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -73,8 +64,6 @@ export type IStudentAnswer = {
 export type IQuizAttempt = {
   quiz: Types.ObjectId;
   student: Types.ObjectId;
-  course: Types.ObjectId;
-  enrollment: Types.ObjectId;
   answers: IStudentAnswer[];
   score: number;
   maxScore: number;

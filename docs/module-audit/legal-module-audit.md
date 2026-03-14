@@ -32,7 +32,7 @@ Legal module review — full code audit. Module ta legal pages (Terms of Service
 | 5 | Public read access (no auth on GET) | `route.ts:11, 14` |
 | 6 | Zod validation on create + update | `validation.ts:3-18` |
 | 7 | Title max length (200 chars) | `validation.ts:5, 15` |
-| 8 | Content optional in create (default `''`), min 1 char if provided | `validation.ts:6`, `model.ts:18-20` |
+| 8 | Content optional in create (default `''`), empty string allowed | `validation.ts:6`, `model.ts:18-20` |
 | 9 | Slug lowercase + trim in schema | `model.ts:9-11` |
 | 10 | Unique index on slug (via `unique: true`) | `model.ts:8` |
 | 11 | Timestamps auto-managed (createdAt, updatedAt) | `model.ts:23` |
@@ -60,7 +60,7 @@ Legal module review — full code audit. Module ta legal pages (Terms of Service
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
 | title | string | Yes | min 1, max 200 |
-| content | string | No | min 1 if provided, NO max limit ⚠️. Default `''` |
+| content | string | No | optional, empty string allowed, NO max limit ⚠️. Default `''` |
 
 **Response (201):**
 
@@ -256,7 +256,7 @@ Legal module review — full code audit. Module ta legal pages (Terms of Service
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
 | body.title | string | Yes | min(1), max(200) |
-| body.content | string | No | min(1) if provided — ⚠️ no max. Default `''` in DB |
+| body.content | string | No | optional, empty string allowed — ⚠️ no max. Default `''` in DB |
 
 **Update (`updateLegalPage`):**
 
