@@ -25,6 +25,12 @@
 2. Nested reply korte chaile `parentReplyId` pathay (max 1 level)
 3. Success → reply list e admin reply dekhay (with admin badge)
 
+### Edit Own Post / Reply
+1. Admin nijer post ba reply edit korte chaile "Edit" button e click kore (author-only)
+2. Post edit: title, content, course, image update kore → `PATCH /community/posts/:id` (multipart/form-data)
+3. Reply edit: content update kore → `PATCH /community/replies/:id`
+4. Success → updated content dekhay
+
 ### Moderate — Delete Post / Reply
 1. Admin kono post ba reply delete korte chaile "Delete" button e click kore
 2. Confirmation dialog → confirm korle `DELETE /community/posts/:id` ba `DELETE /community/replies/:id`
@@ -149,7 +155,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-### 7.3 Reply to Post
+### 7.3 Reply to Post (Simple)
 
 ```
 POST /community/posts/:id/replies
@@ -157,7 +163,7 @@ Content-Type: application/json
 Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> Same endpoint as [App Reply to Post](../app-screens/08-community.md#85-reply-to-post). Admin can reply directly or nested (1 level max).
+> Same endpoint as [App Reply to Post (Simple)](../app-screens/08-community.md#85-reply-to-post-simple). Top-level reply — post er directly under boshbe.
 
 **Request:**
 ```json
@@ -177,14 +183,110 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 }
 ```
 
-**Errors:**
+---
+
+### 7.4 Reply to Post (Nested)
+
+```
+POST /community/posts/:id/replies
+Content-Type: application/json
+Auth: Bearer {{accessToken}} (SUPER_ADMIN)
+```
+
+> Same endpoint as [App Reply to Post (Nested)](../app-screens/08-community.md#86-reply-to-post-nested). `parentReplyId` diye nested reply — max 1 level nesting.
+
+**Request:**
+```json
+{
+  "content": "I agree!",
+  "parentReplyId": "REPLY_ID"
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "664n...",
+    "content": "I agree!",
+    "parentReply": "REPLY_ID",
+    "createdAt": "2026-03-14T14:10:00Z"
+  }
+}
+```
+
+**Errors (7.3 + 7.4):**
 - `404` — Post not found / Parent reply not found
 - `400` — Parent reply does not belong to this post
 - `400` — Cannot reply to a nested reply (max 1 level)
 
 ---
 
-### 7.4 Delete Post / Delete Reply
+### 7.5 Edit Own Post
+
+```
+PATCH /community/posts/:id
+Content-Type: multipart/form-data
+Auth: Bearer {{accessToken}} (SUPER_ADMIN)
+```
+
+> Same endpoint as [App Edit Post](../app-screens/08-community.md#87-edit-post). Author-only — admin can edit nijer post only.
+
+**Form Data:**
+- `title`: "Updated title" (optional)
+- `content`: "Updated content..." (optional)
+- `courseId`: "COURSE_ID" (optional, send `"null"` to remove course link)
+- `image`: (file, optional — replaces existing image)
+- `removeImage`: "true" (optional — removes existing image without replacing)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Post updated successfully",
+  "data": {
+    "_id": "664k...",
+    "title": "Updated title",
+    "content": "Updated content...",
+    "course": "JavaScript Basics",
+    "image": null
+  }
+}
+```
+
+---
+
+### 7.6 Edit Own Reply
+
+```
+PATCH /community/replies/:id
+Content-Type: application/json
+Auth: Bearer {{accessToken}} (SUPER_ADMIN)
+```
+
+> Same endpoint as [App Edit Reply](../app-screens/08-community.md#88-edit-reply). Author-only — admin can edit nijer reply only.
+
+**Request:**
+```json
+{ "content": "Edited reply content by admin" }
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Reply updated successfully",
+  "data": {
+    "_id": "664l...",
+    "content": "Edited reply content by admin"
+  }
+}
+```
+
+---
+
+### 7.7 Delete Post / Delete Reply
 
 ```
 DELETE /community/posts/:id
@@ -199,7 +301,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-### 7.5 Course Options (Filter Dropdown)
+### 7.8 Course Options (Filter Dropdown)
 
 ```
 GET /courses/options

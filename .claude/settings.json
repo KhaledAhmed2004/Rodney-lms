@@ -40,7 +40,8 @@
       "Bash(npm uninstall:*)",
       "Bash(npx eslint:*)",
       "Read(//d/web/ projects/office-sta/rodney/src/app/modules/**)",
-      "Bash(find C:Userskhaled.claudeprojectsd--web-projects-office-sta-rodneymemory -type f -name *.md)"
+      "Bash(find C:Userskhaled.claudeprojectsd--web-projects-office-sta-rodneymemory -type f -name *.md)",
+      "Read(//d/web/ projects/office-sta/rodney/src/routes/**)"
     ],
     "additionalDirectories": [
       "d:\\web projects\\office-sta\\rodney\\.claude",

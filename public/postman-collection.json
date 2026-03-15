@@ -86,14 +86,19 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\"\n}"
+                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\",\n  \"deviceToken\": \"fcm-device-token-here\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/login",
                   "host": ["{{baseUrl}}"],
                   "path": ["auth", "login"]
                 },
-                "description": "Login with email and password. Returns access and refresh tokens."
+                "description": "Login with email and password. Returns access and refresh tokens. deviceToken is optional — used for push notifications."
               },
               "response": [],
               "event": [
@@ -123,13 +128,27 @@
                   {
                     "key": "Authorization",
                     "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
                   }
                 ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"deviceToken\": \"fcm-device-token-here\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
                 "url": {
                   "raw": "{{baseUrl}}/auth/logout",
                   "host": ["{{baseUrl}}"],
                   "path": ["auth", "logout"]
-                }
+                },
+                "description": "Logout the current user. deviceToken is required — server removes it from push notification list."
               },
               "response": []
             },
@@ -167,15 +186,39 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"oneTimeCode\": 123456\n}"
+                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"oneTimeCode\": 123456\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/verify-email",
                   "host": ["{{baseUrl}}"],
                   "path": ["auth", "verify-email"]
-                }
+                },
+                "description": "Verify email with OTP. New user: auto-login (returns tokens). Password reset flow: returns reset token string."
               },
-              "response": []
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "if (jsonData.success && jsonData.data && jsonData.data.tokens) {",
+                      "  pm.collectionVariables.set('accessToken', jsonData.data.tokens.accessToken);",
+                      "  if (jsonData.data.tokens.refreshToken) {",
+                      "    pm.collectionVariables.set('refreshToken', jsonData.data.tokens.refreshToken);",
+                      "  }",
+                      "  console.log('Auto-login tokens saved to collection variables');",
+                      "}"
+                    ]
+                  }
+                }
+              ]
             },
             {
               "name": "Resend Verification Email",
@@ -875,7 +918,7 @@
                 "description": "Completed quiz attempts with pagination. Returns: quizTitle, courseName, percentage, passed, completedAt. Auth: STUDENT."
               },
               "response": []
-            },
+            }
           ]
         },
         {
@@ -1579,6 +1622,38 @@
               "response": []
             },
             {
+              "name": "Change Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentPassword\": \"Password123!\",\n  \"newPassword\": \"NewPassword456!\",\n  \"confirmPassword\": \"NewPassword456!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/change-password",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "change-password"]
+                },
+                "description": "Change password from profile screen. Requires current password verification. Auth required."
+              },
+              "response": []
+            },
+            {
               "name": "Logout",
               "request": {
                 "method": "POST",
@@ -1586,14 +1661,27 @@
                   {
                     "key": "Authorization",
                     "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
                   }
                 ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"deviceToken\": \"fcm-device-token-here\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
                 "url": {
                   "raw": "{{baseUrl}}/auth/logout",
                   "host": ["{{baseUrl}}"],
                   "path": ["auth", "logout"]
                 },
-                "description": "Clears refreshToken cookie + removes device token for push notifications. Client side: clear stored tokens → navigate to login."
+                "description": "Clears refreshToken cookie + removes device token for push notifications. deviceToken required in body. Client side: clear stored tokens → navigate to login."
               },
               "response": []
             }
@@ -1802,14 +1890,19 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+                  "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"deviceToken\": \"fcm-admin-device-token\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/login",
                   "host": ["{{baseUrl}}"],
                   "path": ["auth", "login"]
                 },
-                "description": "Admin login using collection variables {{adminEmail}} and {{adminPassword}}."
+                "description": "Admin login using collection variables {{adminEmail}} and {{adminPassword}}. deviceToken is optional — used for push notifications."
               },
               "response": [],
               "event": [
@@ -1839,14 +1932,27 @@
                   {
                     "key": "Authorization",
                     "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
                   }
                 ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"deviceToken\": \"fcm-admin-device-token\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
                 "url": {
                   "raw": "{{baseUrl}}/auth/logout",
                   "host": ["{{baseUrl}}"],
                   "path": ["auth", "logout"]
                 },
-                "description": "Logout the currently authenticated admin."
+                "description": "Logout the currently authenticated admin. deviceToken required — server removes it from push notification list."
               },
               "response": []
             },
@@ -1866,7 +1972,12 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"currentPassword\": \"OldPass123!\",\n  \"newPassword\": \"NewPass456!\",\n  \"confirmPassword\": \"NewPass456!\"\n}"
+                  "raw": "{\n  \"currentPassword\": \"OldPass123!\",\n  \"newPassword\": \"NewPass456!\",\n  \"confirmPassword\": \"NewPass456!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{baseUrl}}/auth/change-password",
@@ -3138,7 +3249,7 @@
               "response": []
             },
             {
-              "name": "Reply to Post",
+              "name": "Reply to Post (Simple)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -3166,7 +3277,134 @@
                     }
                   ]
                 },
-                "description": "Reply to a community post. Send parentReplyId in body for nested reply (max 1 level). Requires SUPER_ADMIN role."
+                "description": "Top-level reply — post er directly under boshbe. parentReplyId na dile simple reply hoy. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Reply to Post (Nested)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"I agree!\",\n  \"parentReplyId\": \"REPLY_ID\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts/:id/replies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts", ":id", "replies"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "POST_ID"
+                    }
+                  ]
+                },
+                "description": "Nested reply — ekta top-level reply er under boshbe. parentReplyId = jei reply er reply korte chao tar ID. Max 1 level nesting (nested reply er reply kora jay na). Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Own Post",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "title",
+                      "value": "Updated title",
+                      "type": "text",
+                      "description": "Optional"
+                    },
+                    {
+                      "key": "content",
+                      "value": "Updated content...",
+                      "type": "text",
+                      "description": "Optional"
+                    },
+                    {
+                      "key": "courseId",
+                      "value": "COURSE_ID",
+                      "type": "text",
+                      "description": "Optional. Send \"null\" to remove course link."
+                    },
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": "",
+                      "description": "Optional. Replaces existing image."
+                    },
+                    {
+                      "key": "removeImage",
+                      "value": "true",
+                      "type": "text",
+                      "description": "Optional. Send \"true\" to remove existing image without replacing.",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "POST_ID"
+                    }
+                  ]
+                },
+                "description": "Edit own post. Author-only — admin can only edit posts they created. At least one field required. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Own Reply",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"Edited reply content by admin\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/community/replies/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "replies", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLY_ID"
+                    }
+                  ]
+                },
+                "description": "Edit own reply. Author-only — admin can only edit replies they created. Requires SUPER_ADMIN role."
               },
               "response": []
             },
@@ -3191,7 +3429,7 @@
                     }
                   ]
                 },
-                "description": "Delete a community post by ID. Requires SUPER_ADMIN role."
+                "description": "Delete a community post by ID. Admin can delete any post. Requires SUPER_ADMIN role."
               },
               "response": []
             },
