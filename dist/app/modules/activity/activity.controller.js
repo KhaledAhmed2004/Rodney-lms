@@ -19,8 +19,9 @@ const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const activity_service_1 = require("./activity.service");
 const getCalendar = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
-    const days = req.query.days ? parseInt(req.query.days) : 30;
-    const result = yield activity_service_1.ActivityService.getCalendar(userId, days);
+    const month = req.query.month ? Number(req.query.month) : undefined;
+    const year = req.query.year ? Number(req.query.year) : undefined;
+    const result = yield activity_service_1.ActivityService.getCalendar(userId, month, year);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,

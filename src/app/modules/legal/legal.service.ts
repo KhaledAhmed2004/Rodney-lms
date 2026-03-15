@@ -25,21 +25,21 @@ const createLegalPage = async (
   const slug = await generateSlug(payload.title);
   await LegalPage.create({ ...payload, slug });
   const result = await LegalPage.findOne({ slug }).select(
-    'slug title content createdAt updatedAt',
+    'slug title content createdAt',
   );
   return result as ILegalPage;
 };
 
 const getAll = async (): Promise<ILegalPage[]> => {
   const result = await LegalPage.find()
-    .select('-_id slug title updatedAt')
+    .select('-_id slug title')
     .sort({ title: 1 });
   return result;
 };
 
 const getBySlug = async (slug: string): Promise<ILegalPage> => {
   const result = await LegalPage.findOne({ slug }).select(
-    'slug title content createdAt updatedAt',
+    'slug title content updatedAt',
   );
   if (!result) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');

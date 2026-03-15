@@ -55,6 +55,10 @@ const quizSchema = new Schema<IQuiz, QuizModel>(
   {
     title: { type: String, required: true, trim: true },
     description: { type: String },
+    course: {
+      type: Schema.Types.ObjectId,
+      ref: 'Course',
+    },
     questions: { type: [QuestionSchema], default: [] },
     settings: {
       type: SettingsSchema,

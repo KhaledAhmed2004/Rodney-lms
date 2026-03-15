@@ -16,6 +16,8 @@ const router = express_1.default.Router();
 router.post('/', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, fileHandler_1.fileHandler)([{ name: 'thumbnail', maxCount: 1 }]), (0, validateRequest_1.default)(course_validation_1.CourseValidation.createCourseZodSchema), course_controller_1.CourseController.createCourse);
 // Get all published courses (public)
 router.get('/', course_controller_1.CourseController.getAllCourses);
+// Get course options for filter dropdowns (student + admin)
+router.get('/options', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), course_controller_1.CourseController.getCourseOptions);
 // Get all courses for admin (all statuses)
 router.get('/manage', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), course_controller_1.CourseController.getAdminCourses);
 // Browse courses with enrollment status (student)

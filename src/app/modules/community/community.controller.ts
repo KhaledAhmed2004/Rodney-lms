@@ -7,11 +7,12 @@ import { CommunityService } from './community.service';
 
 const createPost = catchAsync(async (req: Request, res: Response) => {
   const userId = (req.user as JwtPayload).id;
-  const result = await CommunityService.createPost(
-    userId,
-    req.body.content,
-    req.body.image,
-  );
+  const result = await CommunityService.createPost(userId, {
+    title: req.body.title,
+    content: req.body.content,
+    courseId: req.body.courseId,
+    image: req.body.image,
+  });
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.CREATED,
@@ -71,6 +72,7 @@ const createReply = catchAsync(async (req: Request, res: Response) => {
     req.params.id,
     userId,
     req.body.content,
+    req.body.parentReplyId,
   );
   sendResponse(res, {
     success: true,
@@ -91,14 +93,47 @@ const deleteReply = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getFlaggedPosts = catchAsync(async (req: Request, res: Response) => {
-  const result = await CommunityService.getFlaggedPosts(req.query);
+const getMyPosts = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req.user as JwtPayload).id;
+  const result = await CommunityService.getMyPosts(userId, req.query);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Flagged posts retrieved successfully',
+    message: 'My posts retrieved successfully',
     pagination: result.pagination,
     data: result.data,
+  });
+});
+
+const updatePost = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req.user as JwtPayload).id;
+  const result = await CommunityService.updatePost(req.params.id, userId, {
+    title: req.body.title,
+    content: req.body.content,
+    courseId: req.body.courseId,
+    image: req.body.image,
+    removeImage: req.body.removeImage,
+  });
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Post updated successfully',
+    data: result,
+  });
+});
+
+const updateReply = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req.user as JwtPayload).id;
+  const result = await CommunityService.updateReply(
+    req.params.id,
+    userId,
+    req.body.content,
+  );
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Reply updated successfully',
+    data: result,
   });
 });
 
@@ -110,5 +145,7 @@ export const CommunityController = {
   toggleLike,
   createReply,
   deleteReply,
-  getFlaggedPosts,
+  getMyPosts,
+  updatePost,
+  updateReply,
 };

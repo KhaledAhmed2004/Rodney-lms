@@ -6,17 +6,24 @@ import {
   PostLikeModel,
   IPostReply,
   PostReplyModel,
-  POST_STATUS,
-  REPLY_STATUS,
 } from './community.interface';
 
-// ==================== POST SCHEMA ====================
 const postSchema = new Schema<IPost, PostModel>(
   {
     author: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200,
+    },
+    course: {
+      type: Schema.Types.ObjectId,
+      ref: 'Course',
     },
     content: {
       type: String,
@@ -26,21 +33,16 @@ const postSchema = new Schema<IPost, PostModel>(
     image: { type: String },
     likesCount: { type: Number, default: 0 },
     repliesCount: { type: Number, default: 0 },
-    status: {
-      type: String,
-      enum: Object.values(POST_STATUS),
-      default: POST_STATUS.ACTIVE,
-    },
   },
   { timestamps: true },
 );
 
 postSchema.index({ author: 1 });
-postSchema.index({ status: 1, createdAt: -1 });
+postSchema.index({ createdAt: -1 });
+postSchema.index({ course: 1 });
 
 export const Post = model<IPost, PostModel>('Post', postSchema);
 
-// ==================== POST LIKE SCHEMA ====================
 const postLikeSchema = new Schema<IPostLike, PostLikeModel>(
   {
     post: {
@@ -64,7 +66,6 @@ export const PostLike = model<IPostLike, PostLikeModel>(
   postLikeSchema,
 );
 
-// ==================== POST REPLY SCHEMA ====================
 const postReplySchema = new Schema<IPostReply, PostReplyModel>(
   {
     post: {
@@ -82,10 +83,10 @@ const postReplySchema = new Schema<IPostReply, PostReplyModel>(
       required: true,
       maxlength: 2000,
     },
-    status: {
-      type: String,
-      enum: Object.values(REPLY_STATUS),
-      default: REPLY_STATUS.ACTIVE,
+    parentReply: {
+      type: Schema.Types.ObjectId,
+      ref: 'PostReply',
+      default: null,
     },
   },
   { timestamps: true },
@@ -93,6 +94,7 @@ const postReplySchema = new Schema<IPostReply, PostReplyModel>(
 
 postReplySchema.index({ post: 1, createdAt: 1 });
 postReplySchema.index({ author: 1 });
+postReplySchema.index({ parentReply: 1 });
 
 export const PostReply = model<IPostReply, PostReplyModel>(
   'PostReply',

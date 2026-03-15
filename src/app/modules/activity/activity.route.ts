@@ -1,7 +1,9 @@
 import express from 'express';
 import { USER_ROLES } from '../../../enums/user';
 import auth from '../../middlewares/auth';
+import validateRequest from '../../middlewares/validateRequest';
 import { ActivityController } from './activity.controller';
+import { ActivityValidation } from './activity.validation';
 
 const router = express.Router();
 
@@ -9,6 +11,7 @@ const router = express.Router();
 router.get(
   '/calendar',
   auth(USER_ROLES.STUDENT),
+  validateRequest(ActivityValidation.getCalendar),
   ActivityController.getCalendar,
 );
 

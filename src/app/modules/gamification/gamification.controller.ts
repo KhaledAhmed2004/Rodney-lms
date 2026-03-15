@@ -34,7 +34,7 @@ const getMyBadges = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Badges retrieved successfully',
+    message: 'Achievements retrieved successfully',
     data: result,
   });
 });

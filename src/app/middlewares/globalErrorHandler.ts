@@ -8,8 +8,17 @@ import handleCastError from '../../errors/handleCastError';
 import { errorLogger } from '../../shared/logger';
 import { IErrorMessage } from '../../types/errors.types';
 import { trace } from '@opentelemetry/api';
+import { deleteFile } from './fileHandler';
 
 const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
+  // Clean up uploaded files on error (prevents orphaned files on S3/Cloudinary)
+  const uploadedUrls = (req as any)?._uploadedFileUrls as string[] | undefined;
+  if (uploadedUrls?.length) {
+    for (const url of uploadedUrls) {
+      deleteFile(url).catch(() => {});
+    }
+  }
+
   // config.node_env === 'development'
   //   ? console.log('🚨 globalErrorHandler ~~ ', error)
   //   : errorLogger.error('🚨 globalErrorHandler ~~ ', error);

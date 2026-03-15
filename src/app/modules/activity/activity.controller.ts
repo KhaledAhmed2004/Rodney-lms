@@ -7,8 +7,9 @@ import { ActivityService } from './activity.service';
 
 const getCalendar = catchAsync(async (req: Request, res: Response) => {
   const userId = (req.user as JwtPayload).id;
-  const days = req.query.days ? parseInt(req.query.days as string) : 30;
-  const result = await ActivityService.getCalendar(userId, days);
+  const month = req.query.month ? Number(req.query.month) : undefined;
+  const year = req.query.year ? Number(req.query.year) : undefined;
+  const result = await ActivityService.getCalendar(userId, month, year);
 
   sendResponse(res, {
     success: true,

@@ -25,6 +25,7 @@ const enrollment_model_1 = require("../enrollment/enrollment.model");
 const enrollment_interface_1 = require("../enrollment/enrollment.interface");
 const escape_string_regexp_1 = __importDefault(require("escape-string-regexp"));
 const AggregationBuilder_1 = __importDefault(require("../../builder/AggregationBuilder"));
+const DEFAULT_PROFILE_PICTURE = 'https://i.ibb.co/z5YHLV9/profile.png';
 const createUserToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     const createUser = yield user_model_1.User.create(payload);
     if (!createUser) {
@@ -52,14 +53,21 @@ const createUserToDB = (payload) => __awaiter(void 0, void 0, void 0, function* 
 const getUserProfileFromDB = (user) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = user;
     // Student-specific fields to exclude for non-student roles
-    const studentOnlyFields = '-averageRating -ratingsCount -achievements -totalPoints -streak -onboardingCompleted -deviceTokens';
+    const studentOnlyFields = '-achievements -totalPoints -streak -onboardingCompleted -deviceTokens';
+    const studentProfileFields = 'name email profilePicture phone gender dateOfBirth location role status verified totalPoints streak onboardingCompleted';
     const query = user_model_1.User.findById(id);
-    if (user.role !== user_1.USER_ROLES.STUDENT) {
+    if (user.role === user_1.USER_ROLES.STUDENT) {
+        query.select(studentProfileFields);
+    }
+    else {
         query.select(studentOnlyFields);
     }
     const result = yield query;
     if (!result) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
+    }
+    if (result.status === user_1.USER_STATUS.DELETE) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your account has been deleted');
     }
     return result;
 });
@@ -69,15 +77,24 @@ const updateProfileToDB = (user, payload) => __awaiter(void 0, void 0, void 0, f
     if (!isExistUser) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
     }
-    if (payload.profilePicture && isExistUser.profilePicture) {
+    if (isExistUser.status !== user_1.USER_STATUS.ACTIVE) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your account is not active');
+    }
+    if (payload.profilePicture &&
+        isExistUser.profilePicture &&
+        isExistUser.profilePicture !== DEFAULT_PROFILE_PICTURE) {
         yield (0, fileHandler_1.deleteFile)(isExistUser.profilePicture);
     }
     // Student-specific fields to exclude for non-student roles
-    const studentOnlyFields = '-averageRating -ratingsCount -achievements -totalPoints -streak -onboardingCompleted -deviceTokens';
+    const studentOnlyFields = '-achievements -totalPoints -streak -onboardingCompleted -deviceTokens';
+    const studentUpdateFields = 'name email profilePicture phone gender dateOfBirth location';
     const updateQuery = user_model_1.User.findOneAndUpdate({ _id: id }, payload, {
         new: true,
     });
-    if (user.role !== user_1.USER_ROLES.STUDENT) {
+    if (user.role === user_1.USER_ROLES.STUDENT) {
+        updateQuery.select(studentUpdateFields);
+    }
+    else {
         updateQuery.select(studentOnlyFields);
     }
     return updateQuery;

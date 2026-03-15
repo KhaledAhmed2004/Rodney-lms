@@ -19,7 +19,12 @@ const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const community_service_1 = require("./community.service");
 const createPost = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
-    const result = yield community_service_1.CommunityService.createPost(userId, req.body.content, req.body.image);
+    const result = yield community_service_1.CommunityService.createPost(userId, {
+        title: req.body.title,
+        content: req.body.content,
+        courseId: req.body.courseId,
+        image: req.body.image,
+    });
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.CREATED,
@@ -72,7 +77,7 @@ const toggleLike = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
 }));
 const createReply = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
-    const result = yield community_service_1.CommunityService.createReply(req.params.id, userId, req.body.content);
+    const result = yield community_service_1.CommunityService.createReply(req.params.id, userId, req.body.content, req.body.parentReplyId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.CREATED,
@@ -90,14 +95,41 @@ const deleteReply = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
         message: 'Reply deleted successfully',
     });
 }));
-const getFlaggedPosts = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield community_service_1.CommunityService.getFlaggedPosts(req.query);
+const getMyPosts = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user.id;
+    const result = yield community_service_1.CommunityService.getMyPosts(userId, req.query);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Flagged posts retrieved successfully',
+        message: 'My posts retrieved successfully',
         pagination: result.pagination,
         data: result.data,
+    });
+}));
+const updatePost = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user.id;
+    const result = yield community_service_1.CommunityService.updatePost(req.params.id, userId, {
+        title: req.body.title,
+        content: req.body.content,
+        courseId: req.body.courseId,
+        image: req.body.image,
+        removeImage: req.body.removeImage,
+    });
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Post updated successfully',
+        data: result,
+    });
+}));
+const updateReply = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user.id;
+    const result = yield community_service_1.CommunityService.updateReply(req.params.id, userId, req.body.content);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Reply updated successfully',
+        data: result,
     });
 }));
 exports.CommunityController = {
@@ -108,5 +140,7 @@ exports.CommunityController = {
     toggleLike,
     createReply,
     deleteReply,
-    getFlaggedPosts,
+    getMyPosts,
+    updatePost,
+    updateReply,
 };

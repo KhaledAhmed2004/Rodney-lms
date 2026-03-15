@@ -27,30 +27,23 @@ const createUserZodSchema = z.object({
     .strict(),
 });
 
-// const updateUserZodSchema = z.object({
-//   name: z.string().optional(),
-//   email: z.string().optional(),
-//   gender: z.enum(['male', 'female']).optional(),
-//   dateOfBirth: z.string().optional(),
-//   location: z.string().optional(),
-//   phone: z.string().optional(),
-//   password: z.string().optional(),
-//   image: z.string().optional(),
-// });
 const updateUserZodSchema = z.object({
-  body: z.object({
-    name: z.string().optional(),
-    email: z.string().email('Invalid email address').optional(),
-    gender: z.enum(['male', 'female']).optional(),
-    dateOfBirth: z.string().optional(),
-    location: z.string().optional(),
-    phone: z.string().regex(phoneRegex, 'Phone must be 7-15 digits, optional +').optional(),
-    password: z
-      .string()
-      .regex(passwordRegex, 'Password must include upper, lower, number, special and be 8+ chars')
-      .optional(),
-    profilePicture: z.string().min(1).optional(),
-  }),
+  body: z
+    .object({
+      name: z.string().trim().min(1, 'Name cannot be empty').max(100).optional(),
+      gender: z.enum(['male', 'female']).optional(),
+      dateOfBirth: z.string().optional(),
+      location: z.string().trim().optional(),
+      phone: z
+        .string()
+        .regex(phoneRegex, 'Phone must be 7-15 digits, optional +')
+        .optional(),
+      profilePicture: z.string().min(1).optional(),
+    })
+    .strict()
+    .refine(data => Object.keys(data).length > 0, {
+      message: 'At least one field must be provided',
+    }),
 });
 
 const adminUpdateUserZodSchema = z.object({

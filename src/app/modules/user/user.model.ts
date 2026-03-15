@@ -63,14 +63,6 @@ const userSchema = new Schema<IUser>(
       type: [String],
       default: [],
     },
-    averageRating: {
-      type: Number,
-      default: 0,
-    },
-    ratingsCount: {
-      type: Number,
-      default: 0,
-    },
     about: {
       type: String,
     },

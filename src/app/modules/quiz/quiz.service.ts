@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { StatusCodes } from 'http-status-codes';
+import { PipelineStage, Types } from 'mongoose';
 import ApiError from '../../../errors/ApiError';
 import QueryBuilder from '../../builder/QueryBuilder';
 import {
@@ -405,18 +406,67 @@ const getMyAttempts = async (
   studentId: string,
   query: Record<string, unknown>,
 ) => {
-  const attemptQuery = new QueryBuilder(
-    QuizAttempt.find({ student: studentId })
-      .populate('quiz', 'title totalMarks'),
-    query,
-  )
-    .filter()
-    .sort()
-    .paginate();
+  const page = Number(query.page) || 1;
+  const limit = Number(query.limit) || 10;
+  const skip = (page - 1) * limit;
 
-  const data = await attemptQuery.modelQuery;
-  const pagination = await attemptQuery.getPaginationInfo();
-  return { pagination, data };
+  const pipeline: PipelineStage[] = [
+    { $match: { student: new Types.ObjectId(studentId), status: 'COMPLETED' } },
+    {
+      $lookup: {
+        from: 'quizzes',
+        localField: 'quiz',
+        foreignField: '_id',
+        as: 'quizData',
+        pipeline: [{ $project: { title: 1, course: 1 } }],
+      },
+    },
+    { $unwind: '$quizData' },
+    {
+      $lookup: {
+        from: 'courses',
+        localField: 'quizData.course',
+        foreignField: '_id',
+        as: 'courseData',
+        pipeline: [{ $project: { title: 1 } }],
+      },
+    },
+    { $unwind: { path: '$courseData', preserveNullAndEmptyArrays: true } },
+    {
+      $project: {
+        _id: 0,
+        quizTitle: '$quizData.title',
+        courseName: { $ifNull: ['$courseData.title', null] },
+        percentage: 1,
+        passed: 1,
+        completedAt: 1,
+      },
+    },
+    {
+      $facet: {
+        data: [
+          { $sort: { completedAt: -1 as const } },
+          { $skip: skip },
+          { $limit: limit },
+        ],
+        total: [{ $count: 'count' }],
+      },
+    },
+  ];
+
+  const result = await QuizAttempt.aggregate(pipeline);
+  const data = result[0]?.data ?? [];
+  const total = result[0]?.total[0]?.count ?? 0;
+
+  return {
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+    data,
+  };
 };
 
 export const QuizService = {

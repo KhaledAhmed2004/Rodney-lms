@@ -20,6 +20,13 @@ router.post(
 // Get all published courses (public)
 router.get('/', CourseController.getAllCourses);
 
+// Get course options for filter dropdowns (student + admin)
+router.get(
+  '/options',
+  auth(USER_ROLES.STUDENT, USER_ROLES.SUPER_ADMIN),
+  CourseController.getCourseOptions,
+);
+
 // Get all courses for admin (all statuses)
 router.get(
   '/manage',

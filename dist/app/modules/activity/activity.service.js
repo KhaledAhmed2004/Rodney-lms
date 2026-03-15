@@ -14,20 +14,50 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ActivityService = void 0;
 const http_status_codes_1 = require("http-status-codes");
+const mongoose_1 = require("mongoose");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const activity_model_1 = require("./activity.model");
 const user_model_1 = require("../user/user.model");
-const getCalendar = (studentId_1, ...args_1) => __awaiter(void 0, [studentId_1, ...args_1], void 0, function* (studentId, days = 30) {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    startDate.setHours(0, 0, 0, 0);
-    const activities = yield activity_model_1.DailyActivity.find({
-        student: studentId,
-        date: { $gte: startDate },
-    })
-        .sort({ date: 1 })
-        .select('date lessonsCompleted quizzesTaken pointsEarned isActive');
-    return activities;
+const getCalendar = (studentId, month, year) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const now = new Date();
+    const m = month !== null && month !== void 0 ? month : now.getMonth() + 1;
+    const y = year !== null && year !== void 0 ? year : now.getFullYear();
+    const startDate = new Date(y, m - 1, 1);
+    const endDate = new Date(y, m, 1);
+    const [days, summaryResult] = yield Promise.all([
+        activity_model_1.DailyActivity.find({
+            student: studentId,
+            date: { $gte: startDate, $lt: endDate },
+        })
+            .sort({ date: 1 })
+            .select('date lessonsCompleted quizzesTaken pointsEarned -_id'),
+        activity_model_1.DailyActivity.aggregate([
+            {
+                $match: {
+                    student: new mongoose_1.Types.ObjectId(studentId),
+                    date: { $gte: startDate, $lt: endDate },
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalActiveDays: { $sum: 1 },
+                    totalLessons: { $sum: '$lessonsCompleted' },
+                    totalQuizzes: { $sum: '$quizzesTaken' },
+                    totalPoints: { $sum: '$pointsEarned' },
+                },
+            },
+        ]),
+    ]);
+    const summary = (_a = summaryResult[0]) !== null && _a !== void 0 ? _a : {
+        totalActiveDays: 0,
+        totalLessons: 0,
+        totalQuizzes: 0,
+        totalPoints: 0,
+    };
+    delete summary._id;
+    return { month: m, year: y, summary, days };
 });
 const getStreak = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c;

@@ -160,6 +160,7 @@ IMPORTANT: Always update documentation when making code changes. See `.claude/ru
 
 Docs in `docs/` directory:
 - `docs/architecture/` - System overview, auth flow, data flow, DB design, module structure, Socket.IO
+- `docs/ux-flow-api-responses/` - Screen-wise API flow docs (app-screens/ + dashboard-screens/)
 - `docs/code-quality-audit-report.md` - Code quality audit
 
 ## Core Principles

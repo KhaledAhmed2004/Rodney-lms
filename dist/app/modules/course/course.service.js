@@ -626,7 +626,14 @@ const browseCourses = (studentId, query) => __awaiter(void 0, void 0, void 0, fu
         data,
     };
 });
+const getCourseOptions = () => __awaiter(void 0, void 0, void 0, function* () {
+    return course_model_1.Course.find({ status: course_interface_1.COURSE_STATUS.PUBLISHED })
+        .select('_id title')
+        .sort({ title: 1 })
+        .lean();
+});
 exports.CourseService = {
+    getCourseOptions,
     createCourse,
     getAllCourses,
     browseCourses,

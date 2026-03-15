@@ -324,6 +324,15 @@ const fileHandler = (options) => {
                     enforceFieldPolicy(filesByField, resolved);
                     const processedFiles = yield processFilesToUrls(filesByField, resolved.storageMode, provider, effectiveBaseUrl);
                     req.body = Object.assign(Object.assign({}, req.body), processedFiles);
+                    // Track uploaded file URLs for cleanup on error (e.g. validation failure)
+                    const uploadedUrls = [];
+                    for (const val of Object.values(processedFiles)) {
+                        if (Array.isArray(val))
+                            uploadedUrls.push(...val);
+                        else if (typeof val === 'string')
+                            uploadedUrls.push(val);
+                    }
+                    req._uploadedFileUrls = uploadedUrls;
                 }
                 next();
             }

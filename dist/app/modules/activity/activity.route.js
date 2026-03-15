@@ -7,10 +7,12 @@ exports.ActivityRoutes = void 0;
 const express_1 = __importDefault(require("express"));
 const user_1 = require("../../../enums/user");
 const auth_1 = __importDefault(require("../../middlewares/auth"));
+const validateRequest_1 = __importDefault(require("../../middlewares/validateRequest"));
 const activity_controller_1 = require("./activity.controller");
+const activity_validation_1 = require("./activity.validation");
 const router = express_1.default.Router();
 // Student routes
-router.get('/calendar', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), activity_controller_1.ActivityController.getCalendar);
+router.get('/calendar', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), (0, validateRequest_1.default)(activity_validation_1.ActivityValidation.getCalendar), activity_controller_1.ActivityController.getCalendar);
 router.get('/streak', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), activity_controller_1.ActivityController.getStreak);
 // Admin routes
 router.get('/admin/overview', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), activity_controller_1.ActivityController.getAdminOverview);

@@ -7,6 +7,17 @@ import { CourseService } from './course.service';
 
 // ==================== COURSE ====================
 
+const getCourseOptions = catchAsync(async (req: Request, res: Response) => {
+  const result = await CourseService.getCourseOptions();
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Course options retrieved successfully',
+    data: result,
+  });
+});
+
 const createCourse = catchAsync(async (req: Request, res: Response) => {
   const result = await CourseService.createCourse(req.body);
 
@@ -271,6 +282,7 @@ const toggleLessonVisibility = catchAsync(
 );
 
 export const CourseController = {
+  getCourseOptions,
   createCourse,
   getAllCourses,
   browseCourses,

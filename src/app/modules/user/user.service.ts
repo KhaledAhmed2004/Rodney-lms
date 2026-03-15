@@ -14,6 +14,8 @@ import { ENROLLMENT_STATUS } from '../enrollment/enrollment.interface';
 import escapeRegex from 'escape-string-regexp';
 import AggregationBuilder from '../../builder/AggregationBuilder';
 
+const DEFAULT_PROFILE_PICTURE = 'https://i.ibb.co/z5YHLV9/profile.png';
+
 const createUserToDB = async (payload: Partial<IUser>): Promise<IUser> => {
   const createUser = await User.create(payload);
   if (!createUser) {
@@ -55,17 +57,26 @@ const getUserProfileFromDB = async (
 
   // Student-specific fields to exclude for non-student roles
   const studentOnlyFields =
-    '-averageRating -ratingsCount -achievements -totalPoints -streak -onboardingCompleted -deviceTokens';
+    '-achievements -totalPoints -streak -onboardingCompleted -deviceTokens';
+
+  const studentProfileFields =
+    'name email profilePicture phone gender dateOfBirth location role status verified totalPoints streak onboardingCompleted';
 
   const query = User.findById(id);
 
-  if (user.role !== USER_ROLES.STUDENT) {
+  if (user.role === USER_ROLES.STUDENT) {
+    query.select(studentProfileFields);
+  } else {
     query.select(studentOnlyFields);
   }
 
   const result = await query;
   if (!result) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
+  }
+
+  if (result.status === USER_STATUS.DELETE) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been deleted');
   }
 
   return result;
@@ -81,19 +92,32 @@ const updateProfileToDB = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
   }
 
-  if (payload.profilePicture && isExistUser.profilePicture) {
+  if (isExistUser.status !== USER_STATUS.ACTIVE) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account is not active');
+  }
+
+  if (
+    payload.profilePicture &&
+    isExistUser.profilePicture &&
+    isExistUser.profilePicture !== DEFAULT_PROFILE_PICTURE
+  ) {
     await deleteFile(isExistUser.profilePicture);
   }
 
   // Student-specific fields to exclude for non-student roles
   const studentOnlyFields =
-    '-averageRating -ratingsCount -achievements -totalPoints -streak -onboardingCompleted -deviceTokens';
+    '-achievements -totalPoints -streak -onboardingCompleted -deviceTokens';
+
+  const studentUpdateFields =
+    'name email profilePicture phone gender dateOfBirth location';
 
   const updateQuery = User.findOneAndUpdate({ _id: id }, payload, {
     new: true,
   });
 
-  if (user.role !== USER_ROLES.STUDENT) {
+  if (user.role === USER_ROLES.STUDENT) {
+    updateQuery.select(studentUpdateFields);
+  } else {
     updateQuery.select(studentOnlyFields);
   }
 

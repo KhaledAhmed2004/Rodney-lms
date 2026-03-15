@@ -31,17 +31,17 @@ const createLegalPage = (payload) => __awaiter(void 0, void 0, void 0, function*
     }
     const slug = yield generateSlug(payload.title);
     yield legal_model_1.LegalPage.create(Object.assign(Object.assign({}, payload), { slug }));
-    const result = yield legal_model_1.LegalPage.findOne({ slug }).select('slug title content createdAt updatedAt');
+    const result = yield legal_model_1.LegalPage.findOne({ slug }).select('slug title content createdAt');
     return result;
 });
 const getAll = () => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield legal_model_1.LegalPage.find()
-        .select('-_id slug title updatedAt')
+        .select('-_id slug title')
         .sort({ title: 1 });
     return result;
 });
 const getBySlug = (slug) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield legal_model_1.LegalPage.findOne({ slug }).select('slug title content createdAt updatedAt');
+    const result = yield legal_model_1.LegalPage.findOne({ slug }).select('slug title content updatedAt');
     if (!result) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Legal page not found');
     }

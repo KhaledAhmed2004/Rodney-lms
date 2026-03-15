@@ -39,8 +39,6 @@ export type IUser = {
   status: USER_STATUS;
   verified: boolean;
   deviceTokens?: string[];
-  averageRating: number;
-  ratingsCount: number;
   about?: string;
   achievements?: AchievementType[];
   totalPoints: number;

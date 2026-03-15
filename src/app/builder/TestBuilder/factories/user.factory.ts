@@ -67,8 +67,6 @@ export class UserFactory extends BaseFactory<UserDocument, IUser> {
       dateOfBirth: faker.date.birthdate({ min: 18, max: 60, mode: 'age' }).toISOString(),
       phone: faker.phone.number(),
       profilePicture: faker.image.avatar(),
-      averageRating: 0,
-      ratingsCount: 0,
       about: faker.lorem.paragraph(),
       deviceTokens: [],
     };
@@ -194,13 +192,6 @@ export class UserFactory extends BaseFactory<UserDocument, IUser> {
   }
 
   /**
-   * Set user rating
-   */
-  withRating(rating: number, count: number = 10): this {
-    return this.set('averageRating', rating).set('ratingsCount', count);
-  }
-
-  /**
    * Add device token for push notifications
    */
   withDeviceToken(token?: string): this {
@@ -243,8 +234,7 @@ export class UserFactory extends BaseFactory<UserDocument, IUser> {
    */
   newStudent(): this {
     return this.asStudent()
-      .verified()
-      .withRating(0, 0);
+      .verified();
   }
 
   /**

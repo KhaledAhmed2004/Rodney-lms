@@ -41,6 +41,7 @@ export type IQuizSettings = {
 export type IQuiz = {
   title: string;
   description?: string;
+  course?: Types.ObjectId;
   questions: IQuestion[];
   settings: IQuizSettings;
   totalMarks: number;

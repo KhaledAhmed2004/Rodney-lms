@@ -8,13 +8,6 @@ import { CommunityValidation } from './community.validation';
 
 const router = express.Router();
 
-// Admin
-router.get(
-  '/admin/flagged',
-  auth(USER_ROLES.SUPER_ADMIN),
-  CommunityController.getFlaggedPosts,
-);
-
 // Posts
 router.post(
   '/posts',
@@ -30,10 +23,25 @@ router.get(
   CommunityController.getAllPosts,
 );
 
+// Static route BEFORE /:id
+router.get(
+  '/posts/my-posts',
+  auth(USER_ROLES.STUDENT, USER_ROLES.SUPER_ADMIN),
+  CommunityController.getMyPosts,
+);
+
 router.get(
   '/posts/:id',
   auth(USER_ROLES.STUDENT, USER_ROLES.SUPER_ADMIN),
   CommunityController.getPostById,
+);
+
+router.patch(
+  '/posts/:id',
+  auth(USER_ROLES.STUDENT, USER_ROLES.SUPER_ADMIN),
+  fileHandler(['image']),
+  validateRequest(CommunityValidation.updatePost),
+  CommunityController.updatePost,
 );
 
 router.delete(
@@ -43,9 +51,10 @@ router.delete(
 );
 
 // Likes
-router.post(
+router.patch(
   '/posts/:id/like',
   auth(USER_ROLES.STUDENT, USER_ROLES.SUPER_ADMIN),
+  validateRequest(CommunityValidation.toggleLike),
   CommunityController.toggleLike,
 );
 
@@ -55,6 +64,13 @@ router.post(
   auth(USER_ROLES.STUDENT, USER_ROLES.SUPER_ADMIN),
   validateRequest(CommunityValidation.createReply),
   CommunityController.createReply,
+);
+
+router.patch(
+  '/replies/:id',
+  auth(USER_ROLES.STUDENT, USER_ROLES.SUPER_ADMIN),
+  validateRequest(CommunityValidation.updateReply),
+  CommunityController.updateReply,
 );
 
 router.delete(

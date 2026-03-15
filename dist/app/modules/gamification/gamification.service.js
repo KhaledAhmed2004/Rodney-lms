@@ -78,9 +78,15 @@ const getMyPoints = (studentId, query) => __awaiter(void 0, void 0, void 0, func
 // ==================== STUDENT BADGES ====================
 const getMyBadges = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
     const badges = yield gamification_model_1.StudentBadge.find({ student: studentId })
-        .populate('badge')
-        .sort({ earnedAt: -1 });
-    return badges;
+        .populate('badge', 'name icon description')
+        .sort({ earnedAt: -1 })
+        .lean();
+    return badges.map(({ badge, earnedAt }) => ({
+        name: badge.name,
+        icon: badge.icon,
+        description: badge.description,
+        earnedAt,
+    }));
 });
 const getMySummary = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;

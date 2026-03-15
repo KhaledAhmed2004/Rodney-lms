@@ -1,32 +1,66 @@
 import { StatusCodes } from 'http-status-codes';
 import ApiError from '../../../errors/ApiError';
 import QueryBuilder from '../../builder/QueryBuilder';
+import { deleteFile } from '../../middlewares/fileHandler';
 import { IPost, IPostReply } from './community.interface';
+import { Course } from '../course/course.model';
 import { Post, PostLike, PostReply } from './community.model';
+
+const validateCourseId = async (courseId: string) => {
+  const course = await Course.findById(courseId).select('_id');
+  if (!course) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Course not found');
+  }
+};
 
 const createPost = async (
   authorId: string,
-  content: string,
-  image?: string,
+  payload: { title: string; content: string; courseId?: string; image?: string },
 ): Promise<IPost> => {
-  const post = await Post.create({ author: authorId, content, image });
-  return post;
+  if (payload.courseId) await validateCourseId(payload.courseId);
+
+  const post = await Post.create({
+    author: authorId,
+    title: payload.title,
+    course: payload.courseId || undefined,
+    content: payload.content,
+    image: payload.image,
+  });
+
+  const result: any = (
+    await Post.findById(post._id)
+      .select('_id title content course image createdAt')
+      .populate('course', 'title')
+  )!.toObject();
+  return { ...result, course: result.course?.title || null };
 };
 
 const getAllPosts = async (query: Record<string, unknown>, userId?: string) => {
+  const baseFilter: Record<string, unknown> = {};
+  if (query.courseId) {
+    baseFilter.course = query.courseId;
+  }
+
   const postQuery = new QueryBuilder(
-    Post.find({ status: 'ACTIVE' }).populate('author', 'name profilePicture'),
+    Post.find(baseFilter)
+      .select('author title course content image likesCount repliesCount createdAt')
+      .populate({
+        path: 'author',
+        select: 'name profilePicture role',
+        match: { status: { $ne: 'DELETE' } },
+      })
+      .populate('course', 'title'),
     query,
   )
-    .search(['content'])
+    .search(['title', 'content'])
     .sort()
     .paginate();
 
   const data = await postQuery.modelQuery;
   const pagination = await postQuery.getPaginationInfo();
 
-  // Add isLiked flag for current user
-  let postsWithLikeStatus = data;
+  // Add isLiked flag for current user + flatten course to title string
+  let postsWithLikeStatus;
   if (userId) {
     const postIds = data.map((p: any) => p._id);
     const userLikes = await PostLike.find({
@@ -37,25 +71,67 @@ const getAllPosts = async (query: Record<string, unknown>, userId?: string) => {
 
     postsWithLikeStatus = data.map((p: any) => ({
       ...p.toObject(),
+      course: p.course?.title || null,
       isLiked: likedPostIds.has(p._id.toString()),
     }));
+  } else {
+    postsWithLikeStatus = data.map((p: any) => ({
+      ...p.toObject(),
+      course: p.course?.title || null,
+    }));
   }
+
+  // Filter out posts from deleted/removed users
+  postsWithLikeStatus = postsWithLikeStatus.filter(
+    (p: any) => p.author !== null,
+  );
 
   return { pagination, data: postsWithLikeStatus };
 };
 
+const REPLY_LIMIT = 200;
+
 const getPostById = async (id: string, userId?: string) => {
-  const post = await Post.findById(id).populate(
-    'author',
-    'name profilePicture',
-  );
-  if (!post || post.status !== 'ACTIVE') {
+  const post = await Post.findById(id)
+    .select('author title course content image likesCount repliesCount createdAt')
+    .populate({
+      path: 'author',
+      select: 'name profilePicture role',
+      match: { status: { $ne: 'DELETE' } },
+    })
+    .populate('course', 'title');
+  if (!post) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
   }
 
-  const replies = await PostReply.find({ post: id, status: 'ACTIVE' })
-    .populate('author', 'name profilePicture')
-    .sort({ createdAt: 1 });
+  const allReplies = await PostReply.find({ post: id })
+    .select('author content parentReply createdAt')
+    .populate({
+      path: 'author',
+      select: 'name profilePicture role',
+      match: { status: { $ne: 'DELETE' } },
+    })
+    .sort({ createdAt: 1 })
+    .limit(REPLY_LIMIT)
+    .lean();
+
+  // Build nested reply structure (1-level)
+  const topLevelReplies: any[] = [];
+  const childrenMap = new Map<string, any[]>();
+
+  for (const reply of allReplies) {
+    if (reply.parentReply) {
+      const parentId = reply.parentReply.toString();
+      if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
+      childrenMap.get(parentId)!.push(reply);
+    } else {
+      topLevelReplies.push({ ...reply, children: [] });
+    }
+  }
+
+  for (const topReply of topLevelReplies) {
+    topReply.children = childrenMap.get(topReply._id.toString()) || [];
+  }
 
   let isLiked = false;
   if (userId) {
@@ -63,10 +139,13 @@ const getPostById = async (id: string, userId?: string) => {
     isLiked = !!like;
   }
 
+  const postObj: any = post.toObject();
   return {
-    ...post.toObject(),
+    ...postObj,
+    course: postObj.course?.title || null,
     isLiked,
-    replies,
+    replies: topLevelReplies,
+    hasMoreReplies: post.repliesCount > REPLY_LIMIT,
   };
 };
 
@@ -87,26 +166,39 @@ const deletePost = async (
     );
   }
 
-  await Post.findByIdAndUpdate(id, { status: 'DELETED' });
-  await PostReply.updateMany({ post: id }, { status: 'DELETED' });
+  if (post.image) deleteFile(post.image).catch(() => {});
+  await Post.findByIdAndDelete(id);
+  await PostReply.deleteMany({ post: id });
+  await PostLike.deleteMany({ post: id });
 };
 
 const toggleLike = async (postId: string, userId: string) => {
   const post = await Post.findById(postId);
-  if (!post || post.status !== 'ACTIVE') {
+  if (!post) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
   }
 
-  const existingLike = await PostLike.findOne({ post: postId, user: userId });
+  // Atomic unlike — findOneAndDelete prevents race condition
+  const removed = await PostLike.findOneAndDelete({
+    post: postId,
+    user: userId,
+  });
 
-  if (existingLike) {
-    await PostLike.findByIdAndDelete(existingLike._id);
+  if (removed) {
     await Post.findByIdAndUpdate(postId, { $inc: { likesCount: -1 } });
     return { liked: false };
-  } else {
+  }
+
+  // Like — catch duplicate key (race condition: concurrent double-click)
+  try {
     await PostLike.create({ post: postId, user: userId });
     await Post.findByIdAndUpdate(postId, { $inc: { likesCount: 1 } });
     return { liked: true };
+  } catch (err: any) {
+    if (err.code === 11000) {
+      return { liked: true };
+    }
+    throw err;
   }
 };
 
@@ -114,21 +206,44 @@ const createReply = async (
   postId: string,
   authorId: string,
   content: string,
+  parentReplyId?: string,
 ): Promise<IPostReply> => {
   const post = await Post.findById(postId);
-  if (!post || post.status !== 'ACTIVE') {
+  if (!post) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
+  }
+
+  if (parentReplyId) {
+    const parentReply = await PostReply.findById(parentReplyId);
+    if (!parentReply) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Parent reply not found');
+    }
+    if (parentReply.post.toString() !== postId) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Parent reply does not belong to this post',
+      );
+    }
+    if (parentReply.parentReply) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Cannot reply to a nested reply (max 1 level)',
+      );
+    }
   }
 
   const reply = await PostReply.create({
     post: postId,
     author: authorId,
     content,
+    parentReply: parentReplyId || null,
   });
 
   await Post.findByIdAndUpdate(postId, { $inc: { repliesCount: 1 } });
 
-  return reply;
+  return (await PostReply.findById(reply._id).select(
+    '_id content parentReply createdAt',
+  ))!;
 };
 
 const deleteReply = async (
@@ -148,25 +263,142 @@ const deleteReply = async (
     );
   }
 
-  await PostReply.findByIdAndUpdate(replyId, { status: 'DELETED' });
-  await Post.findByIdAndUpdate(reply.post, { $inc: { repliesCount: -1 } });
+  // Cascade delete: if top-level reply, delete its children too
+  let deleteCount = 1;
+  if (!reply.parentReply) {
+    const childResult = await PostReply.deleteMany({ parentReply: replyId });
+    deleteCount += childResult.deletedCount;
+  }
+
+  await PostReply.findByIdAndDelete(replyId);
+  await Post.findByIdAndUpdate(
+    { _id: reply.post, repliesCount: { $gte: deleteCount } },
+    { $inc: { repliesCount: -deleteCount } },
+  );
 };
 
-// Admin
-const getFlaggedPosts = async (query: Record<string, unknown>) => {
+const getMyPosts = async (userId: string, query: Record<string, unknown>) => {
+  const baseFilter: Record<string, unknown> = {
+    author: userId,
+  };
+  if (query.courseId) {
+    baseFilter.course = query.courseId;
+  }
+
   const postQuery = new QueryBuilder(
-    Post.find({ status: 'HIDDEN' }).populate(
-      'author',
-      'name email profilePicture',
-    ),
+    Post.find(baseFilter)
+      .select('author title course content image likesCount repliesCount createdAt')
+      .populate({
+        path: 'author',
+        select: 'name profilePicture role',
+        match: { status: { $ne: 'DELETE' } },
+      })
+      .populate('course', 'title'),
     query,
   )
+    .search(['title', 'content'])
     .sort()
     .paginate();
 
   const data = await postQuery.modelQuery;
   const pagination = await postQuery.getPaginationInfo();
-  return { pagination, data };
+
+  const postIds = data.map((p: any) => p._id);
+  const userLikes = await PostLike.find({
+    post: { $in: postIds },
+    user: userId,
+  });
+  const likedPostIds = new Set(userLikes.map(l => l.post.toString()));
+
+  const postsWithLikeStatus = data.map((p: any) => ({
+    ...p.toObject(),
+    course: p.course?.title || null,
+    isLiked: likedPostIds.has(p._id.toString()),
+  }));
+
+  return { pagination, data: postsWithLikeStatus };
+};
+
+const updatePost = async (
+  postId: string,
+  userId: string,
+  payload: {
+    title?: string;
+    content?: string;
+    courseId?: string | null;
+    image?: string;
+    removeImage?: boolean;
+  },
+) => {
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
+  }
+  if (post.author.toString() !== userId) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Not authorized to edit this post',
+    );
+  }
+
+  const update: Record<string, unknown> = {};
+  const unset: Record<string, unknown> = {};
+
+  if (payload.title !== undefined) update.title = payload.title;
+  if (payload.content !== undefined) update.content = payload.content;
+
+  if (payload.removeImage && !payload.image) {
+    if (post.image) deleteFile(post.image).catch(() => {});
+    unset.image = 1;
+  } else if (payload.image) {
+    if (post.image) deleteFile(post.image).catch(() => {});
+    update.image = payload.image;
+  }
+
+  if (payload.courseId === null) {
+    unset.course = 1;
+  } else if (payload.courseId !== undefined) {
+    await validateCourseId(payload.courseId);
+    update.course = payload.courseId;
+  }
+
+  const updateQuery: Record<string, unknown> = {};
+  if (Object.keys(update).length > 0) updateQuery.$set = update;
+  if (Object.keys(unset).length > 0) updateQuery.$unset = unset;
+
+  const updated = await Post.findByIdAndUpdate(postId, updateQuery, {
+    new: true,
+  })
+    .select('_id title content course image')
+    .populate('course', 'title');
+
+  const result: any = updated!.toObject();
+  return { ...result, course: result.course?.title || null };
+};
+
+const updateReply = async (
+  replyId: string,
+  userId: string,
+  content: string,
+): Promise<IPostReply> => {
+  const reply = await PostReply.findById(replyId);
+  if (!reply) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Reply not found');
+  }
+  if (reply.author.toString() !== userId) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Not authorized to edit this reply',
+    );
+  }
+
+  const updated = await PostReply.findByIdAndUpdate(
+    replyId,
+    { content },
+    { new: true },
+  ).select('_id content');
+
+  return updated!;
 };
 
 export const CommunityService = {
@@ -177,5 +409,7 @@ export const CommunityService = {
   toggleLike,
   createReply,
   deleteReply,
-  getFlaggedPosts,
+  getMyPosts,
+  updatePost,
+  updateReply,
 };

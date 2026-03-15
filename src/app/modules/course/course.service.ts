@@ -798,7 +798,15 @@ const browseCourses = async (
   };
 };
 
+const getCourseOptions = async () => {
+  return Course.find({ status: COURSE_STATUS.PUBLISHED })
+    .select('_id title')
+    .sort({ title: 1 })
+    .lean();
+};
+
 export const CourseService = {
+  getCourseOptions,
   createCourse,
   getAllCourses,
   browseCourses,

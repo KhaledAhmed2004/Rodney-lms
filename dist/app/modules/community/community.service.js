@@ -16,20 +16,51 @@ exports.CommunityService = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
+const fileHandler_1 = require("../../middlewares/fileHandler");
+const course_model_1 = require("../course/course.model");
 const community_model_1 = require("./community.model");
-const createPost = (authorId, content, image) => __awaiter(void 0, void 0, void 0, function* () {
-    const post = yield community_model_1.Post.create({ author: authorId, content, image });
-    return post;
+const validateCourseId = (courseId) => __awaiter(void 0, void 0, void 0, function* () {
+    const course = yield course_model_1.Course.findById(courseId).select('_id');
+    if (!course) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Course not found');
+    }
+});
+const createPost = (authorId, payload) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    if (payload.courseId)
+        yield validateCourseId(payload.courseId);
+    const post = yield community_model_1.Post.create({
+        author: authorId,
+        title: payload.title,
+        course: payload.courseId || undefined,
+        content: payload.content,
+        image: payload.image,
+    });
+    const result = (yield community_model_1.Post.findById(post._id)
+        .select('_id title content course image createdAt')
+        .populate('course', 'title')).toObject();
+    return Object.assign(Object.assign({}, result), { course: ((_a = result.course) === null || _a === void 0 ? void 0 : _a.title) || null });
 });
 const getAllPosts = (query, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const postQuery = new QueryBuilder_1.default(community_model_1.Post.find({ status: 'ACTIVE' }).populate('author', 'name profilePicture'), query)
-        .search(['content'])
+    const baseFilter = {};
+    if (query.courseId) {
+        baseFilter.course = query.courseId;
+    }
+    const postQuery = new QueryBuilder_1.default(community_model_1.Post.find(baseFilter)
+        .select('author title course content image likesCount repliesCount createdAt')
+        .populate({
+        path: 'author',
+        select: 'name profilePicture role',
+        match: { status: { $ne: 'DELETE' } },
+    })
+        .populate('course', 'title'), query)
+        .search(['title', 'content'])
         .sort()
         .paginate();
     const data = yield postQuery.modelQuery;
     const pagination = yield postQuery.getPaginationInfo();
-    // Add isLiked flag for current user
-    let postsWithLikeStatus = data;
+    // Add isLiked flag for current user + flatten course to title string
+    let postsWithLikeStatus;
     if (userId) {
         const postIds = data.map((p) => p._id);
         const userLikes = yield community_model_1.PostLike.find({
@@ -37,25 +68,69 @@ const getAllPosts = (query, userId) => __awaiter(void 0, void 0, void 0, functio
             user: userId,
         });
         const likedPostIds = new Set(userLikes.map(l => l.post.toString()));
-        postsWithLikeStatus = data.map((p) => (Object.assign(Object.assign({}, p.toObject()), { isLiked: likedPostIds.has(p._id.toString()) })));
+        postsWithLikeStatus = data.map((p) => {
+            var _a;
+            return (Object.assign(Object.assign({}, p.toObject()), { course: ((_a = p.course) === null || _a === void 0 ? void 0 : _a.title) || null, isLiked: likedPostIds.has(p._id.toString()) }));
+        });
     }
+    else {
+        postsWithLikeStatus = data.map((p) => {
+            var _a;
+            return (Object.assign(Object.assign({}, p.toObject()), { course: ((_a = p.course) === null || _a === void 0 ? void 0 : _a.title) || null }));
+        });
+    }
+    // Filter out posts from deleted/removed users
+    postsWithLikeStatus = postsWithLikeStatus.filter((p) => p.author !== null);
     return { pagination, data: postsWithLikeStatus };
 });
+const REPLY_LIMIT = 200;
 const getPostById = (id, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const post = yield community_model_1.Post.findById(id).populate('author', 'name profilePicture');
-    if (!post || post.status !== 'ACTIVE') {
+    var _a;
+    const post = yield community_model_1.Post.findById(id)
+        .select('author title course content image likesCount repliesCount createdAt')
+        .populate({
+        path: 'author',
+        select: 'name profilePicture role',
+        match: { status: { $ne: 'DELETE' } },
+    })
+        .populate('course', 'title');
+    if (!post) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Post not found');
     }
-    const replies = yield community_model_1.PostReply.find({ post: id, status: 'ACTIVE' })
-        .populate('author', 'name profilePicture')
-        .sort({ createdAt: 1 });
+    const allReplies = yield community_model_1.PostReply.find({ post: id })
+        .select('author content parentReply createdAt')
+        .populate({
+        path: 'author',
+        select: 'name profilePicture role',
+        match: { status: { $ne: 'DELETE' } },
+    })
+        .sort({ createdAt: 1 })
+        .limit(REPLY_LIMIT)
+        .lean();
+    // Build nested reply structure (1-level)
+    const topLevelReplies = [];
+    const childrenMap = new Map();
+    for (const reply of allReplies) {
+        if (reply.parentReply) {
+            const parentId = reply.parentReply.toString();
+            if (!childrenMap.has(parentId))
+                childrenMap.set(parentId, []);
+            childrenMap.get(parentId).push(reply);
+        }
+        else {
+            topLevelReplies.push(Object.assign(Object.assign({}, reply), { children: [] }));
+        }
+    }
+    for (const topReply of topLevelReplies) {
+        topReply.children = childrenMap.get(topReply._id.toString()) || [];
+    }
     let isLiked = false;
     if (userId) {
         const like = yield community_model_1.PostLike.findOne({ post: id, user: userId });
         isLiked = !!like;
     }
-    return Object.assign(Object.assign({}, post.toObject()), { isLiked,
-        replies });
+    const postObj = post.toObject();
+    return Object.assign(Object.assign({}, postObj), { course: ((_a = postObj.course) === null || _a === void 0 ? void 0 : _a.title) || null, isLiked, replies: topLevelReplies, hasMoreReplies: post.repliesCount > REPLY_LIMIT });
 });
 const deletePost = (id, userId, userRole) => __awaiter(void 0, void 0, void 0, function* () {
     const post = yield community_model_1.Post.findById(id);
@@ -65,38 +140,64 @@ const deletePost = (id, userId, userRole) => __awaiter(void 0, void 0, void 0, f
     if (post.author.toString() !== userId && userRole !== 'SUPER_ADMIN') {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to delete this post');
     }
-    yield community_model_1.Post.findByIdAndUpdate(id, { status: 'DELETED' });
-    yield community_model_1.PostReply.updateMany({ post: id }, { status: 'DELETED' });
+    if (post.image)
+        (0, fileHandler_1.deleteFile)(post.image).catch(() => { });
+    yield community_model_1.Post.findByIdAndDelete(id);
+    yield community_model_1.PostReply.deleteMany({ post: id });
+    yield community_model_1.PostLike.deleteMany({ post: id });
 });
 const toggleLike = (postId, userId) => __awaiter(void 0, void 0, void 0, function* () {
     const post = yield community_model_1.Post.findById(postId);
-    if (!post || post.status !== 'ACTIVE') {
+    if (!post) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Post not found');
     }
-    const existingLike = yield community_model_1.PostLike.findOne({ post: postId, user: userId });
-    if (existingLike) {
-        yield community_model_1.PostLike.findByIdAndDelete(existingLike._id);
+    // Atomic unlike — findOneAndDelete prevents race condition
+    const removed = yield community_model_1.PostLike.findOneAndDelete({
+        post: postId,
+        user: userId,
+    });
+    if (removed) {
         yield community_model_1.Post.findByIdAndUpdate(postId, { $inc: { likesCount: -1 } });
         return { liked: false };
     }
-    else {
+    // Like — catch duplicate key (race condition: concurrent double-click)
+    try {
         yield community_model_1.PostLike.create({ post: postId, user: userId });
         yield community_model_1.Post.findByIdAndUpdate(postId, { $inc: { likesCount: 1 } });
         return { liked: true };
     }
+    catch (err) {
+        if (err.code === 11000) {
+            return { liked: true };
+        }
+        throw err;
+    }
 });
-const createReply = (postId, authorId, content) => __awaiter(void 0, void 0, void 0, function* () {
+const createReply = (postId, authorId, content, parentReplyId) => __awaiter(void 0, void 0, void 0, function* () {
     const post = yield community_model_1.Post.findById(postId);
-    if (!post || post.status !== 'ACTIVE') {
+    if (!post) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Post not found');
+    }
+    if (parentReplyId) {
+        const parentReply = yield community_model_1.PostReply.findById(parentReplyId);
+        if (!parentReply) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Parent reply not found');
+        }
+        if (parentReply.post.toString() !== postId) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Parent reply does not belong to this post');
+        }
+        if (parentReply.parentReply) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Cannot reply to a nested reply (max 1 level)');
+        }
     }
     const reply = yield community_model_1.PostReply.create({
         post: postId,
         author: authorId,
         content,
+        parentReply: parentReplyId || null,
     });
     yield community_model_1.Post.findByIdAndUpdate(postId, { $inc: { repliesCount: 1 } });
-    return reply;
+    return (yield community_model_1.PostReply.findById(reply._id).select('_id content parentReply createdAt'));
 });
 const deleteReply = (replyId, userId, userRole) => __awaiter(void 0, void 0, void 0, function* () {
     const reply = yield community_model_1.PostReply.findById(replyId);
@@ -106,17 +207,102 @@ const deleteReply = (replyId, userId, userRole) => __awaiter(void 0, void 0, voi
     if (reply.author.toString() !== userId && userRole !== 'SUPER_ADMIN') {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to delete this reply');
     }
-    yield community_model_1.PostReply.findByIdAndUpdate(replyId, { status: 'DELETED' });
-    yield community_model_1.Post.findByIdAndUpdate(reply.post, { $inc: { repliesCount: -1 } });
+    // Cascade delete: if top-level reply, delete its children too
+    let deleteCount = 1;
+    if (!reply.parentReply) {
+        const childResult = yield community_model_1.PostReply.deleteMany({ parentReply: replyId });
+        deleteCount += childResult.deletedCount;
+    }
+    yield community_model_1.PostReply.findByIdAndDelete(replyId);
+    yield community_model_1.Post.findByIdAndUpdate({ _id: reply.post, repliesCount: { $gte: deleteCount } }, { $inc: { repliesCount: -deleteCount } });
 });
-// Admin
-const getFlaggedPosts = (query) => __awaiter(void 0, void 0, void 0, function* () {
-    const postQuery = new QueryBuilder_1.default(community_model_1.Post.find({ status: 'HIDDEN' }).populate('author', 'name email profilePicture'), query)
+const getMyPosts = (userId, query) => __awaiter(void 0, void 0, void 0, function* () {
+    const baseFilter = {
+        author: userId,
+    };
+    if (query.courseId) {
+        baseFilter.course = query.courseId;
+    }
+    const postQuery = new QueryBuilder_1.default(community_model_1.Post.find(baseFilter)
+        .select('author title course content image likesCount repliesCount createdAt')
+        .populate({
+        path: 'author',
+        select: 'name profilePicture role',
+        match: { status: { $ne: 'DELETE' } },
+    })
+        .populate('course', 'title'), query)
+        .search(['title', 'content'])
         .sort()
         .paginate();
     const data = yield postQuery.modelQuery;
     const pagination = yield postQuery.getPaginationInfo();
-    return { pagination, data };
+    const postIds = data.map((p) => p._id);
+    const userLikes = yield community_model_1.PostLike.find({
+        post: { $in: postIds },
+        user: userId,
+    });
+    const likedPostIds = new Set(userLikes.map(l => l.post.toString()));
+    const postsWithLikeStatus = data.map((p) => {
+        var _a;
+        return (Object.assign(Object.assign({}, p.toObject()), { course: ((_a = p.course) === null || _a === void 0 ? void 0 : _a.title) || null, isLiked: likedPostIds.has(p._id.toString()) }));
+    });
+    return { pagination, data: postsWithLikeStatus };
+});
+const updatePost = (postId, userId, payload) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const post = yield community_model_1.Post.findById(postId);
+    if (!post) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Post not found');
+    }
+    if (post.author.toString() !== userId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to edit this post');
+    }
+    const update = {};
+    const unset = {};
+    if (payload.title !== undefined)
+        update.title = payload.title;
+    if (payload.content !== undefined)
+        update.content = payload.content;
+    if (payload.removeImage && !payload.image) {
+        if (post.image)
+            (0, fileHandler_1.deleteFile)(post.image).catch(() => { });
+        unset.image = 1;
+    }
+    else if (payload.image) {
+        if (post.image)
+            (0, fileHandler_1.deleteFile)(post.image).catch(() => { });
+        update.image = payload.image;
+    }
+    if (payload.courseId === null) {
+        unset.course = 1;
+    }
+    else if (payload.courseId !== undefined) {
+        yield validateCourseId(payload.courseId);
+        update.course = payload.courseId;
+    }
+    const updateQuery = {};
+    if (Object.keys(update).length > 0)
+        updateQuery.$set = update;
+    if (Object.keys(unset).length > 0)
+        updateQuery.$unset = unset;
+    const updated = yield community_model_1.Post.findByIdAndUpdate(postId, updateQuery, {
+        new: true,
+    })
+        .select('_id title content course image')
+        .populate('course', 'title');
+    const result = updated.toObject();
+    return Object.assign(Object.assign({}, result), { course: ((_a = result.course) === null || _a === void 0 ? void 0 : _a.title) || null });
+});
+const updateReply = (replyId, userId, content) => __awaiter(void 0, void 0, void 0, function* () {
+    const reply = yield community_model_1.PostReply.findById(replyId);
+    if (!reply) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Reply not found');
+    }
+    if (reply.author.toString() !== userId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to edit this reply');
+    }
+    const updated = yield community_model_1.PostReply.findByIdAndUpdate(replyId, { content }, { new: true }).select('_id content');
+    return updated;
 });
 exports.CommunityService = {
     createPost,
@@ -126,5 +312,7 @@ exports.CommunityService = {
     toggleLike,
     createReply,
     deleteReply,
-    getFlaggedPosts,
+    getMyPosts,
+    updatePost,
+    updateReply,
 };

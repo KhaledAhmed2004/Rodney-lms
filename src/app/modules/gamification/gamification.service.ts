@@ -1,4 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
+import { Types } from 'mongoose';
 import ApiError from '../../../errors/ApiError';
 import QueryBuilder from '../../builder/QueryBuilder';
 import { IBadge, POINTS_REASON } from './gamification.interface';
@@ -56,7 +57,7 @@ const getMyPoints = async (
   query: Record<string, unknown>,
 ) => {
   const totalResult = await PointsLedger.aggregate([
-    { $match: { student: studentId } },
+    { $match: { student: new Types.ObjectId(studentId) } },
     { $group: { _id: null, total: { $sum: '$points' } } },
   ]);
   const totalPoints = totalResult[0]?.total || 0;
@@ -76,15 +77,30 @@ const getMyPoints = async (
 
 // ==================== STUDENT BADGES ====================
 const getMyBadges = async (studentId: string) => {
-  const badges = await StudentBadge.find({ student: studentId })
-    .populate('badge')
-    .sort({ earnedAt: -1 });
-  return badges;
+  const [earnedBadges, totalBadges] = await Promise.all([
+    StudentBadge.find({ student: studentId })
+      .populate('badge', 'name icon')
+      .sort({ earnedAt: -1 })
+      .lean(),
+    Badge.countDocuments({ isActive: true }),
+  ]);
+
+  const validBadges = earnedBadges.filter(({ badge }) => badge);
+
+  return {
+    totalBadges,
+    earnedBadges: validBadges.length,
+    badges: validBadges.map(({ badge, earnedAt }) => ({
+      name: (badge as any).name,
+      icon: (badge as any).icon,
+      earnedAt,
+    })),
+  };
 };
 
 const getMySummary = async (studentId: string) => {
   const totalResult = await PointsLedger.aggregate([
-    { $match: { student: studentId } },
+    { $match: { student: new Types.ObjectId(studentId) } },
     { $group: { _id: null, total: { $sum: '$points' } } },
   ]);
   const totalPoints = totalResult[0]?.total || 0;

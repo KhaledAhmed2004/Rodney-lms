@@ -173,7 +173,7 @@ const getMyAttempts = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'My attempts retrieved successfully',
+    message: 'Quiz attempts retrieved successfully',
     pagination: result.pagination,
     data: result.data,
   });

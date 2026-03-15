@@ -52,8 +52,6 @@ class UserFactory extends base_factory_1.BaseFactory {
             dateOfBirth: faker_1.faker.date.birthdate({ min: 18, max: 60, mode: 'age' }).toISOString(),
             phone: faker_1.faker.phone.number(),
             profilePicture: faker_1.faker.image.avatar(),
-            averageRating: 0,
-            ratingsCount: 0,
             about: faker_1.faker.lorem.paragraph(),
             deviceTokens: [],
         };
@@ -160,12 +158,6 @@ class UserFactory extends base_factory_1.BaseFactory {
         return this.set('about', about);
     }
     /**
-     * Set user rating
-     */
-    withRating(rating, count = 10) {
-        return this.set('averageRating', rating).set('ratingsCount', count);
-    }
-    /**
      * Add device token for push notifications
      */
     withDeviceToken(token) {
@@ -201,8 +193,7 @@ class UserFactory extends base_factory_1.BaseFactory {
      */
     newStudent() {
         return this.asStudent()
-            .verified()
-            .withRating(0, 0);
+            .verified();
     }
     /**
      * User awaiting email verification

@@ -458,6 +458,33 @@
                 "description": "Browse all published courses with student's enrollment status. Enrolled courses include enrollment details, non-enrolled return enrollment: null. Auth: STUDENT."
               },
               "response": []
+            },
+            {
+              "name": "Enroll in Course",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"courseId\": \"COURSE_ID\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/enrollments",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["enrollments"]
+                },
+                "description": "Enroll in a course. Primary trigger: 'Start Course' button on browse screen. On success, navigate to GET /courses/:slug/student-detail. Auth: STUDENT."
+              },
+              "response": []
             }
           ]
         },
@@ -567,33 +594,6 @@
                   ]
                 },
                 "description": "Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Enroll in Course",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"courseId\": \"COURSE_ID\"\n}"
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/enrollments",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["enrollments"]
-                },
-                "description": "Enroll in a single course. Auth: STUDENT."
               },
               "response": []
             },
@@ -793,7 +793,7 @@
                   "host": ["{{baseUrl}}"],
                   "path": ["student", "progress"]
                 },
-                "description": "Overall progress: completion %, points, streak, topic progress. Auth: STUDENT."
+                "description": "Overall progress: completion %, points, streak, per-course progress. Auth: STUDENT."
               },
               "response": []
             },
@@ -808,11 +808,23 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/activity/calendar",
+                  "raw": "{{baseUrl}}/activity/calendar?month=3&year=2026",
                   "host": ["{{baseUrl}}"],
-                  "path": ["activity", "calendar"]
+                  "path": ["activity", "calendar"],
+                  "query": [
+                    {
+                      "key": "month",
+                      "value": "3",
+                      "description": "Month (1-12). Default: current month"
+                    },
+                    {
+                      "key": "year",
+                      "value": "2026",
+                      "description": "Year (2020-2100). Default: current year"
+                    }
+                  ]
                 },
-                "description": "30-day activity calendar. Auth: STUDENT."
+                "description": "Monthly activity calendar with summary. Returns only active days — empty days filled by frontend. Auth: STUDENT."
               },
               "response": []
             },
@@ -860,39 +872,10 @@
                     }
                   ]
                 },
-                "description": "Quiz attempt history. Auth: STUDENT."
+                "description": "Completed quiz attempts with pagination. Returns: quizTitle, courseName, percentage, passed, completedAt. Auth: STUDENT."
               },
               "response": []
             },
-            {
-              "name": "Get My Grades",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/gradebook/my-grades?page=1&limit=10",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["gradebook", "my-grades"],
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "10"
-                    }
-                  ]
-                },
-                "description": "All grades across courses. Auth: STUDENT."
-              },
-              "response": []
-            }
           ]
         },
         {
@@ -913,7 +896,7 @@
                   "host": ["{{baseUrl}}"],
                   "path": ["gamification", "my-badges"]
                 },
-                "description": "Get all earned badges. Auth: STUDENT."
+                "description": "Returns totalBadges (all active), earnedBadges (count), and badges array (name, icon, earnedAt). Auth: STUDENT."
               },
               "response": []
             },
@@ -1003,8 +986,19 @@
                   "mode": "formdata",
                   "formdata": [
                     {
+                      "key": "title",
+                      "value": "Struggling with closures",
+                      "type": "text"
+                    },
+                    {
+                      "key": "courseId",
+                      "value": "COURSE_ID",
+                      "type": "text",
+                      "description": "Optional. Link post to a course."
+                    },
+                    {
                       "key": "content",
-                      "value": "Just completed the JavaScript module!",
+                      "value": "Can someone explain closures in JavaScript? I'm confused about...",
                       "type": "text"
                     },
                     {
@@ -1034,7 +1028,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/community/posts?page=1&limit=10&sort=-createdAt",
+                  "raw": "{{baseUrl}}/community/posts?page=1&limit=10&sort=-createdAt&courseId=",
                   "host": ["{{baseUrl}}"],
                   "path": ["community", "posts"],
                   "query": [
@@ -1049,10 +1043,15 @@
                     {
                       "key": "sort",
                       "value": "-createdAt"
+                    },
+                    {
+                      "key": "courseId",
+                      "value": "",
+                      "description": "Optional. Filter posts by course."
                     }
                   ]
                 },
-                "description": "Community feed, newest first. Auth required."
+                "description": "Community feed, newest first. Optional courseId filter. Auth required."
               },
               "response": []
             },
@@ -1109,7 +1108,7 @@
             {
               "name": "Toggle Like",
               "request": {
-                "method": "POST",
+                "method": "PATCH",
                 "header": [
                   {
                     "key": "Authorization",
@@ -1132,7 +1131,7 @@
               "response": []
             },
             {
-              "name": "Reply to Post",
+              "name": "Reply to Post (Simple)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -1160,7 +1159,40 @@
                     }
                   ]
                 },
-                "description": "Reply to a community post. Auth required."
+                "description": "Top-level reply — post er directly under boshbe. parentReplyId na dile simple reply hoy."
+              },
+              "response": []
+            },
+            {
+              "name": "Reply to Post (Nested)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"I agree!\",\n  \"parentReplyId\": \"REPLY_ID\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts/:id/replies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts", ":id", "replies"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "POST_ID"
+                    }
+                  ]
+                },
+                "description": "Nested reply — ekta top-level reply er under boshbe. parentReplyId = jei reply er reply korte chao tar ID. Max 1 level nesting (nested reply er reply kora jay na)."
               },
               "response": []
             },
@@ -1186,6 +1218,157 @@
                   ]
                 },
                 "description": "Delete own reply. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "My Posts",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts/my-posts?page=1&limit=10&sort=-createdAt&courseId=",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts", "my-posts"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-createdAt"
+                    },
+                    {
+                      "key": "courseId",
+                      "value": "",
+                      "description": "Optional. Filter by course."
+                    }
+                  ]
+                },
+                "description": "Get current user's posts. Same response as Get Feed. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Post",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "title",
+                      "value": "Updated title",
+                      "type": "text",
+                      "description": "Optional"
+                    },
+                    {
+                      "key": "content",
+                      "value": "Updated content...",
+                      "type": "text",
+                      "description": "Optional"
+                    },
+                    {
+                      "key": "courseId",
+                      "value": "COURSE_ID",
+                      "type": "text",
+                      "description": "Optional. Send \"null\" to remove course link."
+                    },
+                    {
+                      "key": "image",
+                      "type": "file",
+                      "src": "",
+                      "description": "Optional. Replaces existing image."
+                    },
+                    {
+                      "key": "removeImage",
+                      "value": "true",
+                      "type": "text",
+                      "description": "Optional. Send \"true\" to remove existing image without replacing.",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "POST_ID"
+                    }
+                  ]
+                },
+                "description": "Edit own post. At least one field required. Author-only. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Reply",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"Updated reply content\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/community/replies/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "replies", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "REPLY_ID"
+                    }
+                  ]
+                },
+                "description": "Edit own reply. Author-only. Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Course Options",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/courses/options",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["courses", "options"]
+                },
+                "description": "Lightweight endpoint for course filter dropdown. Returns published courses with _id + title only. Auth required (STUDENT or SUPER_ADMIN)."
               },
               "response": []
             }
@@ -1343,7 +1526,7 @@
               "response": []
             },
             {
-              "name": "Get Gamification Summary",
+              "name": "Get My Badges",
               "request": {
                 "method": "GET",
                 "header": [
@@ -1353,30 +1536,11 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/gamification/my-summary",
+                  "raw": "{{baseUrl}}/gamification/my-badges",
                   "host": ["{{baseUrl}}"],
-                  "path": ["gamification", "my-summary"]
+                  "path": ["gamification", "my-badges"]
                 },
-                "description": "Points, streak, top badge for profile. Auth: STUDENT."
-              },
-              "response": []
-            },
-            {
-              "name": "Get Streak",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/activity/streak",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["activity", "streak"]
-                },
-                "description": "Current and longest streak. Auth: STUDENT."
+                "description": "Returns totalBadges (all active), earnedBadges (count), and badges array (name, icon, earnedAt). Auth: STUDENT."
               },
               "response": []
             },
@@ -1415,58 +1579,21 @@
               "response": []
             },
             {
-              "name": "Get My Reviews",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/feedback/my-reviews?page=1&limit=10",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["feedback", "my-reviews"],
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "10"
-                    }
-                  ]
-                },
-                "description": "Get own course reviews. Auth: STUDENT."
-              },
-              "response": []
-            },
-            {
-              "name": "Submit Course Review",
+              "name": "Logout",
               "request": {
                 "method": "POST",
                 "header": [
                   {
                     "key": "Authorization",
                     "value": "Bearer {{accessToken}}"
-                  },
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
                   }
                 ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"courseId\": \"COURSE_ID\",\n  \"rating\": 5,\n  \"review\": \"Excellent course! Very well structured.\"\n}"
-                },
                 "url": {
-                  "raw": "{{baseUrl}}/feedback",
+                  "raw": "{{baseUrl}}/auth/logout",
                   "host": ["{{baseUrl}}"],
-                  "path": ["feedback"]
+                  "path": ["auth", "logout"]
                 },
-                "description": "Submit a course review (1-5 rating). Auth: STUDENT."
+                "description": "Clears refreshToken cookie + removes device token for push notifications. Client side: clear stored tokens → navigate to login."
               },
               "response": []
             }
@@ -2978,7 +3105,7 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/community/posts?page=1&limit=10&sort=-createdAt",
+                  "raw": "{{baseUrl}}/community/posts?page=1&limit=10&sort=-createdAt&searchTerm=&courseId=",
                   "host": ["{{baseUrl}}"],
                   "path": ["community", "posts"],
                   "query": [
@@ -2993,10 +3120,53 @@
                     {
                       "key": "sort",
                       "value": "-createdAt"
+                    },
+                    {
+                      "key": "searchTerm",
+                      "value": "",
+                      "description": "Search by post title or content"
+                    },
+                    {
+                      "key": "courseId",
+                      "value": "",
+                      "description": "Filter posts by course ID"
                     }
                   ]
                 },
-                "description": "Get all community posts with pagination and sorting. Requires SUPER_ADMIN role."
+                "description": "Get all community posts with pagination, sorting, search, and course filter. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Reply to Post",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"Great question! Here's how closures work...\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/community/posts/:id/replies",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["community", "posts", ":id", "replies"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "POST_ID"
+                    }
+                  ]
+                },
+                "description": "Reply to a community post. Send parentReplyId in body for nested reply (max 1 level). Requires SUPER_ADMIN role."
               },
               "response": []
             },
@@ -3051,7 +3221,7 @@
               "response": []
             },
             {
-              "name": "Get Flagged Posts",
+              "name": "Get Course Options",
               "request": {
                 "method": "GET",
                 "header": [
@@ -3061,21 +3231,11 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/community/admin/flagged?page=1&limit=10",
+                  "raw": "{{baseUrl}}/courses/options",
                   "host": ["{{baseUrl}}"],
-                  "path": ["community", "admin", "flagged"],
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "10"
-                    }
-                  ]
+                  "path": ["courses", "options"]
                 },
-                "description": "Get all flagged community posts for moderation. Requires SUPER_ADMIN role."
+                "description": "Lightweight endpoint for course filter dropdown. Returns published courses with _id + title only. Auth required (STUDENT or SUPER_ADMIN)."
               },
               "response": []
             }

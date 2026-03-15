@@ -144,3 +144,20 @@ res.cookie('refreshToken', refreshToken, {
 - **List endpoint exclusion**: List/manage page er API te nested arrays (modules, lessons etc.) exclude koro `.select('-field')` diye — detail page e alag endpoint e fetch korbe
 - **Consistency across endpoints**: Ekta endpoint e fix korle, related endpoints eO same fix apply koro — half-baked fix never acceptable
 - **`Model.create()` bypasses `select: false`**: `.create()` er return value te `select: false` fields (password, authentication) ashbe — `.find()` / `.findById()` te kaje laage but `.create()` te na. Fix: create er por `Model.findById(id).select('field1 field2')` diye re-fetch koro. Raw `.create()` result NEVER return koro
+
+### Create Response Checklist
+Notun resource create korle (POST):
+- Raw `.create()` result NEVER return koro — `.findById(id).select('field1 field2')` diye re-fetch koro
+- Default values exclude koro (`status: ACTIVE`, `count: 0`) — client already jane
+- `updatedAt` exclude koro — create e same as `createdAt`, redundant
+- `__v` exclude koro — internal Mongoose field
+- Author/user populate koro NA — client nijer info already jane
+- **Return**: `_id` + user-submitted fields + `createdAt`
+
+### Update Response Checklist
+Existing resource update korle (PATCH):
+- Shudhu changed/changeable fields return koro — client er state e baki data already ache
+- Author populate koro NA — user nijer data edit korche, nijer info client e ache
+- `status`, `createdAt`, `updatedAt`, counts — exclude koro, edit e relevant na
+- Extra DB query avoid koro (like check, re-populate) — unnecessary round trip
+- **Return**: `_id` + fields that can change in this endpoint

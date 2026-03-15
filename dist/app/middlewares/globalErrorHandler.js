@@ -11,7 +11,15 @@ const handleZodError_1 = __importDefault(require("../../errors/handleZodError"))
 const handleCastError_1 = __importDefault(require("../../errors/handleCastError"));
 const logger_1 = require("../../shared/logger");
 const api_1 = require("@opentelemetry/api");
+const fileHandler_1 = require("./fileHandler");
 const globalErrorHandler = (error, req, res, next) => {
+    // Clean up uploaded files on error (prevents orphaned files on S3/Cloudinary)
+    const uploadedUrls = req === null || req === void 0 ? void 0 : req._uploadedFileUrls;
+    if (uploadedUrls === null || uploadedUrls === void 0 ? void 0 : uploadedUrls.length) {
+        for (const url of uploadedUrls) {
+            (0, fileHandler_1.deleteFile)(url).catch(() => { });
+        }
+    }
     // config.node_env === 'development'
     //   ? console.log('🚨 globalErrorHandler ~~ ', error)
     //   : errorLogger.error('🚨 globalErrorHandler ~~ ', error);

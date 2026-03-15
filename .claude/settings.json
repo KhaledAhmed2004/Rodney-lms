@@ -39,7 +39,8 @@
       "Bash(rm -f scripts/bruno-setup.js scripts/postman-to-bruno.js)",
       "Bash(npm uninstall:*)",
       "Bash(npx eslint:*)",
-      "Read(//d/web/ projects/office-sta/rodney/src/app/modules/**)"
+      "Read(//d/web/ projects/office-sta/rodney/src/app/modules/**)",
+      "Bash(find C:Userskhaled.claudeprojectsd--web-projects-office-sta-rodneymemory -type f -name *.md)"
     ],
     "additionalDirectories": [
       "d:\\web projects\\office-sta\\rodney\\.claude",

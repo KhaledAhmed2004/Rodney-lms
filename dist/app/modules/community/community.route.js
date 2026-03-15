@@ -12,16 +12,18 @@ const fileHandler_1 = require("../../middlewares/fileHandler");
 const community_controller_1 = require("./community.controller");
 const community_validation_1 = require("./community.validation");
 const router = express_1.default.Router();
-// Admin
-router.get('/admin/flagged', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), community_controller_1.CommunityController.getFlaggedPosts);
 // Posts
 router.post('/posts', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), (0, fileHandler_1.fileHandler)(['image']), (0, validateRequest_1.default)(community_validation_1.CommunityValidation.createPost), community_controller_1.CommunityController.createPost);
 router.get('/posts', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), community_controller_1.CommunityController.getAllPosts);
+// Static route BEFORE /:id
+router.get('/posts/my-posts', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), community_controller_1.CommunityController.getMyPosts);
 router.get('/posts/:id', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), community_controller_1.CommunityController.getPostById);
+router.patch('/posts/:id', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), (0, fileHandler_1.fileHandler)(['image']), (0, validateRequest_1.default)(community_validation_1.CommunityValidation.updatePost), community_controller_1.CommunityController.updatePost);
 router.delete('/posts/:id', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), community_controller_1.CommunityController.deletePost);
 // Likes
-router.post('/posts/:id/like', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), community_controller_1.CommunityController.toggleLike);
+router.patch('/posts/:id/like', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(community_validation_1.CommunityValidation.toggleLike), community_controller_1.CommunityController.toggleLike);
 // Replies
 router.post('/posts/:id/replies', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(community_validation_1.CommunityValidation.createReply), community_controller_1.CommunityController.createReply);
+router.patch('/replies/:id', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(community_validation_1.CommunityValidation.updateReply), community_controller_1.CommunityController.updateReply);
 router.delete('/replies/:id', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), community_controller_1.CommunityController.deleteReply);
 exports.CommunityRoutes = router;

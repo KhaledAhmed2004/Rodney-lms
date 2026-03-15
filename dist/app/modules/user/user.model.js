@@ -75,14 +75,6 @@ const userSchema = new mongoose_1.Schema({
         type: [String],
         default: [],
     },
-    averageRating: {
-        type: Number,
-        default: 0,
-    },
-    ratingsCount: {
-        type: Number,
-        default: 0,
-    },
     about: {
         type: String,
     },

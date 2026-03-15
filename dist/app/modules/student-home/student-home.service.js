@@ -83,49 +83,34 @@ const getHome = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
     };
 });
 const getProgress = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
-    const [user, enrollments, quizResults, totalPointsResult] = yield Promise.all([
+    var _a, _b;
+    const [user, enrollments] = yield Promise.all([
         user_model_1.User.findById(studentId).select('streak totalPoints'),
         enrollment_model_1.Enrollment.find({ student: studentId })
-            .populate('course', 'title slug')
+            .populate('course', 'title slug thumbnail totalLessons')
             .select('course status progress'),
-        quiz_model_1.QuizAttempt.find({ student: studentId, status: 'COMPLETED' })
-            .populate('quiz', 'title')
-            .sort({ completedAt: -1 })
-            .limit(20),
-        gamification_model_2.PointsLedger.aggregate([
-            { $match: { student: studentId } },
-            { $group: { _id: null, total: { $sum: '$points' } } },
-        ]),
     ]);
-    // Calculate overall progress
     const totalCourses = enrollments.length;
     const overallPercentage = totalCourses > 0
         ? Math.round(enrollments.reduce((sum, e) => sum + e.progress.completionPercentage, 0) / totalCourses)
         : 0;
     return {
         overallPercentage,
-        points: ((_a = totalPointsResult[0]) === null || _a === void 0 ? void 0 : _a.total) || 0,
+        points: (user === null || user === void 0 ? void 0 : user.totalPoints) || 0,
         streak: {
-            current: ((_b = user === null || user === void 0 ? void 0 : user.streak) === null || _b === void 0 ? void 0 : _b.current) || 0,
-            longest: ((_c = user === null || user === void 0 ? void 0 : user.streak) === null || _c === void 0 ? void 0 : _c.longest) || 0,
+            current: ((_a = user === null || user === void 0 ? void 0 : user.streak) === null || _a === void 0 ? void 0 : _a.current) || 0,
+            longest: ((_b = user === null || user === void 0 ? void 0 : user.streak) === null || _b === void 0 ? void 0 : _b.longest) || 0,
         },
-        progressByTopics: enrollments.map((e) => ({
+        courses: enrollments.map((e) => ({
             courseId: e.course._id,
             title: e.course.title,
             slug: e.course.slug,
+            thumbnail: e.course.thumbnail,
             completionPercentage: e.progress.completionPercentage,
-            status: e.status,
             completedLessons: e.progress.completedLessons.length,
-        })),
-        quizResults: quizResults.map((a) => ({
-            quizId: a.quiz._id,
-            quizTitle: a.quiz.title,
-            score: a.score,
-            maxScore: a.maxScore,
-            percentage: a.percentage,
-            passed: a.passed,
-            completedAt: a.completedAt,
+            totalLessons: e.course.totalLessons,
+            status: e.status,
+            lastAccessedAt: e.progress.lastAccessedAt,
         })),
     };
 });
