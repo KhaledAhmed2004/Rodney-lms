@@ -177,7 +177,9 @@ const sendAdminNotification = async (
   }
 
   const result = await builder.sendNow();
-  const recipientCount = result?.sent ?? 0;
+  const sent = result?.sent;
+  const recipientCount =
+    typeof sent === 'number' ? sent : sent?.database ?? sent?.socket ?? 0;
 
   // Save sent record for history (flat — no ObjectId refs, no populate needed)
   await SentNotification.create({

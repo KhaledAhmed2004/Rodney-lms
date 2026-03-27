@@ -182,3 +182,55 @@ Auth: None (token in body or cookie)
 ---
 
 > **Logout + Change Password** → [Profile Screen](./14-profile.md) e documented — auth screen er part na, profile/settings theke accessible.
+
+---
+
+## Edge Cases
+- **Non-existent email** (forget-password): Silent success — same response as valid email (enumeration prevention)
+- **Deleted/Inactive account**: OTP sent hoy na, but same success response
+- **Expired OTP**: Generic "Invalid or expired OTP" — no hint about expiry vs wrong code
+- **Wrong OTP**: Same generic error — no attempt count revealed
+- **Expired reset token**: "Invalid or expired reset token" — token auto-deleted by TTL index
+- **Token reuse**: Old tokens deleted on new OTP — single-use
+- **Password mismatch**: Zod `.refine()` catches at validation layer
+- **Rate limit exceeded**: 3 req/15min forget-password, 5 req/15min verify + reset
+
+---
+
+## Audit & Review Log
+
+### Code Audit (2026-03-28)
+
+**Doc vs Code verified ✅:**
+
+| Endpoint | Response Message | Response Shape | Match? |
+|----------|:---:|:---:|:---:|
+| 1.1 Login | ✅ | ✅ `{ accessToken, refreshToken }` | ✅ |
+| 1.2 Forget Password | ✅ | ✅ no data | ✅ |
+| 1.3 Verify OTP | ✅ | ✅ reset token string | ✅ |
+| 1.4 Reset Password | ✅ | ✅ no data | ✅ |
+| 1.5 Refresh Token | ✅ | ✅ `{ accessToken, refreshToken }` | ✅ |
+
+**Security audit passed:**
+- Email enumeration prevention (silent return) ✅
+- OTP expiry checked BEFORE value comparison ✅
+- Rate limiting on all auth endpoints ✅
+- Reset token TTL 5min + auto-cleanup index ✅
+- All old tokens invalidated on new OTP ✅
+- `isResetPassword` permission flag check ✅
+- bcrypt password hashing ✅
+- `authentication` field `select: false` ✅
+
+**Issue found & fixed:**
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 1 | `confirmPassword` validation `.min(1)` — allows 1-char password as confirm | Changed to `passwordSchema` (min 8, max 128) — consistent with `newPassword`. Same fix in `createChangePasswordZodSchema` |
+
+**Remaining observations (not bugs):**
+
+| # | Observation | Priority | Note |
+|---|------------|:--------:|------|
+| 1 | OTP expiry (3min) + reset token expiry (5min) hardcoded | P2 | Extract to config constant |
+| 2 | `verifyEmail` returns different shapes: `{ tokens }` (new user) vs string (reset) | P2 | Frontend handles both — functional, but inconsistent |
+| 3 | No audit logging for password reset attempts | P2 | Cannot track suspicious activity |
