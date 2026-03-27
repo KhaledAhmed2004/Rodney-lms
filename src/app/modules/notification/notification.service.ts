@@ -3,6 +3,7 @@ import { JwtPayload } from 'jsonwebtoken';
 import ApiError from '../../../errors/ApiError';
 import NotificationBuilder from '../../builder/NotificationBuilder/NotificationBuilder';
 import QueryBuilder from '../../builder/QueryBuilder';
+import { Course } from '../course/course.model';
 import { Enrollment } from '../enrollment/enrollment.model';
 import { INotification } from './notification.interface';
 import { Notification } from './notification.model';
@@ -53,7 +54,7 @@ const markNotificationAsReadIntoDB = async (
   );
 
   if (!notification) {
-    throw new Error('Notification not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Notification not found');
   }
 
   return notification;
@@ -107,7 +108,7 @@ const adminMarkNotificationAsReadIntoDB = async (notificationId: string) => {
   );
 
   if (!notification) {
-    throw new Error('Admin notification not found');
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Admin notification not found');
   }
 
   return notification;
@@ -147,15 +148,21 @@ const sendAdminNotification = async (
     builder.toRole('STUDENT');
   } else {
     if (!courseId) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'courseId is required');
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'courseId is required when audience is course');
     }
-    const enrollments = await Enrollment.find({
-      course: courseId,
-      status: { $in: ['ACTIVE', 'COMPLETED'] },
-    })
-      .select('student')
-      .populate('course', 'title')
-      .lean();
+    const [enrollments, course] = await Promise.all([
+      Enrollment.find({
+        course: courseId,
+        status: { $in: ['ACTIVE', 'COMPLETED'] },
+      })
+        .select('student')
+        .lean(),
+      Course.findById(courseId).select('title').lean(),
+    ]);
+
+    if (!course) {
+      throw new ApiError(StatusCodes.NOT_FOUND, 'Course not found');
+    }
 
     if (enrollments.length === 0) {
       throw new ApiError(
@@ -164,7 +171,7 @@ const sendAdminNotification = async (
       );
     }
 
-    courseTitle = (enrollments[0].course as unknown as { title: string })?.title;
+    courseTitle = course.title;
     const studentIds = enrollments.map(e => String(e.student));
     builder.toMany(studentIds);
   }
@@ -191,6 +198,7 @@ const getSentHistory = async (query: Record<string, unknown>) => {
     query,
   )
     .search(['title', 'text'])
+    .filter()
     .sort()
     .paginate();
 

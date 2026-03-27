@@ -31,64 +31,19 @@
 2. Confirm korle send hoy, cancel korle form e fire ashe
 
 ### Edge Cases
-- **Empty form**: Title ba message empty thakle validation error (Zod)
-- **Course not selected**: Audience "Specific Course" but dropdown e kono course select kora hoy nai → "courseId is required" error
-- **No enrolled students**: Selected course e kono student nai → "No students enrolled in this course" error
-- **Large audience**: 500+ students e send → NotificationBuilder bulk handle kore
-- **No sent history**: Empty state — "No notifications sent yet"
+- **Empty form**: Title ba message empty thakle validation error (Zod) — "Title is required", "Message is required"
+- **Course not selected**: Audience "Specific Course" but dropdown e kono course select kora hoy nai → 400 "courseId is required when audience is course"
+- **Course not found**: Valid ObjectId but course exist kore na → 404 "Course not found"
+- **No enrolled students**: Course exist kore but kono student enrolled nai → 400 "No students enrolled in this course"
+- **Invalid audience value**: `audience: "group"` → Zod validation error — only `"all"` ba `"course"` accepted
+- **Large audience**: 500+ students e send → NotificationBuilder bulk handle kore, no timeout
+- **No sent history**: Empty state — `{ data: [], pagination: { total: 0 } }`
 
 ---
 
-<!-- ═══════════ Send Notification Endpoint ═══════════ -->
+<!-- ═══════════ Send Notification Endpoints ═══════════ -->
 
-### 15.1 Get Sent History
-
-```
-GET /notifications/admin/sent?page=1&limit=10&sort=-createdAt
-Auth: Bearer {{accessToken}} (SUPER_ADMIN)
-```
-
-**Query Parameters:**
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `page` | number | 1 | Page number |
-| `limit` | number | 10 | Items per page |
-| `sort` | string | `-createdAt` | Sort field |
-| `searchTerm` | string | — | Search in title and text |
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Sent notification history retrieved successfully",
-  "pagination": { "page": 1, "limit": 10, "total": 5, "totalPage": 1 },
-  "data": [
-    {
-      "_id": "6650s1b2c3d4e5f6a7b8c001",
-      "title": "New Lesson Available",
-      "text": "Check out the new lesson on React Hooks in Advanced JavaScript!",
-      "audience": "course",
-      "courseTitle": "Advanced JavaScript",
-      "recipientCount": 28,
-      "createdAt": "2026-03-28T14:30:00Z"
-    },
-    {
-      "_id": "6650s1b2c3d4e5f6a7b8c002",
-      "title": "Platform Maintenance Scheduled",
-      "text": "The platform will be under maintenance on March 30th from 2 AM to 4 AM.",
-      "audience": "all",
-      "recipientCount": 156,
-      "createdAt": "2026-03-27T10:00:00Z"
-    }
-  ]
-}
-```
-
-> `courseTitle` — flat string, no ObjectId ref. `audience: "all"` hole field absent. No populate needed — course delete/rename holeo history intact thake.
-
----
-
-### 15.2 Send Notification
+### 15.1 Send Notification
 
 ```
 POST /notifications/admin/send
@@ -141,6 +96,14 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 }
 ```
 
+**Error — Course Not Found (404):**
+```json
+{
+  "success": false,
+  "message": "Course not found"
+}
+```
+
 **Error — Missing courseId (400):**
 ```json
 {
@@ -171,11 +134,97 @@ Auth: Bearer {{accessToken}} (STUDENT, SUPER_ADMIN)
 
 ---
 
+### 15.2 Get Sent History
+
+```
+GET /notifications/admin/sent?page=1&limit=10&sort=-createdAt
+Auth: Bearer {{accessToken}} (SUPER_ADMIN)
+```
+
+**Query Parameters:**
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `page` | number | 1 | Page number |
+| `limit` | number | 10 | Items per page |
+| `sort` | string | `-createdAt` | Sort field |
+| `searchTerm` | string | — | Search in title and text |
+| `audience` | string | — | Filter by audience (`all` or `course`) |
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Sent notification history retrieved successfully",
+  "pagination": { "page": 1, "limit": 10, "total": 5, "totalPage": 1 },
+  "data": [
+    {
+      "_id": "6650s1b2c3d4e5f6a7b8c001",
+      "title": "New Lesson Available",
+      "text": "Check out the new lesson on React Hooks in Advanced JavaScript!",
+      "audience": "course",
+      "courseTitle": "Advanced JavaScript",
+      "recipientCount": 28,
+      "createdAt": "2026-03-28T14:30:00Z"
+    },
+    {
+      "_id": "6650s1b2c3d4e5f6a7b8c002",
+      "title": "Platform Maintenance Scheduled",
+      "text": "The platform will be under maintenance on March 30th from 2 AM to 4 AM.",
+      "audience": "all",
+      "recipientCount": 156,
+      "createdAt": "2026-03-27T10:00:00Z"
+    }
+  ]
+}
+```
+
+> `courseTitle` — flat string, no ObjectId ref. `audience: "all"` hole field absent. No populate needed — course delete/rename holeo history intact thake.
+
+---
+
 ## Audit & Review Log
 
 ### Initial Creation (2026-03-28)
 
-- Send notification feature — 1 endpoint (`POST /notifications/admin/send`)
-- UX flow: simple form (title, message, audience), course dropdown for specific course
-- Uses `NotificationBuilder` for multi-channel delivery (DB + Socket.IO + Push)
+- Send notification — `POST /notifications/admin/send` with `NotificationBuilder`
+- Sent history — `GET /notifications/admin/sent` with `QueryBuilder`
+- `SentNotification` model — flat schema (no ObjectId refs, orphan-proof)
 - Validation: Zod `superRefine` for conditional `courseId` requirement
+
+### Code Audit (2026-03-28)
+
+**Doc vs Code match verified ✅:**
+
+| Check | 15.1 Send | 15.2 History |
+|-------|:-:|:-:|
+| Response fields match | ✅ | ✅ |
+| Message strings match | ✅ | ✅ |
+| Error responses match | ✅ | N/A |
+| Pagination placement | N/A | ✅ top-level |
+| Validation constraints match | ✅ | N/A |
+
+**Issues found & fixed:**
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 1 | Doc section references swapped — UX flow pointed Send → 15.1 but 15.1 was History | Sections reordered: 15.1 = Send (primary), 15.2 = History |
+| 2 | Non-existent `courseId` → "No students enrolled" instead of "Course not found" | `Course.findById()` check added — proper error |
+
+**Issues found & fixed (final audit):**
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 3 | Service fallback `"courseId is required"` — Zod message er sathe mismatch | Changed to `"courseId is required when audience is course"` — exact match |
+| 4 | `getSentHistory` e `.filter()` missing — `?audience=course` filter kaj korto na | `.filter()` add + doc e `audience` query param add |
+
+**Passed:**
+- Doc vs code: every field, message, status code, constraint — exact match ✅
+- API design: industry standard action endpoints (200 for send, pagination for list) ✅
+- Response design: flat, clean, no nested objects, no unnecessary data ✅
+- Route order: `/admin/sent`, `/admin/send` before `/admin/:id/read` ✅
+- Auth: all SUPER_ADMIN ✅
+- Validation: Zod `superRefine` conditional + service defense-in-depth ✅
+- Parallel queries: `Promise.all([Enrollment.find(), Course.findById()])` ✅
+- Schema: flat (no ObjectId refs), `{ createdAt: -1 }` index ✅
+- Error handling: `ApiError` everywhere, proper status codes (400/404) ✅
+- `NotificationBuilder` reuse: `.toRole()`, `.toMany()`, `.viaDatabase()`, `.viaSocket()`, `.viaPush()` ✅
