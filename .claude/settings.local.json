@@ -25,7 +25,8 @@
       "Bash(taskkill:*)",
       "Bash(python:*)",
       "Bash(cmd //c \"taskkill /pid 32156 /f\")",
-      "Bash(cmd //c \"taskkill /pid 24612 /T /F\")"
+      "Bash(cmd //c \"taskkill /pid 24612 /T /F\")",
+      "Bash(xargs grep:*)"
     ],
     "deny": [],
     "ask": []
