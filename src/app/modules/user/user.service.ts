@@ -29,10 +29,8 @@ const createUserToDB = async (payload: Partial<IUser>): Promise<IUser> => {
     otp: otp,
     email: createUser.email!,
   };
-  console.log('Sending email to:', createUser.email, 'with OTP:', otp);
-
   const createAccountTemplate = emailTemplate.createAccount(values);
-  emailHelper.sendEmail(createAccountTemplate);
+  await emailHelper.sendEmail(createAccountTemplate);
 
   //save to DB
   const authentication = {
@@ -156,13 +154,15 @@ const getAllUsers = async (query: Record<string, unknown>) => {
   const limit = Number(query.limit) || 10;
   const skip = (page - 1) * limit;
 
-  // Build sort spec from ?sort=field or ?sort=-field
+  // Build sort spec from ?sort=field or ?sort=-field (whitelisted)
+  const SORTABLE_FIELDS = ['name', 'email', 'status', 'enrollmentCount', 'lastActiveDate', 'createdAt'];
   const sortParam = query.sort ? String(query.sort) : '-createdAt';
+  const sortField = sortParam.startsWith('-') ? sortParam.slice(1) : sortParam;
   const sortSpec: Record<string, 1 | -1> = {};
-  if (sortParam.startsWith('-')) {
-    sortSpec[sortParam.slice(1)] = -1;
+  if (SORTABLE_FIELDS.includes(sortField)) {
+    sortSpec[sortField] = sortParam.startsWith('-') ? -1 : 1;
   } else {
-    sortSpec[sortParam] = 1;
+    sortSpec.createdAt = -1;
   }
 
   const matchConditions = buildUserMatchConditions(query);
@@ -189,7 +189,6 @@ const getAllUsers = async (query: Record<string, unknown>) => {
         email: 1,
         profilePicture: 1,
         status: 1,
-        role: 1,
         verified: 1,
         enrollmentCount: 1,
         lastActiveDate: 1,
@@ -239,8 +238,6 @@ const exportUsers = async (query: Record<string, unknown>) => {
         name: 1,
         email: 1,
         status: 1,
-        role: 1,
-        verified: 1,
         enrollmentCount: 1,
         lastActiveDate: 1,
         createdAt: 1,
@@ -252,7 +249,11 @@ const exportUsers = async (query: Record<string, unknown>) => {
   return User.aggregate(pipeline);
 };
 
-const updateUserStatus = async (id: string, status: USER_STATUS) => {
+const updateUserStatus = async (id: string, status: USER_STATUS, requesterId?: string) => {
+  if (requesterId && id === requesterId) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Cannot change your own status');
+  }
+
   const user = await User.isExistUserById(id);
   if (!user) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
@@ -262,40 +263,46 @@ const updateUserStatus = async (id: string, status: USER_STATUS) => {
     id,
     { status },
     { new: true }
-  );
+  ).select('_id name status');
 
   return updatedUser;
 };
 
 const getUserById = async (id: string) => {
-  const user = await User.findById(id).select('-password -authentication -deviceTokens');
+  const user = await User.findById(id).select(
+    'name email profilePicture status verified totalPoints streak'
+  );
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, "User doesn't exist!");
   }
 
   const enrollments = await Enrollment.find({ student: id })
     .populate('course', '_id title thumbnail')
+    .sort({ enrolledAt: -1 })
     .lean();
 
   const courseStats = {
     total: enrollments.length,
     active: enrollments.filter(e => e.status === ENROLLMENT_STATUS.ACTIVE).length,
     completed: enrollments.filter(e => e.status === ENROLLMENT_STATUS.COMPLETED).length,
-    dropped: enrollments.filter(e => e.status === ENROLLMENT_STATUS.DROPPED).length,
     averageCompletion: Math.round(
       enrollments.reduce((sum, e) => sum + (e.progress?.completionPercentage ?? 0), 0) /
         (enrollments.length || 1)
     ),
   };
 
-  const enrolledCourses = enrollments.map(e => ({
-    enrollmentId: e._id,
-    course: e.course,
-    enrollmentStatus: e.status,
-    completionPercentage: e.progress?.completionPercentage ?? 0,
-    enrolledAt: e.enrolledAt,
-    lastAccessedAt: e.progress?.lastAccessedAt ?? null,
-  }));
+  const enrolledCourses = enrollments.map(e => {
+    const course = e.course as any;
+    return {
+      courseId: course?._id ?? null,
+      title: course?.title ?? 'Unknown',
+      thumbnail: course?.thumbnail ?? null,
+      status: e.status,
+      completionPercentage: e.progress?.completionPercentage ?? 0,
+      enrolledAt: e.enrolledAt,
+      lastAccessedAt: e.progress?.lastAccessedAt ?? null,
+    };
+  });
 
   const userObj = user.toObject();
   return {
@@ -323,7 +330,7 @@ const updateUserByAdmin = async (
   }
 
   const updatedUser = await User.findByIdAndUpdate(id, payload, { new: true }).select(
-    '-password -authentication -deviceTokens'
+    '_id name email status role verified'
   );
 
   return updatedUser;
@@ -338,7 +345,7 @@ const getUserDetailsById = async (id: string) => {
 };
 
 const getUserStats = async () => {
-  const [totalStudents, activeStudents] = await Promise.all([
+  const [totalStudentsGrowth, activeStudentsGrowth] = await Promise.all([
     new AggregationBuilder(User as any).calculateGrowth({
       filter: { role: USER_ROLES.STUDENT, status: { $ne: USER_STATUS.DELETE } },
       period: 'month',
@@ -349,7 +356,19 @@ const getUserStats = async () => {
     }),
   ]);
 
-  return { totalStudents, activeStudents };
+  return {
+    comparisonPeriod: 'month',
+    totalStudents: {
+      value: totalStudentsGrowth.total,
+      growth: totalStudentsGrowth.growth,
+      growthType: totalStudentsGrowth.growthType,
+    },
+    activeStudents: {
+      value: activeStudentsGrowth.total,
+      growth: activeStudentsGrowth.growth,
+      growthType: activeStudentsGrowth.growthType,
+    },
+  };
 };
 
 export const UserService = {

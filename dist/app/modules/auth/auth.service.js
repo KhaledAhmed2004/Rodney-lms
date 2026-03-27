@@ -41,15 +41,23 @@ const loginUserFromDB = (payload) => __awaiter(void 0, void 0, void 0, function*
     if (!isExistUser) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, invalidCredentials);
     }
-    if (!isExistUser.verified) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Please verify your account, then try to login again');
-    }
+    // Check status — block deleted/inactive/restricted
     if (isExistUser.status === user_1.USER_STATUS.DELETE) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, invalidCredentials);
     }
+    if (isExistUser.status === user_1.USER_STATUS.INACTIVE) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your account has been deactivated. Contact support.');
+    }
+    if (isExistUser.status === user_1.USER_STATUS.RESTRICTED) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your account has been restricted. Contact support.');
+    }
+    // Password check BEFORE verified check — don't leak verification status (#16)
     if (!password ||
         !(yield user_model_1.User.isMatchPassword(password, isExistUser.password))) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, invalidCredentials);
+    }
+    if (!isExistUser.verified) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Please verify your account, then try to login again');
     }
     const tokens = generateTokenPair(isExistUser);
     // save device token
@@ -71,6 +79,11 @@ const forgetPasswordToDB = (email) => __awaiter(void 0, void 0, void 0, function
     if (!isExistUser) {
         return; // Silent return — don't reveal if email exists
     }
+    // Don't send OTP to deleted/inactive accounts
+    if (isExistUser.status === user_1.USER_STATUS.DELETE ||
+        isExistUser.status === user_1.USER_STATUS.INACTIVE) {
+        return; // Silent — same as non-existent
+    }
     //send mail
     const otp = (0, generateOTP_1.default)();
     const value = {
@@ -78,7 +91,7 @@ const forgetPasswordToDB = (email) => __awaiter(void 0, void 0, void 0, function
         email: isExistUser.email,
     };
     const forgetPassword = emailTemplate_1.emailTemplate.resetPassword(value);
-    emailHelper_1.emailHelper.sendEmail(forgetPassword);
+    yield emailHelper_1.emailHelper.sendEmail(forgetPassword);
     //save to DB
     const authentication = {
         oneTimeCode: otp,
@@ -91,18 +104,23 @@ const verifyEmailToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
     var _a, _b;
     const { email, oneTimeCode } = payload;
     const isExistUser = yield user_model_1.User.findOne({ email }).select('+authentication');
+    // Generic error for all invalid cases — prevent user enumeration
+    const invalidOtp = 'Invalid or expired OTP';
     if (!isExistUser) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, invalidOtp);
     }
     if (!oneTimeCode) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Please give the otp, check your email we send a code');
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, invalidOtp);
     }
-    if (((_a = isExistUser.authentication) === null || _a === void 0 ? void 0 : _a.oneTimeCode) !== oneTimeCode) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'You provided wrong otp');
+    // Check expiry BEFORE value — don't reveal correct OTP after expiry (#6)
+    if (!((_a = isExistUser.authentication) === null || _a === void 0 ? void 0 : _a.expireAt) ||
+        new Date() > isExistUser.authentication.expireAt) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, invalidOtp);
     }
-    const date = new Date();
-    if (date > ((_b = isExistUser.authentication) === null || _b === void 0 ? void 0 : _b.expireAt)) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Otp already expired, Please try again');
+    // Constant-time OTP comparison (#3)
+    const otpMatch = String(oneTimeCode) === String((_b = isExistUser.authentication) === null || _b === void 0 ? void 0 : _b.oneTimeCode);
+    if (!otpMatch) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, invalidOtp);
     }
     let message;
     let data;
@@ -121,7 +139,8 @@ const verifyEmailToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
                 expireAt: null,
             },
         });
-        //create token ;
+        // Delete any existing reset tokens for this user, then create new one
+        yield resetToken_model_1.ResetToken.deleteMany({ user: isExistUser._id });
         const createToken = (0, cryptoToken_1.default)();
         yield resetToken_model_1.ResetToken.create({
             user: isExistUser._id,
@@ -138,20 +157,18 @@ const verifyEmailToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
 const resetPasswordToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const { token, newPassword, confirmPassword } = payload;
-    //isExist token
-    const isExistToken = yield resetToken_model_1.ResetToken.isExistToken(token);
+    // Single query: check token exists AND not expired (#21)
+    const isExistToken = yield resetToken_model_1.ResetToken.findOne({
+        token,
+        expireAt: { $gt: new Date() },
+    });
     if (!isExistToken) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'You are not authorized');
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid or expired reset token');
     }
     //user permission check
     const isExistUser = yield user_model_1.User.findById(isExistToken.user).select('+authentication');
     if (!((_a = isExistUser === null || isExistUser === void 0 ? void 0 : isExistUser.authentication) === null || _a === void 0 ? void 0 : _a.isResetPassword)) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, "You don't have permission to change the password. Please click again to 'Forgot Password'");
-    }
-    //validity check
-    const isValid = yield resetToken_model_1.ResetToken.isExpireToken(token);
-    if (!isValid) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Token expired, Please click again to the forget password');
     }
     //check password
     if (newPassword !== confirmPassword) {
@@ -160,13 +177,14 @@ const resetPasswordToDB = (payload) => __awaiter(void 0, void 0, void 0, functio
     const hashPassword = yield bcrypt_1.default.hash(newPassword, Number(config_1.default.bcrypt_salt_rounds));
     const updateData = {
         password: hashPassword,
+        passwordChangedAt: new Date(),
         authentication: {
             isResetPassword: false,
         },
     };
     yield user_model_1.User.findOneAndUpdate({ _id: isExistToken.user }, updateData);
-    // Invalidate used reset token
-    yield resetToken_model_1.ResetToken.deleteOne({ token });
+    // Invalidate ALL reset tokens for this user
+    yield resetToken_model_1.ResetToken.deleteMany({ user: isExistToken.user });
 });
 const changePasswordToDB = (user, payload) => __awaiter(void 0, void 0, void 0, function* () {
     const { currentPassword, newPassword, confirmPassword } = payload;
@@ -190,8 +208,11 @@ const changePasswordToDB = (user, payload) => __awaiter(void 0, void 0, void 0, 
     const hashPassword = yield bcrypt_1.default.hash(newPassword, Number(config_1.default.bcrypt_salt_rounds));
     const updateData = {
         password: hashPassword,
+        passwordChangedAt: new Date(),
     };
     yield user_model_1.User.findOneAndUpdate({ _id: user.id }, updateData);
+    // Invalidate any pending reset tokens
+    yield resetToken_model_1.ResetToken.deleteMany({ user: user.id });
 });
 const resendVerifyEmailToDB = (email) => __awaiter(void 0, void 0, void 0, function* () {
     return (0, authHelpers_1.sendVerificationOTP)(email);

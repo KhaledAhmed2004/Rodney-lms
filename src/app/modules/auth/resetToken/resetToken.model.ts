@@ -40,6 +40,9 @@ resetTokenSchema.statics.isExpireToken = async function (
   return !!resetToken;
 };
 
+// Query index for token lookups
+resetTokenSchema.index({ token: 1 });
+
 // Auto-delete expired tokens
 resetTokenSchema.index({ expireAt: 1 }, { expireAfterSeconds: 0 });
 

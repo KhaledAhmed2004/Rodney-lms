@@ -3,7 +3,6 @@ import { Model, Types } from 'mongoose';
 export enum ENROLLMENT_STATUS {
   ACTIVE = 'ACTIVE',
   COMPLETED = 'COMPLETED',
-  DROPPED = 'DROPPED',
   SUSPENDED = 'SUSPENDED',
 }
 

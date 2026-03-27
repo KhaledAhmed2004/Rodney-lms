@@ -98,6 +98,10 @@ const userSchema = new mongoose_1.Schema({
         type: Boolean,
         default: false,
     },
+    passwordChangedAt: {
+        type: Date,
+        select: false,
+    },
     authentication: {
         type: {
             isResetPassword: {

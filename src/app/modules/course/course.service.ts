@@ -130,8 +130,8 @@ const getAdminCourses = async (query: Record<string, unknown>) => {
 const getCourseByIdentifier = async (identifier: string) => {
   const isObjectId = Types.ObjectId.isValid(identifier);
   const course = isObjectId
-    ? await Course.findById(identifier)
-    : await Course.findOne({ slug: identifier });
+    ? await Course.findOne({ _id: identifier, status: COURSE_STATUS.PUBLISHED })
+    : await Course.findOne({ slug: identifier, status: COURSE_STATUS.PUBLISHED });
 
   if (!course) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Course not found');
@@ -763,6 +763,7 @@ const browseCourses = async (
     {
       $project: {
         title: 1,
+        slug: 1,
         thumbnail: 1,
         description: 1,
         totalLessons: 1,

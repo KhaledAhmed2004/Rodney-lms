@@ -2,21 +2,17 @@ import { StatusCodes } from 'http-status-codes';
 import { Types } from 'mongoose';
 import ApiError from '../../../errors/ApiError';
 import QueryBuilder from '../../builder/QueryBuilder';
-import { IBadge, POINTS_REASON } from './gamification.interface';
+import { IBadge } from './gamification.interface';
 import { PointsLedger, Badge, StudentBadge } from './gamification.model';
-import { User } from '../user/user.model';
 
 // ==================== LEADERBOARD ====================
 const getLeaderboard = async (query: Record<string, unknown>) => {
-  const page = Number(query.page) || 1;
-  const limit = Number(query.limit) || 20;
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
   const skip = (page - 1) * limit;
 
-  const leaderboard = await PointsLedger.aggregate([
+  const result = await PointsLedger.aggregate([
     { $group: { _id: '$student', totalPoints: { $sum: '$points' } } },
-    { $sort: { totalPoints: -1 } },
-    { $skip: skip },
-    { $limit: limit },
     {
       $lookup: {
         from: 'users',
@@ -28,25 +24,45 @@ const getLeaderboard = async (query: Record<string, unknown>) => {
     },
     { $unwind: '$student' },
     {
+      $lookup: {
+        from: 'studentbadges',
+        localField: '_id',
+        foreignField: 'student',
+        as: 'badges',
+      },
+    },
+    {
       $project: {
         _id: 0,
         studentId: '$_id',
         name: '$student.name',
         profilePicture: '$student.profilePicture',
         totalPoints: 1,
+        badgeCount: { $size: '$badges' },
+      },
+    },
+    {
+      $facet: {
+        data: [
+          { $sort: { totalPoints: -1 as const } },
+          { $skip: skip },
+          { $limit: limit },
+        ],
+        total: [{ $count: 'count' }],
       },
     },
   ]);
 
-  const totalStudents = await PointsLedger.distinct('student');
+  const data = result[0]?.data ?? [];
+  const total = result[0]?.total[0]?.count ?? 0;
 
   return {
-    data: leaderboard,
+    data,
     pagination: {
       page,
       limit,
-      total: totalStudents.length,
-      totalPage: Math.ceil(totalStudents.length / limit),
+      total,
+      totalPage: Math.ceil(total / limit),
     },
   };
 };
@@ -63,7 +79,9 @@ const getMyPoints = async (
   const totalPoints = totalResult[0]?.total || 0;
 
   const ledgerQuery = new QueryBuilder(
-    PointsLedger.find({ student: studentId }),
+    PointsLedger.find({ student: studentId }).select(
+      'points reason description referenceId referenceType createdAt',
+    ),
     query,
   )
     .sort()
@@ -119,22 +137,11 @@ const getMySummary = async (studentId: string) => {
 };
 
 // ==================== BADGE CRUD (Admin) ====================
-const createBadge = async (
-  payload: Partial<IBadge> & { icon?: string },
-): Promise<IBadge> => {
-  const existing = await Badge.findOne({ name: payload.name });
-  if (existing) {
-    throw new ApiError(
-      StatusCodes.CONFLICT,
-      'Badge with this name already exists',
-    );
-  }
-  const result = await Badge.create(payload);
-  return result;
-};
-
 const getAllBadges = async (query: Record<string, unknown>) => {
-  const badgeQuery = new QueryBuilder(Badge.find(), query)
+  const badgeQuery = new QueryBuilder(
+    Badge.find().select('-description -createdAt -updatedAt -__v'),
+    query,
+  )
     .search(['name'])
     .filter()
     .sort()
@@ -147,39 +154,29 @@ const getAllBadges = async (query: Record<string, unknown>) => {
 
 const updateBadge = async (
   id: string,
-  payload: Partial<IBadge>,
+  payload: Pick<Partial<IBadge>, 'description' | 'isActive'> & {
+    criteria?: { threshold: number };
+  },
 ): Promise<IBadge | null> => {
   const existing = await Badge.findById(id);
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Badge not found');
   }
-  const result = await Badge.findByIdAndUpdate(id, payload, { new: true });
-  return result;
-};
 
-const deleteBadge = async (id: string): Promise<void> => {
-  const existing = await Badge.findById(id);
-  if (!existing) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Badge not found');
+  const updateData: Record<string, unknown> = {};
+  if (payload.description !== undefined) updateData.description = payload.description;
+  if (payload.isActive !== undefined) updateData.isActive = payload.isActive;
+  if (payload.criteria?.threshold !== undefined) {
+    updateData['criteria.threshold'] = payload.criteria.threshold;
   }
-  await StudentBadge.deleteMany({ badge: id });
-  await Badge.findByIdAndDelete(id);
-};
 
-// ==================== ADMIN: Manual Points Adjust ====================
-const adjustPoints = async (
-  studentId: string,
-  points: number,
-  description: string,
-): Promise<void> => {
-  await PointsLedger.create({
-    student: studentId,
-    points,
-    reason: POINTS_REASON.ADMIN_ADJUST,
-    description,
-  });
+  if (Object.keys(updateData).length === 0) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'No valid fields to update');
+  }
 
-  await User.findByIdAndUpdate(studentId, { $inc: { totalPoints: points } });
+  const result = await Badge.findByIdAndUpdate(id, updateData, { new: true })
+    .select('-createdAt -updatedAt -__v');
+  return result;
 };
 
 // ==================== ADMIN STATS ====================
@@ -234,10 +231,7 @@ export const GamificationService = {
   getMyPoints,
   getMyBadges,
   getMySummary,
-  createBadge,
   getAllBadges,
   updateBadge,
-  deleteBadge,
-  adjustPoints,
   getAdminStats,
 };

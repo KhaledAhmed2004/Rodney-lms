@@ -31,13 +31,13 @@ Every API follows this format:
 | 1 | [Auth](./app-screens/01-auth.md) | Register, login, OTP verify, password reset, refresh token |
 | 2 | [Welcome / Onboarding](./app-screens/02-welcome-onboarding.md) | Published courses list for onboarding flow |
 | 3 | [Home](./app-screens/03-home.md) | Dashboard data — enrolled courses, streaks, recent activity |
-| 4 | [Browse Courses](./app-screens/04-browse-courses.md) | Course catalog with filters, categories, search |
+| 4 | [Course](./app-screens/04-course.md) | Course catalog with filters, categories, search |
 | 5 | [Course Content](./app-screens/05-course-content.md) | Course detail, modules, lessons, enrollment, progress tracking |
 | 6 | [Progress](./app-screens/06-progress.md) | Learning progress, streaks, completion stats |
 | 8 | [Community](./app-screens/08-community.md) | Community posts, comments, likes, bookmarks |
 | 9 | [Notification](./app-screens/09-notification.md) | In-app notifications, mark read |
 | 10 | [Profile](./app-screens/10-profile.md) | View/edit profile, preferences, settings |
-| 11 | [Chat](./app-screens/11-chat.md) | Real-time messaging, chat rooms, Socket.IO events |
+
 
 ---
 

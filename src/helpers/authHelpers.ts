@@ -15,12 +15,8 @@ const OTP_EXPIRY_MINUTES = 3;
  */
 export const sendVerificationOTP = async (email: string) => {
   const user = await User.findOne({ email });
-  if (!user) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
-  }
-
-  if (user.verified) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'User is already verified!');
+  if (!user || user.verified) {
+    return; // Silent — prevent user enumeration
   }
 
   const otp = generateOTP();

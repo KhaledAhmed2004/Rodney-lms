@@ -203,12 +203,22 @@ Auth: Bearer {{accessToken}}
 
 ### 10.6 Logout
 
-> Same API as [1.5 Logout](./01-auth.md). Clears refreshToken cookie + removes device token for push notifications.
+> Clears refreshToken cookie + removes device token for push notifications.
 
 ```
 POST /auth/logout
+Content-Type: application/json
 Auth: Bearer {{accessToken}}
 ```
+
+**Request Body:**
+```json
+{
+  "deviceToken": "fcm-device-token-here"
+}
+```
+
+> `deviceToken` is required — server removes it from user's push notification device list.
 
 **Response:**
 ```json
@@ -224,7 +234,7 @@ Auth: Bearer {{accessToken}}
 
 ### 10.7 Change Password
 
-> Same API as [1.8 Change Password](./01-auth.md). Profile screen theke accessible.
+> Profile screen theke accessible. Requires current password verification.
 
 ```
 POST /auth/change-password

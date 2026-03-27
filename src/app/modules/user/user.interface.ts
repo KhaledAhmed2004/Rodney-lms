@@ -44,6 +44,7 @@ export type IUser = {
   totalPoints: number;
   streak: IStreak;
   onboardingCompleted: boolean;
+  passwordChangedAt?: Date;
   authentication?: {
     isResetPassword: boolean;
     oneTimeCode: number;

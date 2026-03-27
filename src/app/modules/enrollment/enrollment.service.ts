@@ -31,46 +31,88 @@ const enrollInCourse = async (
     throw new ApiError(StatusCodes.CONFLICT, 'Already enrolled in this course');
   }
 
-  const result = await Enrollment.create({
-    student: studentId,
-    course: courseId,
-  });
+  try {
+    const result = await Enrollment.create({
+      student: studentId,
+      course: courseId,
+    });
 
-  return result;
+    // Increment enrollmentCount
+    await Course.findByIdAndUpdate(courseId, {
+      $inc: { enrollmentCount: 1 },
+    });
+
+    return result;
+  } catch (error: any) {
+    // Race condition: concurrent double-click
+    if (error.code === 11000) {
+      throw new ApiError(
+        StatusCodes.CONFLICT,
+        'Already enrolled in this course',
+      );
+    }
+    throw error;
+  }
 };
 
 const bulkEnroll = async (
   studentId: string,
   courseIds: string[],
 ): Promise<{ enrolledCount: number; skippedCount: number }> => {
-  let enrolledCount = 0;
-  let skippedCount = 0;
+  // Deduplicate input
+  const uniqueIds = [...new Set(courseIds)];
 
-  for (const courseId of courseIds) {
-    // Skip if already enrolled
-    const existing = await Enrollment.findOne({
-      student: studentId,
-      course: courseId,
-    });
-    if (existing) {
-      skippedCount++;
-      continue;
+  // Batch: find existing enrollments
+  const existing = await Enrollment.find({
+    student: studentId,
+    course: { $in: uniqueIds },
+  })
+    .select('course')
+    .lean();
+  const enrolledSet = new Set(existing.map(e => e.course.toString()));
+
+  // Batch: find valid published courses
+  const courses = await Course.find({
+    _id: { $in: uniqueIds },
+    status: 'PUBLISHED',
+  })
+    .select('_id')
+    .lean();
+  const validSet = new Set(courses.map(c => c._id.toString()));
+
+  // Filter to new, valid enrollments only
+  const toEnroll = uniqueIds.filter(
+    id => validSet.has(id) && !enrolledSet.has(id),
+  );
+
+  if (toEnroll.length > 0) {
+    // Bulk insert with ordered:false — skip duplicate key errors from race conditions
+    try {
+      await Enrollment.insertMany(
+        toEnroll.map(courseId => ({ student: studentId, course: courseId })),
+        { ordered: false },
+      );
+    } catch (err: any) {
+      // Only ignore duplicate key errors (race condition)
+      if (
+        err.code !== 11000 &&
+        !err.writeErrors?.every((e: any) => e.code === 11000)
+      ) {
+        throw err;
+      }
     }
 
-    const course = await Course.findById(courseId);
-    if (!course || course.status !== 'PUBLISHED') {
-      skippedCount++;
-      continue;
-    }
-
-    await Enrollment.create({
-      student: studentId,
-      course: courseId,
-    });
-    enrolledCount++;
+    // Increment enrollmentCount on each enrolled course (+1 each)
+    await Course.updateMany(
+      { _id: { $in: toEnroll } },
+      { $inc: { enrollmentCount: 1 } },
+    );
   }
 
-  return { enrolledCount, skippedCount };
+  return {
+    enrolledCount: toEnroll.length,
+    skippedCount: uniqueIds.length - toEnroll.length,
+  };
 };
 
 const getAllEnrollments = async (query: Record<string, unknown>) => {

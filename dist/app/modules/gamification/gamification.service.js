@@ -14,21 +14,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GamificationService = void 0;
 const http_status_codes_1 = require("http-status-codes");
+const mongoose_1 = require("mongoose");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
-const gamification_interface_1 = require("./gamification.interface");
 const gamification_model_1 = require("./gamification.model");
-const user_model_1 = require("../user/user.model");
 // ==================== LEADERBOARD ====================
 const getLeaderboard = (query) => __awaiter(void 0, void 0, void 0, function* () {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 20;
+    var _a, _b, _c, _d, _e;
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
     const skip = (page - 1) * limit;
-    const leaderboard = yield gamification_model_1.PointsLedger.aggregate([
+    const result = yield gamification_model_1.PointsLedger.aggregate([
         { $group: { _id: '$student', totalPoints: { $sum: '$points' } } },
-        { $sort: { totalPoints: -1 } },
-        { $skip: skip },
-        { $limit: limit },
         {
             $lookup: {
                 from: 'users',
@@ -40,23 +37,43 @@ const getLeaderboard = (query) => __awaiter(void 0, void 0, void 0, function* ()
         },
         { $unwind: '$student' },
         {
+            $lookup: {
+                from: 'studentbadges',
+                localField: '_id',
+                foreignField: 'student',
+                as: 'badges',
+            },
+        },
+        {
             $project: {
                 _id: 0,
                 studentId: '$_id',
                 name: '$student.name',
                 profilePicture: '$student.profilePicture',
                 totalPoints: 1,
+                badgeCount: { $size: '$badges' },
+            },
+        },
+        {
+            $facet: {
+                data: [
+                    { $sort: { totalPoints: -1 } },
+                    { $skip: skip },
+                    { $limit: limit },
+                ],
+                total: [{ $count: 'count' }],
             },
         },
     ]);
-    const totalStudents = yield gamification_model_1.PointsLedger.distinct('student');
+    const data = (_b = (_a = result[0]) === null || _a === void 0 ? void 0 : _a.data) !== null && _b !== void 0 ? _b : [];
+    const total = (_e = (_d = (_c = result[0]) === null || _c === void 0 ? void 0 : _c.total[0]) === null || _d === void 0 ? void 0 : _d.count) !== null && _e !== void 0 ? _e : 0;
     return {
-        data: leaderboard,
+        data,
         pagination: {
             page,
             limit,
-            total: totalStudents.length,
-            totalPage: Math.ceil(totalStudents.length / limit),
+            total,
+            totalPage: Math.ceil(total / limit),
         },
     };
 });
@@ -64,11 +81,11 @@ const getLeaderboard = (query) => __awaiter(void 0, void 0, void 0, function* ()
 const getMyPoints = (studentId, query) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const totalResult = yield gamification_model_1.PointsLedger.aggregate([
-        { $match: { student: studentId } },
+        { $match: { student: new mongoose_1.Types.ObjectId(studentId) } },
         { $group: { _id: null, total: { $sum: '$points' } } },
     ]);
     const totalPoints = ((_a = totalResult[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
-    const ledgerQuery = new QueryBuilder_1.default(gamification_model_1.PointsLedger.find({ student: studentId }), query)
+    const ledgerQuery = new QueryBuilder_1.default(gamification_model_1.PointsLedger.find({ student: studentId }).select('points reason description referenceId referenceType createdAt'), query)
         .sort()
         .paginate();
     const history = yield ledgerQuery.modelQuery;
@@ -77,21 +94,28 @@ const getMyPoints = (studentId, query) => __awaiter(void 0, void 0, void 0, func
 });
 // ==================== STUDENT BADGES ====================
 const getMyBadges = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
-    const badges = yield gamification_model_1.StudentBadge.find({ student: studentId })
-        .populate('badge', 'name icon description')
-        .sort({ earnedAt: -1 })
-        .lean();
-    return badges.map(({ badge, earnedAt }) => ({
-        name: badge.name,
-        icon: badge.icon,
-        description: badge.description,
-        earnedAt,
-    }));
+    const [earnedBadges, totalBadges] = yield Promise.all([
+        gamification_model_1.StudentBadge.find({ student: studentId })
+            .populate('badge', 'name icon')
+            .sort({ earnedAt: -1 })
+            .lean(),
+        gamification_model_1.Badge.countDocuments({ isActive: true }),
+    ]);
+    const validBadges = earnedBadges.filter(({ badge }) => badge);
+    return {
+        totalBadges,
+        earnedBadges: validBadges.length,
+        badges: validBadges.map(({ badge, earnedAt }) => ({
+            name: badge.name,
+            icon: badge.icon,
+            earnedAt,
+        })),
+    };
 });
 const getMySummary = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const totalResult = yield gamification_model_1.PointsLedger.aggregate([
-        { $match: { student: studentId } },
+        { $match: { student: new mongoose_1.Types.ObjectId(studentId) } },
         { $group: { _id: null, total: { $sum: '$points' } } },
     ]);
     const totalPoints = ((_a = totalResult[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
@@ -106,16 +130,8 @@ const getMySummary = (studentId) => __awaiter(void 0, void 0, void 0, function* 
     };
 });
 // ==================== BADGE CRUD (Admin) ====================
-const createBadge = (payload) => __awaiter(void 0, void 0, void 0, function* () {
-    const existing = yield gamification_model_1.Badge.findOne({ name: payload.name });
-    if (existing) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, 'Badge with this name already exists');
-    }
-    const result = yield gamification_model_1.Badge.create(payload);
-    return result;
-});
 const getAllBadges = (query) => __awaiter(void 0, void 0, void 0, function* () {
-    const badgeQuery = new QueryBuilder_1.default(gamification_model_1.Badge.find(), query)
+    const badgeQuery = new QueryBuilder_1.default(gamification_model_1.Badge.find().select('-description -createdAt -updatedAt -__v'), query)
         .search(['name'])
         .filter()
         .sort()
@@ -125,30 +141,25 @@ const getAllBadges = (query) => __awaiter(void 0, void 0, void 0, function* () {
     return { pagination, data };
 });
 const updateBadge = (id, payload) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const existing = yield gamification_model_1.Badge.findById(id);
     if (!existing) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Badge not found');
     }
-    const result = yield gamification_model_1.Badge.findByIdAndUpdate(id, payload, { new: true });
+    const updateData = {};
+    if (payload.description !== undefined)
+        updateData.description = payload.description;
+    if (payload.isActive !== undefined)
+        updateData.isActive = payload.isActive;
+    if (((_a = payload.criteria) === null || _a === void 0 ? void 0 : _a.threshold) !== undefined) {
+        updateData['criteria.threshold'] = payload.criteria.threshold;
+    }
+    if (Object.keys(updateData).length === 0) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'No valid fields to update');
+    }
+    const result = yield gamification_model_1.Badge.findByIdAndUpdate(id, updateData, { new: true })
+        .select('-createdAt -updatedAt -__v');
     return result;
-});
-const deleteBadge = (id) => __awaiter(void 0, void 0, void 0, function* () {
-    const existing = yield gamification_model_1.Badge.findById(id);
-    if (!existing) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Badge not found');
-    }
-    yield gamification_model_1.StudentBadge.deleteMany({ badge: id });
-    yield gamification_model_1.Badge.findByIdAndDelete(id);
-});
-// ==================== ADMIN: Manual Points Adjust ====================
-const adjustPoints = (studentId, points, description) => __awaiter(void 0, void 0, void 0, function* () {
-    yield gamification_model_1.PointsLedger.create({
-        student: studentId,
-        points,
-        reason: gamification_interface_1.POINTS_REASON.ADMIN_ADJUST,
-        description,
-    });
-    yield user_model_1.User.findByIdAndUpdate(studentId, { $inc: { totalPoints: points } });
 });
 // ==================== ADMIN STATS ====================
 const getAdminStats = () => __awaiter(void 0, void 0, void 0, function* () {
@@ -200,10 +211,7 @@ exports.GamificationService = {
     getMyPoints,
     getMyBadges,
     getMySummary,
-    createBadge,
     getAllBadges,
     updateBadge,
-    deleteBadge,
-    adjustPoints,
     getAdminStats,
 };

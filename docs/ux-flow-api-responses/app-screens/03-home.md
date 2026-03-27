@@ -3,7 +3,26 @@
 > **Section**: App APIs (Student-Facing)
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
 > **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
-> **Related screens**: [Browse Courses](./04-browse-courses.md), [Course Content](./05-course-content.md), [Progress](./06-progress.md)
+> **Related screens**: [Course](./04-course.md), [Course Content](./05-course-content.md), [Progress](./06-progress.md)
+
+## UX Flow
+
+### Home Load
+1. Student Home tab e tap kore (or onboarding/login er por auto-navigate hoy)
+2. Page load e single call → `GET /student/home` (→ 3.1)
+3. Screen render hoy: greeting card (name + points + streak) → progress ring (courseProgress + quizProgress) → enrolled courses carousel → recent badges
+
+### Enrolled Course Tap
+1. Student enrolled course card e tap kore
+2. Navigate to Course Content screen → `GET /courses/:slug/student-detail` (→ [5.2](./05-course-content.md))
+
+### Browse Courses Button
+1. Student "Browse Courses" button e tap kore
+2. Navigate to Browse Courses screen (→ [Screen 4](./04-course.md))
+
+### View Progress Button
+1. Student "View Progress" button e tap kore
+2. Navigate to Progress screen (→ [Screen 6](./06-progress.md))
 
 ---
 
@@ -11,8 +30,10 @@
 
 ```
 GET /student/home
-Auth: Bearer {{accessToken}}
+Auth: Bearer {{accessToken}} (STUDENT)
 ```
+
+> Aggregated home data — 4 parallel queries internally (user, enrollments, badges, quiz stats).
 
 **Response:**
 ```json
@@ -32,61 +53,84 @@ Auth: Bearer {{accessToken}}
     },
     "enrolledCourses": [
       {
-        "enrollmentId": "664b...",
-        "courseId": "664a...",
         "title": "Introduction to Web Development",
         "slug": "introduction-to-web-development",
-        "thumbnail": "https://cdn.example.com/thumb.jpg",
-        "totalLessons": 24,
-        "completionPercentage": 45,
-        "status": "ACTIVE"
+        "thumbnail": "https://cdn.example.com/thumb1.jpg",
+        "completionPercentage": 45
+      },
+      {
+        "title": "Advanced JavaScript Patterns",
+        "slug": "advanced-javascript-patterns",
+        "thumbnail": "https://cdn.example.com/thumb2.jpg",
+        "completionPercentage": 78
       }
     ],
     "recentBadges": [
       {
         "name": "Quiz Master",
-        "icon": "https://cdn.example.com/badge.png",
+        "icon": "https://cdn.example.com/badge-quiz.png",
         "earnedAt": "2026-03-10T12:00:00Z"
+      },
+      {
+        "name": "7-Day Streak",
+        "icon": "https://cdn.example.com/badge-streak.png",
+        "earnedAt": "2026-03-08T09:00:00Z"
+      },
+      {
+        "name": "First Steps",
+        "icon": "https://cdn.example.com/badge-first.png",
+        "earnedAt": "2026-03-05T08:30:00Z"
       }
     ]
   }
 }
 ```
 
----
-
-### 3.2 Get Leaderboard
-
-```
-GET /gamification/leaderboard?page=1&limit=10
-Auth: Bearer {{accessToken}}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "pagination": { "page": 1, "limit": 10, "total": 100, "totalPage": 10 },
-  "data": [
-    {
-      "studentId": "664a...",
-      "name": "John Doe",
-      "profilePicture": "https://cdn.example.com/avatar.jpg",
-      "totalPoints": 1250
-    }
-  ]
-}
-```
+> `enrolledCourses`: max 10, sorted by `lastAccessedAt` (most recent first). Only ACTIVE + COMPLETED. Deleted courses filtered out.
+> `recentBadges`: max 5, sorted by `earnedAt` (newest first). Deleted badges filtered out.
+> `courseProgress`: average completion % across all enrolled courses.
+> `quizProgress`: (passed quizzes / total completed quizzes) * 100.
 
 ---
 
-### 3.3 Get All Published Courses
+## Audit & Review Log
 
-```
-GET /courses?page=1&limit=10&sort=-createdAt
-Auth: None
-```
+### Changes (2026-03-16)
 
-> Same response shape as [2.1](#21-get-all-published-courses)
+| # | What | Before | After |
+|---|------|--------|-------|
+| 1 | UX Flow section | Missing | Added Home Load, Enrolled Course Tap, Browse Courses Button, View Progress Button |
+| 2 | Leaderboard | Was in Home screen (3.2) | Removed — View Progress button e Progress screen e redirect hoy ([Screen 6](./06-progress.md)) |
+| 3 | Courses | Was in Home screen (3.3) | Removed — Browse Courses button e Screen 4 e redirect hoy ([Screen 4](./04-course.md)) |
+| 4 | Home response notes | None | Added notes on limits, sorting, filtering, progress calculation |
+| 5 | `enrolledCourses` fields | Had `enrollmentId`, `courseId`, `totalLessons`, `status` | Removed — home card e dorkar nai. Navigation slug diye hoy, detail Course Content screen e |
+| 6 | `enrolledCourses` populate | `.populate('course', 'title slug thumbnail totalLessons')` | Changed to `'title slug thumbnail'` — `totalLessons` removed |
 
----
+### Code Audit (2026-03-16) — All Passed
+
+| Check | Doc | Code | Status |
+|-------|-----|------|--------|
+| Route | `GET /student/home` | `student-home.route.ts:8` | Match |
+| Auth | STUDENT | `auth(USER_ROLES.STUDENT)` | Match |
+| Message | `"Home data retrieved successfully"` | `controller.ts:14` | Match |
+| `name` | string | `service.ts:56` — `user?.name` | Match |
+| `points` | number | `service.ts:57` — `user?.totalPoints` | Match |
+| `streak` | `{ current, longest }` | `service.ts:58-61` | Match |
+| `yourProgress` | `{ courseProgress, quizProgress }` | `service.ts:62-65` | Match |
+| `enrolledCourses` fields | `title, slug, thumbnail, completionPercentage` | `service.ts:67-70` | Match |
+| `enrolledCourses` limit | max 10 | `service.ts:16` — `.limit(10)` | Match |
+| `enrolledCourses` sort | lastAccessedAt desc | `service.ts:15` | Match |
+| `enrolledCourses` filter | ACTIVE + COMPLETED | `service.ts:12` | Match |
+| `enrolledCourses` null guard | deleted courses filtered | `service.ts:34` | Match |
+| `recentBadges` fields | `name, icon, earnedAt` | `service.ts:73-75` | Match |
+| `recentBadges` limit | max 5 | `service.ts:20` — `.limit(5)` | Match |
+| `recentBadges` sort | earnedAt desc | `service.ts:19` | Match |
+| `recentBadges` null guard | deleted badges filtered | `service.ts:35` | Match |
+
+### Files Checked
+
+| File | What Checked |
+|------|-------------|
+| `src/app/modules/student-home/student-home.service.ts:7-77` | `getHome` — populate fields, response mapping, limits, sorts, filters, null guards |
+| `src/app/modules/student-home/student-home.controller.ts:14` | Message: "Home data retrieved successfully" |
+| `src/app/modules/student-home/student-home.route.ts:8` | Route: `GET /home`, auth STUDENT only |

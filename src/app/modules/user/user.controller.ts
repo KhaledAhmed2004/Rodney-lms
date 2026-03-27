@@ -65,7 +65,8 @@ const getAllUsers = catchAsync(async (req: Request, res: Response) => {
 
 const blockUser = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const result = await UserService.updateUserStatus(id, USER_STATUS.RESTRICTED);
+  const requesterId = (req.user as JwtPayload).id;
+  const result = await UserService.updateUserStatus(id, USER_STATUS.RESTRICTED, requesterId);
 
   sendResponse(res, {
     success: true,
@@ -77,7 +78,8 @@ const blockUser = catchAsync(async (req: Request, res: Response) => {
 
 const unblockUser = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const result = await UserService.updateUserStatus(id, USER_STATUS.ACTIVE);
+  const requesterId = (req.user as JwtPayload).id;
+  const result = await UserService.updateUserStatus(id, USER_STATUS.ACTIVE, requesterId);
 
   sendResponse(res, {
     success: true,
@@ -129,11 +131,7 @@ const deleteUser = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const requesterId = (req.user as JwtPayload).id;
 
-  if (id === requesterId) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Cannot delete your own account');
-  }
-
-  await UserService.updateUserStatus(id, USER_STATUS.DELETE);
+  await UserService.updateUserStatus(id, USER_STATUS.DELETE, requesterId);
 
   sendResponse(res, {
     success: true,
@@ -153,8 +151,6 @@ const exportUsers = catchAsync(async (req: Request, res: Response) => {
       { key: 'name', header: 'Name', width: 20 },
       { key: 'email', header: 'Email', width: 30 },
       { key: 'status', header: 'Status', width: 12 },
-      { key: 'role', header: 'Role', width: 12 },
-      { key: 'verified', header: 'Verified', width: 10 },
       { key: 'enrollmentCount', header: 'Enrolled Courses', width: 16 },
       { key: 'lastActiveDate', header: 'Last Active', width: 18 },
       { key: 'createdAt', header: 'Joined Date', width: 18 },

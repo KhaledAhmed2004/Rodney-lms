@@ -24,6 +24,17 @@ const bulkEnroll = catchAsync(async (req: Request, res: Response) => {
   const userId = (req.user as JwtPayload).id;
   const result = await EnrollmentService.bulkEnroll(userId, req.body.courseIds);
 
+  if (result.enrolledCount === 0) {
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message:
+        'No new enrollments — courses may already be enrolled or unavailable',
+      data: result,
+    });
+    return;
+  }
+
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.CREATED,

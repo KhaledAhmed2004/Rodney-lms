@@ -4,6 +4,9 @@ import { Secret } from 'jsonwebtoken';
 import config from '../../config';
 import ApiError from '../../errors/ApiError';
 import { jwtHelper } from '../../helpers/jwtHelper';
+import { User } from '../modules/user/user.model';
+import { USER_STATUS } from '../../enums/user';
+
 const auth =
   (...allowedRoles: string[]) =>
   async (req: Request, res: Response, next: NextFunction) => {
@@ -18,7 +21,7 @@ const auth =
         );
       }
 
-      // 3️⃣ Validate Bearer format
+      // 2️⃣ Validate Bearer format
       if (!authHeader.startsWith('Bearer ')) {
         throw new ApiError(
           StatusCodes.UNAUTHORIZED,
@@ -26,13 +29,13 @@ const auth =
         );
       }
 
-      // 4️⃣ Extract token and ensure it's not empty
+      // 3️⃣ Extract token and ensure it's not empty
       const token = authHeader.split(' ')[1];
       if (!token || token.trim() === '') {
         throw new ApiError(StatusCodes.UNAUTHORIZED, 'Valid token is required');
       }
 
-      // 5️⃣ Verify JWT token
+      // 4️⃣ Verify JWT token
       const verifiedUser = jwtHelper.verifyToken(
         token,
         config.jwt.jwt_secret as Secret
@@ -42,10 +45,40 @@ const auth =
         throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid token payload');
       }
 
-      // 6️⃣ Attach verified user to request
-      req.user = verifiedUser;
+      // 5️⃣ Verify user still exists and is active in DB
+      const dbUser = await User.findById(verifiedUser.id)
+        .select('status passwordChangedAt')
+        .lean();
 
-      // 7️⃣ Role-based access check
+      if (!dbUser) {
+        throw new ApiError(StatusCodes.UNAUTHORIZED, 'Account no longer exists');
+      }
+
+      if (
+        dbUser.status === USER_STATUS.DELETE ||
+        dbUser.status === USER_STATUS.INACTIVE ||
+        dbUser.status === USER_STATUS.RESTRICTED
+      ) {
+        throw new ApiError(StatusCodes.UNAUTHORIZED, 'Account no longer active');
+      }
+
+      // 6️⃣ Reject tokens issued before password change
+      if (dbUser.passwordChangedAt && verifiedUser.iat) {
+        const changedTimestamp = Math.floor(
+          new Date(dbUser.passwordChangedAt).getTime() / 1000
+        );
+        if (verifiedUser.iat < changedTimestamp) {
+          throw new ApiError(
+            StatusCodes.UNAUTHORIZED,
+            'Password was recently changed. Please log in again.'
+          );
+        }
+      }
+
+      // 7️⃣ Attach verified user to request
+      req.user = verifiedUser as any;
+
+      // 8️⃣ Role-based access check
       if (allowedRoles.length && !allowedRoles.includes(verifiedUser.role)) {
         throw new ApiError(
           StatusCodes.FORBIDDEN,
@@ -53,7 +86,7 @@ const auth =
         );
       }
 
-      // 8️⃣ Proceed
+      // 9️⃣ Proceed
       next();
     } catch (error: any) {
       // Handle JWT-specific errors

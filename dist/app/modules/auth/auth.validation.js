@@ -33,23 +33,33 @@ const createForgetPasswordZodSchema = zod_1.z.object({
     }),
 });
 const createResetPasswordZodSchema = zod_1.z.object({
-    body: zod_1.z.object({
+    body: zod_1.z
+        .object({
         token: zod_1.z.string({ required_error: 'Reset token is required' }),
         newPassword: passwordSchema,
         confirmPassword: zod_1.z.string({
             required_error: 'Confirm Password is required',
-        }),
+        }).min(1),
+    })
+        .refine(data => data.newPassword === data.confirmPassword, {
+        message: "Passwords don't match",
+        path: ['confirmPassword'],
     }),
 });
 const createChangePasswordZodSchema = zod_1.z.object({
-    body: zod_1.z.object({
+    body: zod_1.z
+        .object({
         currentPassword: zod_1.z.string({
             required_error: 'Current Password is required',
-        }),
+        }).min(1),
         newPassword: passwordSchema,
         confirmPassword: zod_1.z.string({
             required_error: 'Confirm Password is required',
-        }),
+        }).min(1),
+    })
+        .refine(data => data.newPassword === data.confirmPassword, {
+        message: "Passwords don't match",
+        path: ['confirmPassword'],
     }),
 });
 const createRefreshTokenZodSchema = zod_1.z.object({

@@ -11,7 +11,7 @@ const getHome = async (studentId: string) => {
       student: studentId,
       status: { $in: ['ACTIVE', 'COMPLETED'] },
     })
-      .populate('course', 'title slug thumbnail totalLessons')
+      .populate('course', 'title slug thumbnail')
       .sort({ 'progress.lastAccessedAt': -1 })
       .limit(10),
     StudentBadge.find({ student: studentId })
@@ -64,14 +64,10 @@ const getHome = async (studentId: string) => {
       quizProgress: quizPercentage,
     },
     enrolledCourses: validEnrolledCourses.map((e: any) => ({
-      enrollmentId: e._id,
-      courseId: e.course._id,
       title: e.course.title,
       slug: e.course.slug,
       thumbnail: e.course.thumbnail,
-      totalLessons: e.course.totalLessons,
       completionPercentage: e.progress.completionPercentage || 0,
-      status: e.status,
     })),
     recentBadges: validRecentBadges.map((sb: any) => ({
       name: sb.badge.name,

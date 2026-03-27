@@ -86,6 +86,10 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
+    passwordChangedAt: {
+      type: Date,
+      select: false,
+    },
     authentication: {
       type: {
         isResetPassword: {

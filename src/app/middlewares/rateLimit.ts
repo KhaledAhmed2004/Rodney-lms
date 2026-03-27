@@ -34,9 +34,12 @@ export const rateLimitMiddleware = (options: RateLimitOptions) => {
       logger.info(`✅ RateLimit applied for IP: ${identifier}`);
       return next();
     } catch (e) {
-      // On any error, allow request but log
-      logger.warn(`⚠️ RateLimit error: ${(e as Error).message}`);
-      return next();
+      // Fail closed — don't allow requests when rate limiter errors
+      logger.error(`RateLimit error: ${(e as Error).message}`);
+      return res.status(429).json({
+        success: false,
+        message: 'Service temporarily unavailable, please try again later',
+      });
     }
   };
 };

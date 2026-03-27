@@ -85,6 +85,11 @@ router.post(
 // Refresh Token
 router.post(
   '/refresh-token',
+  rateLimitMiddleware({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    routeName: 'auth-refresh-token',
+  }),
   validateRequest(AuthValidation.createRefreshTokenZodSchema),
   AuthController.refreshToken
 );

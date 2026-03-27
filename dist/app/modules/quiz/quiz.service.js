@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.QuizService = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const http_status_codes_1 = require("http-status-codes");
+const mongoose_1 = require("mongoose");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
 const quiz_interface_1 = require("./quiz.interface");
@@ -293,14 +294,65 @@ const getAttemptById = (attemptId) => __awaiter(void 0, void 0, void 0, function
     return result;
 });
 const getMyAttempts = (studentId, query) => __awaiter(void 0, void 0, void 0, function* () {
-    const attemptQuery = new QueryBuilder_1.default(quiz_model_1.QuizAttempt.find({ student: studentId })
-        .populate('quiz', 'title totalMarks'), query)
-        .filter()
-        .sort()
-        .paginate();
-    const data = yield attemptQuery.modelQuery;
-    const pagination = yield attemptQuery.getPaginationInfo();
-    return { pagination, data };
+    var _a, _b, _c, _d, _e;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const pipeline = [
+        { $match: { student: new mongoose_1.Types.ObjectId(studentId), status: 'COMPLETED' } },
+        {
+            $lookup: {
+                from: 'quizzes',
+                localField: 'quiz',
+                foreignField: '_id',
+                as: 'quizData',
+                pipeline: [{ $project: { title: 1, course: 1 } }],
+            },
+        },
+        { $unwind: '$quizData' },
+        {
+            $lookup: {
+                from: 'courses',
+                localField: 'quizData.course',
+                foreignField: '_id',
+                as: 'courseData',
+                pipeline: [{ $project: { title: 1 } }],
+            },
+        },
+        { $unwind: { path: '$courseData', preserveNullAndEmptyArrays: true } },
+        {
+            $project: {
+                _id: 0,
+                quizTitle: '$quizData.title',
+                courseName: { $ifNull: ['$courseData.title', null] },
+                percentage: 1,
+                passed: 1,
+                completedAt: 1,
+            },
+        },
+        {
+            $facet: {
+                data: [
+                    { $sort: { completedAt: -1 } },
+                    { $skip: skip },
+                    { $limit: limit },
+                ],
+                total: [{ $count: 'count' }],
+            },
+        },
+    ];
+    const result = yield quiz_model_1.QuizAttempt.aggregate(pipeline);
+    const data = (_b = (_a = result[0]) === null || _a === void 0 ? void 0 : _a.data) !== null && _b !== void 0 ? _b : [];
+    const total = (_e = (_d = (_c = result[0]) === null || _c === void 0 ? void 0 : _c.total[0]) === null || _d === void 0 ? void 0 : _d.count) !== null && _e !== void 0 ? _e : 0;
+    return {
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPage: Math.ceil(total / limit),
+        },
+        data,
+    };
 });
 exports.QuizService = {
     createQuiz,

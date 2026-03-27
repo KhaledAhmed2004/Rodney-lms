@@ -38,9 +38,8 @@ const createUserToDB = (payload) => __awaiter(void 0, void 0, void 0, function* 
         otp: otp,
         email: createUser.email,
     };
-    console.log('Sending email to:', createUser.email, 'with OTP:', otp);
     const createAccountTemplate = emailTemplate_1.emailTemplate.createAccount(values);
-    emailHelper_1.emailHelper.sendEmail(createAccountTemplate);
+    yield emailHelper_1.emailHelper.sendEmail(createAccountTemplate);
     //save to DB
     const authentication = {
         oneTimeCode: otp,
@@ -159,7 +158,6 @@ const getAllUsers = (query) => __awaiter(void 0, void 0, void 0, function* () {
                 email: 1,
                 profilePicture: 1,
                 status: 1,
-                role: 1,
                 verified: 1,
                 enrollmentCount: 1,
                 lastActiveDate: 1,
@@ -205,8 +203,6 @@ const exportUsers = (query) => __awaiter(void 0, void 0, void 0, function* () {
                 name: 1,
                 email: 1,
                 status: 1,
-                role: 1,
-                verified: 1,
                 enrollmentCount: 1,
                 lastActiveDate: 1,
                 createdAt: 1,
@@ -226,7 +222,7 @@ const updateUserStatus = (id, status) => __awaiter(void 0, void 0, void 0, funct
 });
 const getUserById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
-    const user = yield user_model_1.User.findById(id).select('-password -authentication -deviceTokens');
+    const user = yield user_model_1.User.findById(id).select('-password -authentication -deviceTokens -role');
     if (!user) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, "User doesn't exist!");
     }
@@ -237,20 +233,21 @@ const getUserById = (id) => __awaiter(void 0, void 0, void 0, function* () {
         total: enrollments.length,
         active: enrollments.filter(e => e.status === enrollment_interface_1.ENROLLMENT_STATUS.ACTIVE).length,
         completed: enrollments.filter(e => e.status === enrollment_interface_1.ENROLLMENT_STATUS.COMPLETED).length,
-        dropped: enrollments.filter(e => e.status === enrollment_interface_1.ENROLLMENT_STATUS.DROPPED).length,
         averageCompletion: Math.round(enrollments.reduce((sum, e) => { var _a, _b; return sum + ((_b = (_a = e.progress) === null || _a === void 0 ? void 0 : _a.completionPercentage) !== null && _b !== void 0 ? _b : 0); }, 0) /
             (enrollments.length || 1)),
     };
     const enrolledCourses = enrollments.map(e => {
-        var _a, _b, _c, _d;
-        return ({
-            enrollmentId: e._id,
-            course: e.course,
-            enrollmentStatus: e.status,
-            completionPercentage: (_b = (_a = e.progress) === null || _a === void 0 ? void 0 : _a.completionPercentage) !== null && _b !== void 0 ? _b : 0,
+        var _a, _b, _c, _d, _e, _f, _g;
+        const course = e.course;
+        return {
+            courseId: (_a = course === null || course === void 0 ? void 0 : course._id) !== null && _a !== void 0 ? _a : null,
+            title: (_b = course === null || course === void 0 ? void 0 : course.title) !== null && _b !== void 0 ? _b : 'Unknown',
+            thumbnail: (_c = course === null || course === void 0 ? void 0 : course.thumbnail) !== null && _c !== void 0 ? _c : null,
+            status: e.status,
+            completionPercentage: (_e = (_d = e.progress) === null || _d === void 0 ? void 0 : _d.completionPercentage) !== null && _e !== void 0 ? _e : 0,
             enrolledAt: e.enrolledAt,
-            lastAccessedAt: (_d = (_c = e.progress) === null || _c === void 0 ? void 0 : _c.lastAccessedAt) !== null && _d !== void 0 ? _d : null,
-        });
+            lastAccessedAt: (_g = (_f = e.progress) === null || _f === void 0 ? void 0 : _f.lastAccessedAt) !== null && _g !== void 0 ? _g : null,
+        };
     });
     const userObj = user.toObject();
     return Object.assign(Object.assign({}, userObj), { lastActiveDate: (_b = (_a = userObj.streak) === null || _a === void 0 ? void 0 : _a.lastActiveDate) !== null && _b !== void 0 ? _b : null, courseStats,
@@ -278,7 +275,7 @@ const getUserDetailsById = (id) => __awaiter(void 0, void 0, void 0, function* (
     return user;
 });
 const getUserStats = () => __awaiter(void 0, void 0, void 0, function* () {
-    const [totalStudents, activeStudents] = yield Promise.all([
+    const [totalStudentsGrowth, activeStudentsGrowth] = yield Promise.all([
         new AggregationBuilder_1.default(user_model_1.User).calculateGrowth({
             filter: { role: user_1.USER_ROLES.STUDENT, status: { $ne: user_1.USER_STATUS.DELETE } },
             period: 'month',
@@ -288,7 +285,19 @@ const getUserStats = () => __awaiter(void 0, void 0, void 0, function* () {
             period: 'month',
         }),
     ]);
-    return { totalStudents, activeStudents };
+    return {
+        comparisonPeriod: 'month',
+        totalStudents: {
+            value: totalStudentsGrowth.total,
+            growth: totalStudentsGrowth.growth,
+            growthType: totalStudentsGrowth.growthType,
+        },
+        activeStudents: {
+            value: activeStudentsGrowth.total,
+            growth: activeStudentsGrowth.growth,
+            growthType: activeStudentsGrowth.growthType,
+        },
+    };
 });
 exports.UserService = {
     createUserToDB,

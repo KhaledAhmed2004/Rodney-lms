@@ -36,37 +36,66 @@ const enrollInCourse = (studentId, courseId) => __awaiter(void 0, void 0, void 0
     if (existing) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, 'Already enrolled in this course');
     }
-    const result = yield enrollment_model_1.Enrollment.create({
-        student: studentId,
-        course: courseId,
-    });
-    return result;
+    try {
+        const result = yield enrollment_model_1.Enrollment.create({
+            student: studentId,
+            course: courseId,
+        });
+        // Increment enrollmentCount
+        yield course_model_1.Course.findByIdAndUpdate(courseId, {
+            $inc: { enrollmentCount: 1 },
+        });
+        return result;
+    }
+    catch (error) {
+        // Race condition: concurrent double-click
+        if (error.code === 11000) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, 'Already enrolled in this course');
+        }
+        throw error;
+    }
 });
 const bulkEnroll = (studentId, courseIds) => __awaiter(void 0, void 0, void 0, function* () {
-    let enrolledCount = 0;
-    let skippedCount = 0;
-    for (const courseId of courseIds) {
-        // Skip if already enrolled
-        const existing = yield enrollment_model_1.Enrollment.findOne({
-            student: studentId,
-            course: courseId,
-        });
-        if (existing) {
-            skippedCount++;
-            continue;
+    var _a;
+    // Deduplicate input
+    const uniqueIds = [...new Set(courseIds)];
+    // Batch: find existing enrollments
+    const existing = yield enrollment_model_1.Enrollment.find({
+        student: studentId,
+        course: { $in: uniqueIds },
+    })
+        .select('course')
+        .lean();
+    const enrolledSet = new Set(existing.map(e => e.course.toString()));
+    // Batch: find valid published courses
+    const courses = yield course_model_1.Course.find({
+        _id: { $in: uniqueIds },
+        status: 'PUBLISHED',
+    })
+        .select('_id')
+        .lean();
+    const validSet = new Set(courses.map(c => c._id.toString()));
+    // Filter to new, valid enrollments only
+    const toEnroll = uniqueIds.filter(id => validSet.has(id) && !enrolledSet.has(id));
+    if (toEnroll.length > 0) {
+        // Bulk insert with ordered:false — skip duplicate key errors from race conditions
+        try {
+            yield enrollment_model_1.Enrollment.insertMany(toEnroll.map(courseId => ({ student: studentId, course: courseId })), { ordered: false });
         }
-        const course = yield course_model_1.Course.findById(courseId);
-        if (!course || course.status !== 'PUBLISHED') {
-            skippedCount++;
-            continue;
+        catch (err) {
+            // Only ignore duplicate key errors (race condition)
+            if (err.code !== 11000 &&
+                !((_a = err.writeErrors) === null || _a === void 0 ? void 0 : _a.every((e) => e.code === 11000))) {
+                throw err;
+            }
         }
-        yield enrollment_model_1.Enrollment.create({
-            student: studentId,
-            course: courseId,
-        });
-        enrolledCount++;
+        // Increment enrollmentCount on each enrolled course (+1 each)
+        yield course_model_1.Course.updateMany({ _id: { $in: toEnroll } }, { $inc: { enrollmentCount: 1 } });
     }
-    return { enrolledCount, skippedCount };
+    return {
+        enrolledCount: toEnroll.length,
+        skippedCount: uniqueIds.length - toEnroll.length,
+    };
 });
 const getAllEnrollments = (query) => __awaiter(void 0, void 0, void 0, function* () {
     const enrollmentQuery = new QueryBuilder_1.default(enrollment_model_1.Enrollment.find()

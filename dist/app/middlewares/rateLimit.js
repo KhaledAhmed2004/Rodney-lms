@@ -36,9 +36,12 @@ const rateLimitMiddleware = (options) => {
             return next();
         }
         catch (e) {
-            // On any error, allow request but log
-            logger_1.logger.warn(`⚠️ RateLimit error: ${e.message}`);
-            return next();
+            // Fail closed — don't allow requests when rate limiter errors
+            logger_1.logger.error(`RateLimit error: ${e.message}`);
+            return res.status(429).json({
+                success: false,
+                message: 'Service temporarily unavailable, please try again later',
+            });
         }
     });
 };

@@ -10,32 +10,28 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudentHomeService = void 0;
+const mongoose_1 = require("mongoose");
 const enrollment_model_1 = require("../enrollment/enrollment.model");
 const quiz_model_1 = require("../quiz/quiz.model");
 const gamification_model_1 = require("../gamification/gamification.model");
-const gamification_model_2 = require("../gamification/gamification.model");
 const user_model_1 = require("../user/user.model");
 const getHome = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c, _d, _e;
-    const [user, enrolledCourses, recentBadges, totalPointsResult, quizStats] = yield Promise.all([
+    var _a, _b, _c, _d;
+    const [user, enrolledCourses, recentBadges, quizStats] = yield Promise.all([
         user_model_1.User.findById(studentId).select('name streak totalPoints'),
         enrollment_model_1.Enrollment.find({
             student: studentId,
             status: { $in: ['ACTIVE', 'COMPLETED'] },
         })
-            .populate('course', 'title slug thumbnail totalLessons')
+            .populate('course', 'title slug thumbnail')
             .sort({ 'progress.lastAccessedAt': -1 })
             .limit(10),
         gamification_model_1.StudentBadge.find({ student: studentId })
             .populate('badge', 'name icon')
             .sort({ earnedAt: -1 })
             .limit(5),
-        gamification_model_2.PointsLedger.aggregate([
-            { $match: { student: studentId } },
-            { $group: { _id: null, total: { $sum: '$points' } } },
-        ]),
         quiz_model_1.QuizAttempt.aggregate([
-            { $match: { student: studentId, status: 'COMPLETED' } },
+            { $match: { student: new mongoose_1.Types.ObjectId(studentId), status: 'COMPLETED' } },
             {
                 $group: {
                     _id: null,
@@ -45,10 +41,13 @@ const getHome = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
             },
         ]),
     ]);
+    // Filter out enrollments where course was deleted
+    const validEnrolledCourses = enrolledCourses.filter((e) => e.course);
+    const validRecentBadges = recentBadges.filter((sb) => sb.badge);
     // Calculate course progress (average completion across all courses)
-    const totalCourses = enrolledCourses.length;
+    const totalCourses = validEnrolledCourses.length;
     const courseProgress = totalCourses > 0
-        ? Math.round(enrolledCourses.reduce((sum, e) => sum + e.progress.completionPercentage, 0) / totalCourses)
+        ? Math.round(validEnrolledCourses.reduce((sum, e) => sum + (e.progress.completionPercentage || 0), 0) / totalCourses)
         : 0;
     // Calculate quiz progress
     const quizTotal = ((_a = quizStats[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
@@ -56,26 +55,22 @@ const getHome = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
     const quizPercentage = quizTotal > 0 ? Math.round((quizPassed / quizTotal) * 100) : 0;
     return {
         name: (user === null || user === void 0 ? void 0 : user.name) || '',
-        points: ((_c = totalPointsResult[0]) === null || _c === void 0 ? void 0 : _c.total) || (user === null || user === void 0 ? void 0 : user.totalPoints) || 0,
+        points: (user === null || user === void 0 ? void 0 : user.totalPoints) || 0,
         streak: {
-            current: ((_d = user === null || user === void 0 ? void 0 : user.streak) === null || _d === void 0 ? void 0 : _d.current) || 0,
-            longest: ((_e = user === null || user === void 0 ? void 0 : user.streak) === null || _e === void 0 ? void 0 : _e.longest) || 0,
+            current: ((_c = user === null || user === void 0 ? void 0 : user.streak) === null || _c === void 0 ? void 0 : _c.current) || 0,
+            longest: ((_d = user === null || user === void 0 ? void 0 : user.streak) === null || _d === void 0 ? void 0 : _d.longest) || 0,
         },
         yourProgress: {
             courseProgress,
             quizProgress: quizPercentage,
         },
-        enrolledCourses: enrolledCourses.map((e) => ({
-            enrollmentId: e._id,
-            courseId: e.course._id,
+        enrolledCourses: validEnrolledCourses.map((e) => ({
             title: e.course.title,
             slug: e.course.slug,
             thumbnail: e.course.thumbnail,
-            totalLessons: e.course.totalLessons,
-            completionPercentage: e.progress.completionPercentage,
-            status: e.status,
+            completionPercentage: e.progress.completionPercentage || 0,
         })),
-        recentBadges: recentBadges.map((sb) => ({
+        recentBadges: validRecentBadges.map((sb) => ({
             name: sb.badge.name,
             icon: sb.badge.icon,
             earnedAt: sb.earnedAt,
@@ -86,13 +81,17 @@ const getProgress = (studentId) => __awaiter(void 0, void 0, void 0, function* (
     var _a, _b;
     const [user, enrollments] = yield Promise.all([
         user_model_1.User.findById(studentId).select('streak totalPoints'),
-        enrollment_model_1.Enrollment.find({ student: studentId })
-            .populate('course', 'title slug thumbnail totalLessons')
-            .select('course status progress'),
+        enrollment_model_1.Enrollment.find({
+            student: studentId,
+            status: { $in: ['ACTIVE', 'COMPLETED'] },
+        })
+            .populate('course', 'title slug')
+            .select('course progress'),
     ]);
-    const totalCourses = enrollments.length;
+    const validEnrollments = enrollments.filter((e) => e.course);
+    const totalCourses = validEnrollments.length;
     const overallPercentage = totalCourses > 0
-        ? Math.round(enrollments.reduce((sum, e) => sum + e.progress.completionPercentage, 0) / totalCourses)
+        ? Math.round(validEnrollments.reduce((sum, e) => sum + (e.progress.completionPercentage || 0), 0) / totalCourses)
         : 0;
     return {
         overallPercentage,
@@ -101,16 +100,10 @@ const getProgress = (studentId) => __awaiter(void 0, void 0, void 0, function* (
             current: ((_a = user === null || user === void 0 ? void 0 : user.streak) === null || _a === void 0 ? void 0 : _a.current) || 0,
             longest: ((_b = user === null || user === void 0 ? void 0 : user.streak) === null || _b === void 0 ? void 0 : _b.longest) || 0,
         },
-        courses: enrollments.map((e) => ({
-            courseId: e.course._id,
+        courses: validEnrollments.map((e) => ({
             title: e.course.title,
             slug: e.course.slug,
-            thumbnail: e.course.thumbnail,
-            completionPercentage: e.progress.completionPercentage,
-            completedLessons: e.progress.completedLessons.length,
-            totalLessons: e.course.totalLessons,
-            status: e.status,
-            lastAccessedAt: e.progress.lastAccessedAt,
+            completionPercentage: e.progress.completionPercentage || 0,
         })),
     };
 });

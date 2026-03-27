@@ -48,25 +48,30 @@ const loginUserFromDB = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, invalidCredentials);
   }
 
-  if (!isExistUser.verified) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Please verify your account, then try to login again'
-    );
-  }
-
+  // Check status — block deleted/inactive/restricted
   if (isExistUser.status === USER_STATUS.DELETE) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      invalidCredentials
-    );
+    throw new ApiError(StatusCodes.BAD_REQUEST, invalidCredentials);
+  }
+  if (isExistUser.status === USER_STATUS.INACTIVE) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been deactivated. Contact support.');
+  }
+  if (isExistUser.status === USER_STATUS.RESTRICTED) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been restricted. Contact support.');
   }
 
+  // Password check BEFORE verified check — don't leak verification status (#16)
   if (
     !password ||
     !(await User.isMatchPassword(password, isExistUser.password))
   ) {
     throw new ApiError(StatusCodes.BAD_REQUEST, invalidCredentials);
+  }
+
+  if (!isExistUser.verified) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Please verify your account, then try to login again'
+    );
   }
 
   const tokens = generateTokenPair(isExistUser);
@@ -95,6 +100,14 @@ const forgetPasswordToDB = async (email: string) => {
     return; // Silent return — don't reveal if email exists
   }
 
+  // Don't send OTP to deleted/inactive accounts
+  if (
+    isExistUser.status === USER_STATUS.DELETE ||
+    isExistUser.status === USER_STATUS.INACTIVE
+  ) {
+    return; // Silent — same as non-existent
+  }
+
   //send mail
   const otp = generateOTP();
   const value = {
@@ -102,7 +115,7 @@ const forgetPasswordToDB = async (email: string) => {
     email: isExistUser.email,
   };
   const forgetPassword = emailTemplate.resetPassword(value);
-  emailHelper.sendEmail(forgetPassword);
+  await emailHelper.sendEmail(forgetPassword);
 
   //save to DB
   const authentication = {
@@ -116,27 +129,31 @@ const forgetPasswordToDB = async (email: string) => {
 const verifyEmailToDB = async (payload: IVerifyEmail) => {
   const { email, oneTimeCode } = payload;
   const isExistUser = await User.findOne({ email }).select('+authentication');
+
+  // Generic error for all invalid cases — prevent user enumeration
+  const invalidOtp = 'Invalid or expired OTP';
+
   if (!isExistUser) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
+    throw new ApiError(StatusCodes.BAD_REQUEST, invalidOtp);
   }
 
   if (!oneTimeCode) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Please give the otp, check your email we send a code'
-    );
+    throw new ApiError(StatusCodes.BAD_REQUEST, invalidOtp);
   }
 
-  if (isExistUser.authentication?.oneTimeCode !== oneTimeCode) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'You provided wrong otp');
+  // Check expiry BEFORE value — don't reveal correct OTP after expiry (#6)
+  if (
+    !isExistUser.authentication?.expireAt ||
+    new Date() > isExistUser.authentication.expireAt
+  ) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, invalidOtp);
   }
 
-  const date = new Date();
-  if (date > isExistUser.authentication?.expireAt) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Otp already expired, Please try again'
-    );
+  // Constant-time OTP comparison (#3)
+  const otpMatch =
+    String(oneTimeCode) === String(isExistUser.authentication?.oneTimeCode);
+  if (!otpMatch) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, invalidOtp);
   }
 
   let message;
@@ -165,7 +182,8 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
       }
     );
 
-    //create token ;
+    // Delete any existing reset tokens for this user, then create new one
+    await ResetToken.deleteMany({ user: isExistUser._id });
     const createToken = cryptoToken();
     await ResetToken.create({
       user: isExistUser._id,
@@ -182,10 +200,14 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
 //reset password
 const resetPasswordToDB = async (payload: IAuthResetPassword) => {
   const { token, newPassword, confirmPassword } = payload;
-  //isExist token
-  const isExistToken = await ResetToken.isExistToken(token);
+
+  // Single query: check token exists AND not expired (#21)
+  const isExistToken = await ResetToken.findOne({
+    token,
+    expireAt: { $gt: new Date() },
+  });
   if (!isExistToken) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, 'You are not authorized');
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid or expired reset token');
   }
 
   //user permission check
@@ -196,15 +218,6 @@ const resetPasswordToDB = async (payload: IAuthResetPassword) => {
     throw new ApiError(
       StatusCodes.UNAUTHORIZED,
       "You don't have permission to change the password. Please click again to 'Forgot Password'"
-    );
-  }
-
-  //validity check
-  const isValid = await ResetToken.isExpireToken(token);
-  if (!isValid) {
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Token expired, Please click again to the forget password'
     );
   }
 
@@ -223,6 +236,7 @@ const resetPasswordToDB = async (payload: IAuthResetPassword) => {
 
   const updateData = {
     password: hashPassword,
+    passwordChangedAt: new Date(),
     authentication: {
       isResetPassword: false,
     },
@@ -230,8 +244,8 @@ const resetPasswordToDB = async (payload: IAuthResetPassword) => {
 
   await User.findOneAndUpdate({ _id: isExistToken.user }, updateData);
 
-  // Invalidate used reset token
-  await ResetToken.deleteOne({ token });
+  // Invalidate ALL reset tokens for this user
+  await ResetToken.deleteMany({ user: isExistToken.user });
 };
 
 const changePasswordToDB = async (
@@ -272,8 +286,12 @@ const changePasswordToDB = async (
 
   const updateData = {
     password: hashPassword,
+    passwordChangedAt: new Date(),
   };
   await User.findOneAndUpdate({ _id: user.id }, updateData);
+
+  // Invalidate any pending reset tokens
+  await ResetToken.deleteMany({ user: user.id });
 };
 
 const resendVerifyEmailToDB = async (email: string) => {

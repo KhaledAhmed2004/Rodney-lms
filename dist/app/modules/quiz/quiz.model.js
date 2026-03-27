@@ -46,6 +46,10 @@ const SettingsSchema = new mongoose_1.Schema({
 const quizSchema = new mongoose_1.Schema({
     title: { type: String, required: true, trim: true },
     description: { type: String },
+    course: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'Course',
+    },
     questions: { type: [QuestionSchema], default: [] },
     settings: {
         type: SettingsSchema,

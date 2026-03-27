@@ -3,9 +3,52 @@
 > **Section**: App APIs (Student-Facing)
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
 > **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
-> **Related screens**: [Browse Courses](./04-browse-courses.md), [Progress](./06-progress.md), [Community](./08-community.md)
+> **Related screens**: [Course](./04-course.md), [Progress](./06-progress.md), [Community](./08-community.md)
+
+## UX Flow
+
+### Course Detail Load
+1. Student course card e tap kore (Browse screen theke) ba deep link e ashe
+2. Page load e call → `GET /courses/:slug/student-detail` (→ 5.2)
+3. Screen render hoy: course header (thumbnail, title, rating, enrollment count) → enrollment status → curriculum (module list with lessons)
+
+### Enroll (Not Enrolled)
+1. `enrollment: null` hole "Enroll" / "Start Course" button dekhay
+2. Student tap kore → `POST /enrollments` (→ [4.2](./04-course.md))
+3. Success → page refresh hoy — enrollment data ashbe, curriculum unlock hoy
+
+### Lesson Tap (Enrolled)
+1. Student curriculum theke lesson e tap kore
+2. Call → `GET /courses/:courseId/lessons/:lessonId` (→ 5.4)
+3. Lesson type onujayi content render hoy:
+   - **VIDEO**: Video player + attachments
+   - **READING**: Reading content + attachments
+   - **ASSIGNMENT**: Instructions + submission form
+
+### Mark Lesson Complete
+1. Student lesson content dekhse / video shesh koreche
+2. "Mark Complete" button e tap kore → `POST /enrollments/:enrollmentId/lessons/:lessonId/complete` (→ 5.5)
+3. Progress update hoy — `completionPercentage` + `completedLessons` update
+
+### Quiz Flow
+1. Curriculum e quiz attached thakle quiz card dekhay
+2. Student "Start Quiz" tap kore → `GET /quizzes/:id/student-view` (→ 5.6) — quiz info + questions load
+3. Student "Begin" tap kore → `POST /quizzes/:id/attempts` (→ 5.7) — attempt start, timer begin
+4. Student answers select kore → "Submit" tap kore → `PATCH /quizzes/attempts/:attemptId/submit` (→ 5.8)
+5. Result screen dekhay — score, pass/fail, answer review
+6. Porbe "View Result" e → `GET /quizzes/attempts/:attemptId` (→ 5.9)
+
+### Assignment Submission
+1. ASSIGNMENT type lesson e submission form dekhay
+2. Student content likhe → "Submit" tap kore → `POST /gradebook/assignments/:lessonId/submit` (→ 5.10)
+3. Success → status "SUBMITTED" dekhay — admin grading er jonno pending
+
+### Back to Browse
+1. Student back button e tap kore → Browse screen e fire jay (→ [Screen 4](./04-course.md))
 
 ---
+
+<!-- ═══════════ Course Content Endpoints ═══════════ -->
 
 ### 5.1 Get Course by ID or Slug
 
@@ -398,30 +441,14 @@ Auth: Bearer {{accessToken}}
     "_id": "664e...",
     "quiz": {
       "_id": "664d...",
-      "title": "Module 1 Quiz",
-      "totalMarks": 17,
-      "settings": { "showResults": true, "passingScore": 70 }
-    },
-    "student": {
-      "_id": "664a...",
-      "name": "John Doe",
-      "email": "john@example.com",
-      "profilePicture": "https://cdn.example.com/avatar.jpg"
+      "title": "Module 1 Quiz"
     },
     "score": 7,
     "maxScore": 17,
     "percentage": 41.2,
     "passed": false,
     "timeSpent": 1200,
-    "status": "COMPLETED",
-    "answers": [
-      {
-        "questionId": "uuid-q1",
-        "selectedOptionId": "A",
-        "isCorrect": true,
-        "marksAwarded": 5
-      }
-    ],
+    "attemptNumber": 1,
     "completedAt": "2026-03-14T11:20:00Z"
   }
 }

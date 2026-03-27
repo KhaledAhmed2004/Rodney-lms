@@ -50,16 +50,6 @@ const getMySummary = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const createBadge = catchAsync(async (req: Request, res: Response) => {
-  const result = await GamificationService.createBadge(req.body);
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.CREATED,
-    message: 'Badge created successfully',
-    data: result,
-  });
-});
-
 const getAllBadges = catchAsync(async (req: Request, res: Response) => {
   const result = await GamificationService.getAllBadges(req.query);
   sendResponse(res, {
@@ -81,28 +71,6 @@ const updateBadge = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const deleteBadge = catchAsync(async (req: Request, res: Response) => {
-  await GamificationService.deleteBadge(req.params.id);
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Badge deleted successfully',
-  });
-});
-
-const adjustPoints = catchAsync(async (req: Request, res: Response) => {
-  await GamificationService.adjustPoints(
-    req.body.studentId,
-    req.body.points,
-    req.body.description,
-  );
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Points adjusted successfully',
-  });
-});
-
 const getAdminStats = catchAsync(async (req: Request, res: Response) => {
   const result = await GamificationService.getAdminStats();
   sendResponse(res, {
@@ -118,10 +86,7 @@ export const GamificationController = {
   getMyPoints,
   getMyBadges,
   getMySummary,
-  createBadge,
   getAllBadges,
   updateBadge,
-  deleteBadge,
-  adjustPoints,
   getAdminStats,
 };

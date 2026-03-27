@@ -44,7 +44,7 @@ const getMyBadges = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Badges retrieved successfully',
+        message: 'Achievements retrieved successfully',
         data: result,
     });
 }));
@@ -55,15 +55,6 @@ const getMySummary = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
         message: 'Summary retrieved successfully',
-        data: result,
-    });
-}));
-const createBadge = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield gamification_service_1.GamificationService.createBadge(req.body);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.CREATED,
-        message: 'Badge created successfully',
         data: result,
     });
 }));
@@ -86,22 +77,6 @@ const updateBadge = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
         data: result,
     });
 }));
-const deleteBadge = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    yield gamification_service_1.GamificationService.deleteBadge(req.params.id);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Badge deleted successfully',
-    });
-}));
-const adjustPoints = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    yield gamification_service_1.GamificationService.adjustPoints(req.body.studentId, req.body.points, req.body.description);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Points adjusted successfully',
-    });
-}));
 const getAdminStats = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield gamification_service_1.GamificationService.getAdminStats();
     (0, sendResponse_1.default)(res, {
@@ -116,10 +91,7 @@ exports.GamificationController = {
     getMyPoints,
     getMyBadges,
     getMySummary,
-    createBadge,
     getAllBadges,
     updateBadge,
-    deleteBadge,
-    adjustPoints,
     getAdminStats,
 };

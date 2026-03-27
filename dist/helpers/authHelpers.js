@@ -13,9 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendVerificationOTP = void 0;
-const http_status_codes_1 = require("http-status-codes");
 const user_model_1 = require("../app/modules/user/user.model");
-const ApiError_1 = __importDefault(require("../errors/ApiError"));
 const generateOTP_1 = __importDefault(require("../util/generateOTP"));
 const emailHelper_1 = require("./emailHelper");
 const emailTemplate_1 = require("../shared/emailTemplate");
@@ -28,11 +26,8 @@ const OTP_EXPIRY_MINUTES = 3;
  */
 const sendVerificationOTP = (email) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield user_model_1.User.findOne({ email });
-    if (!user) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
-    }
-    if (user.verified) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'User is already verified!');
+    if (!user || user.verified) {
+        return; // Silent — prevent user enumeration
     }
     const otp = (0, generateOTP_1.default)();
     const authentication = {

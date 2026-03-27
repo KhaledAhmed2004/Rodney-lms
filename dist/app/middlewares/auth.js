@@ -16,6 +16,8 @@ const http_status_codes_1 = require("http-status-codes");
 const config_1 = __importDefault(require("../../config"));
 const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const jwtHelper_1 = require("../../helpers/jwtHelper");
+const user_model_1 = require("../modules/user/user.model");
+const user_1 = require("../../enums/user");
 const auth = (...allowedRoles) => (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const authHeader = req.headers.authorization;
@@ -23,27 +25,46 @@ const auth = (...allowedRoles) => (req, res, next) => __awaiter(void 0, void 0, 
         if (!authHeader) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Authorization token is required');
         }
-        // 3️⃣ Validate Bearer format
+        // 2️⃣ Validate Bearer format
         if (!authHeader.startsWith('Bearer ')) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Authorization header must start with "Bearer "');
         }
-        // 4️⃣ Extract token and ensure it's not empty
+        // 3️⃣ Extract token and ensure it's not empty
         const token = authHeader.split(' ')[1];
         if (!token || token.trim() === '') {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Valid token is required');
         }
-        // 5️⃣ Verify JWT token
+        // 4️⃣ Verify JWT token
         const verifiedUser = jwtHelper_1.jwtHelper.verifyToken(token, config_1.default.jwt.jwt_secret);
         if (!verifiedUser || !verifiedUser.role) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Invalid token payload');
         }
-        // 6️⃣ Attach verified user to request
+        // 5️⃣ Verify user still exists and is active in DB
+        const dbUser = yield user_model_1.User.findById(verifiedUser.id)
+            .select('status passwordChangedAt')
+            .lean();
+        if (!dbUser) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Account no longer exists');
+        }
+        if (dbUser.status === user_1.USER_STATUS.DELETE ||
+            dbUser.status === user_1.USER_STATUS.INACTIVE ||
+            dbUser.status === user_1.USER_STATUS.RESTRICTED) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Account no longer active');
+        }
+        // 6️⃣ Reject tokens issued before password change
+        if (dbUser.passwordChangedAt && verifiedUser.iat) {
+            const changedTimestamp = Math.floor(new Date(dbUser.passwordChangedAt).getTime() / 1000);
+            if (verifiedUser.iat < changedTimestamp) {
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Password was recently changed. Please log in again.');
+            }
+        }
+        // 7️⃣ Attach verified user to request
         req.user = verifiedUser;
-        // 7️⃣ Role-based access check
+        // 8️⃣ Role-based access check
         if (allowedRoles.length && !allowedRoles.includes(verifiedUser.role)) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, "You don't have permission to access this API");
         }
-        // 8️⃣ Proceed
+        // 9️⃣ Proceed
         next();
     }
     catch (error) {

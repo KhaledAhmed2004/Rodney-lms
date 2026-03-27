@@ -47,5 +47,9 @@ router.post('/resend-verify-email', (0, rateLimit_1.rateLimitMiddleware)({
     routeName: 'auth-resend-verify',
 }), (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createResendVerifyEmailZodSchema), auth_controller_1.AuthController.resendVerifyEmail);
 // Refresh Token
-router.post('/refresh-token', (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createRefreshTokenZodSchema), auth_controller_1.AuthController.refreshToken);
+router.post('/refresh-token', (0, rateLimit_1.rateLimitMiddleware)({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    routeName: 'auth-refresh-token',
+}), (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createRefreshTokenZodSchema), auth_controller_1.AuthController.refreshToken);
 exports.AuthRoutes = router;

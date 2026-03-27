@@ -36,25 +36,35 @@ const createForgetPasswordZodSchema = z.object({
 });
 
 const createResetPasswordZodSchema = z.object({
-  body: z.object({
-    token: z.string({ required_error: 'Reset token is required' }),
-    newPassword: passwordSchema,
-    confirmPassword: z.string({
-      required_error: 'Confirm Password is required',
+  body: z
+    .object({
+      token: z.string({ required_error: 'Reset token is required' }),
+      newPassword: passwordSchema,
+      confirmPassword: z.string({
+        required_error: 'Confirm Password is required',
+      }).min(1),
+    })
+    .refine(data => data.newPassword === data.confirmPassword, {
+      message: "Passwords don't match",
+      path: ['confirmPassword'],
     }),
-  }),
 });
 
 const createChangePasswordZodSchema = z.object({
-  body: z.object({
-    currentPassword: z.string({
-      required_error: 'Current Password is required',
+  body: z
+    .object({
+      currentPassword: z.string({
+        required_error: 'Current Password is required',
+      }).min(1),
+      newPassword: passwordSchema,
+      confirmPassword: z.string({
+        required_error: 'Confirm Password is required',
+      }).min(1),
+    })
+    .refine(data => data.newPassword === data.confirmPassword, {
+      message: "Passwords don't match",
+      path: ['confirmPassword'],
     }),
-    newPassword: passwordSchema,
-    confirmPassword: z.string({
-      required_error: 'Confirm Password is required',
-    }),
-  }),
 });
 
 const createRefreshTokenZodSchema = z.object({

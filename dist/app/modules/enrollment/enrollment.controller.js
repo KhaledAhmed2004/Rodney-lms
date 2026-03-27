@@ -30,6 +30,15 @@ const enrollInCourse = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
 const bulkEnroll = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
     const result = yield enrollment_service_1.EnrollmentService.bulkEnroll(userId, req.body.courseIds);
+    if (result.enrolledCount === 0) {
+        (0, sendResponse_1.default)(res, {
+            success: true,
+            statusCode: http_status_codes_1.StatusCodes.OK,
+            message: 'No new enrollments — courses may already be enrolled or unavailable',
+            data: result,
+        });
+        return;
+    }
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.CREATED,

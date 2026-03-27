@@ -219,139 +219,142 @@ class AggregationBuilder {
     // ====== TIME TRENDS ======
     getTimeTrends(options) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { sumField, timeUnit, filter = {}, limit } = options;
+            const { timeUnit, dateField = 'createdAt', startDate, filter = {}, sumField, gapFill = true, } = options;
             const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth(); // 0-indexed
-            // Only consider documents from the current year
-            const yearFilter = Object.assign(Object.assign({}, filter), { createdAt: {
-                    $gte: new Date(currentYear, 0, 1),
-                    $lte: new Date(currentYear, 11, 31),
-                } });
+            const field = `$${dateField}`;
+            // Date range: startDate → now (or current year if no startDate)
+            const rangeStart = startDate !== null && startDate !== void 0 ? startDate : new Date(now.getFullYear(), 0, 1);
+            const dateFilter = Object.assign(Object.assign({}, filter), { [dateField]: { $gte: rangeStart } });
+            // Dynamic date grouping
             const dateGrouping = {
-                day: {
-                    year: { $year: '$createdAt' },
-                    month: { $month: '$createdAt' },
-                    day: { $dayOfMonth: '$createdAt' },
-                },
-                week: { year: { $year: '$createdAt' }, week: { $week: '$createdAt' } },
-                month: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
-                year: { year: { $year: '$createdAt' } },
+                day: { year: { $year: field }, month: { $month: field }, day: { $dayOfMonth: field } },
+                week: { year: { $year: field }, week: { $week: field } },
+                month: { year: { $year: field }, month: { $month: field } },
+                year: { year: { $year: field } },
             };
+            const groupSpec = {
+                _id: dateGrouping[timeUnit],
+                count: { $sum: 1 },
+            };
+            if (sumField) {
+                groupSpec.total = { $sum: `$${sumField}` };
+            }
             this.pipeline = [
-                { $match: yearFilter },
-                {
-                    $group: {
-                        _id: dateGrouping[timeUnit],
-                        total: sumField ? { $sum: `$${sumField}` } : { $sum: 1 },
-                        count: { $sum: 1 },
-                    },
-                },
-                {
-                    $sort: {
-                        '_id.year': -1,
-                        '_id.month': -1,
-                        '_id.week': -1,
-                        '_id.day': -1,
-                    },
-                },
+                { $match: dateFilter },
+                { $group: groupSpec },
+                { $sort: { '_id.year': 1, '_id.month': 1, '_id.week': 1, '_id.day': 1 } },
             ];
             const results = yield this.execute();
-            switch (timeUnit) {
-                case 'month': {
-                    const months = Array.from({ length: 12 }, (_, i) => ({
-                        month: i + 1,
-                        total: 0,
-                        count: 0,
-                    }));
-                    results.forEach(item => {
-                        const index = item._id.month - 1;
-                        months[index] = {
-                            month: item._id.month,
-                            total: item.total,
-                            count: item.count,
-                        };
-                    });
-                    return months.map(m => ({
-                        label: new Date(currentYear, m.month - 1).toLocaleString('default', {
-                            month: 'short',
-                        }),
-                        totalRevenue: m.total,
-                        transactionCount: m.count,
-                    }));
-                }
-                case 'week': {
-                    const weeks = Array.from({ length: 52 }, (_, i) => ({
-                        week: i + 1,
-                        total: 0,
-                        count: 0,
-                    }));
-                    results.forEach(item => {
-                        if (item._id.year === currentYear) {
-                            const index = item._id.week - 1;
-                            weeks[index] = {
-                                week: item._id.week,
-                                total: item.total,
-                                count: item.count,
-                            };
-                        }
-                    });
-                    return weeks.map(w => ({
-                        label: `Week ${w.week}`,
-                        totalRevenue: w.total,
-                        transactionCount: w.count,
-                    }));
-                }
-                case 'day': {
-                    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-                    const days = Array.from({ length: daysInMonth }, (_, i) => ({
-                        day: i + 1,
-                        total: 0,
-                        count: 0,
-                    }));
-                    results.forEach(item => {
-                        if (item._id.year === currentYear &&
-                            item._id.month === currentMonth + 1) {
-                            const index = item._id.day - 1;
-                            days[index] = {
-                                day: item._id.day,
-                                total: item.total,
-                                count: item.count,
-                            };
-                        }
-                    });
-                    return days.map(d => ({
-                        label: `${now.toLocaleString('default', { month: 'short' })} ${d.day}`,
-                        totalRevenue: d.total,
-                        transactionCount: d.count,
-                    }));
-                }
-                case 'year': {
-                    const years = Array.from({ length: 5 }, (_, i) => ({
-                        year: currentYear - i,
-                        total: 0,
-                        count: 0,
-                    }));
-                    results.forEach(item => {
-                        const index = years.findIndex(y => y.year === item._id.year);
-                        if (index >= 0) {
-                            years[index] = {
-                                year: item._id.year,
-                                total: item.total,
-                                count: item.count,
-                            };
-                        }
-                    });
-                    return years.map(y => ({
-                        label: `${y.year}`,
-                        totalRevenue: y.total,
-                        transactionCount: y.count,
-                    }));
-                }
-                default:
-                    return results;
+            const hasSumField = !!sumField;
+            // Build lookup for gap filling
+            const lookup = new Map();
+            results.forEach((r) => {
+                const key = this.buildPeriodKey(timeUnit, r._id);
+                lookup.set(key, Object.assign({ count: r.count }, (hasSumField && { total: r.total })));
+            });
+            if (!gapFill) {
+                return results.map((r) => this.formatTrendItem(timeUnit, r._id, r.count, hasSumField ? r.total : undefined));
             }
+            // Gap-fill: generate all periods in range
+            const periods = this.generatePeriods(timeUnit, rangeStart, now);
+            return periods.map(p => {
+                var _a, _b;
+                const data = lookup.get(p.key);
+                return this.formatTrendItem(timeUnit, p.id, (_a = data === null || data === void 0 ? void 0 : data.count) !== null && _a !== void 0 ? _a : 0, hasSumField ? ((_b = data === null || data === void 0 ? void 0 : data.total) !== null && _b !== void 0 ? _b : 0) : undefined);
+            });
         });
+    }
+    // Format a single trend item to { period, label, count, total? }
+    formatTrendItem(timeUnit, id, count, total) {
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        let period;
+        let label;
+        switch (timeUnit) {
+            case 'month':
+                period = `${id.year}-${String(id.month).padStart(2, '0')}`;
+                label = `${monthNames[id.month - 1]} ${id.year}`;
+                break;
+            case 'week':
+                period = `${id.year}-W${String(id.week).padStart(2, '0')}`;
+                label = `Week ${id.week}`;
+                break;
+            case 'day':
+                period = `${id.year}-${String(id.month).padStart(2, '0')}-${String(id.day).padStart(2, '0')}`;
+                label = `${monthNames[id.month - 1]} ${id.day}`;
+                break;
+            case 'year':
+                period = `${id.year}`;
+                label = `${id.year}`;
+                break;
+            default:
+                period = JSON.stringify(id);
+                label = period;
+        }
+        const item = { period, label, count };
+        if (total !== undefined)
+            item.total = total;
+        return item;
+    }
+    // Build a lookup key from _id
+    buildPeriodKey(timeUnit, id) {
+        switch (timeUnit) {
+            case 'month': return `${id.year}-${id.month}`;
+            case 'week': return `${id.year}-${id.week}`;
+            case 'day': return `${id.year}-${id.month}-${id.day}`;
+            case 'year': return `${id.year}`;
+            default: return JSON.stringify(id);
+        }
+    }
+    // Generate all periods in a date range for gap filling
+    generatePeriods(timeUnit, start, end) {
+        const periods = [];
+        const current = new Date(start);
+        switch (timeUnit) {
+            case 'month':
+                current.setDate(1);
+                while (current <= end) {
+                    const year = current.getFullYear();
+                    const month = current.getMonth() + 1;
+                    periods.push({ key: `${year}-${month}`, id: { year, month } });
+                    current.setMonth(current.getMonth() + 1);
+                }
+                break;
+            case 'day':
+                while (current <= end) {
+                    const year = current.getFullYear();
+                    const month = current.getMonth() + 1;
+                    const day = current.getDate();
+                    periods.push({ key: `${year}-${month}-${day}`, id: { year, month, day } });
+                    current.setDate(current.getDate() + 1);
+                }
+                break;
+            case 'year': {
+                const startYear = start.getFullYear();
+                const endYear = end.getFullYear();
+                for (let y = startYear; y <= endYear; y++) {
+                    periods.push({ key: `${y}`, id: { year: y } });
+                }
+                break;
+            }
+            case 'week': {
+                // Week gap-fill: generate week numbers from start to end
+                const getWeek = (d) => {
+                    const oneJan = new Date(d.getFullYear(), 0, 1);
+                    return Math.ceil(((d.getTime() - oneJan.getTime()) / 86400000 + oneJan.getDay()) / 7);
+                };
+                while (current <= end) {
+                    const year = current.getFullYear();
+                    const week = getWeek(current);
+                    const key = `${year}-${week}`;
+                    if (!periods.some(p => p.key === key)) {
+                        periods.push({ key, id: { year, week } });
+                    }
+                    current.setDate(current.getDate() + 7);
+                }
+                break;
+            }
+        }
+        return periods;
     }
     // ====== TOP PERFORMERS ======
     getTopPerformers(options) {

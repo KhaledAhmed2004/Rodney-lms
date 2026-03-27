@@ -16,7 +16,9 @@ exports.DashboardController = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
+const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const dashboard_service_1 = require("./dashboard.service");
+const VALID_ACTIVITY_TYPES = ['ENROLLMENT', 'COMPLETION', 'QUIZ_ATTEMPT'];
 const getSummary = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield dashboard_service_1.DashboardService.getSummary();
     (0, sendResponse_1.default)(res, {
@@ -27,7 +29,12 @@ const getSummary = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
     });
 }));
 const getTrends = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const months = req.query.months ? parseInt(req.query.months) : 6;
+    const months = req.query.months
+        ? parseInt(req.query.months, 10)
+        : 6;
+    if (isNaN(months) || months < 1 || months > 24) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'months must be a number between 1 and 24');
+    }
     const result = yield dashboard_service_1.DashboardService.getTrends(months);
     (0, sendResponse_1.default)(res, {
         success: true,
@@ -37,8 +44,17 @@ const getTrends = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void
     });
 }));
 const getRecentActivity = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const limit = req.query.limit ? parseInt(req.query.limit) : 20;
-    const result = yield dashboard_service_1.DashboardService.getRecentActivity(limit);
+    const limit = req.query.limit
+        ? parseInt(req.query.limit, 10)
+        : 20;
+    if (isNaN(limit) || limit < 1 || limit > 100) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'limit must be a number between 1 and 100');
+    }
+    const type = req.query.type;
+    if (type && !VALID_ACTIVITY_TYPES.includes(type)) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, `type must be one of: ${VALID_ACTIVITY_TYPES.join(', ')}`);
+    }
+    const result = yield dashboard_service_1.DashboardService.getRecentActivity(limit, type);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,

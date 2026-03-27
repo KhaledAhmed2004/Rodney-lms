@@ -175,7 +175,7 @@
               "response": []
             },
             {
-              "name": "Verify Email (OTP)",
+              "name": "Verify Email — Auto-login (Registration)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -198,7 +198,7 @@
                   "host": ["{{baseUrl}}"],
                   "path": ["auth", "verify-email"]
                 },
-                "description": "Verify email with OTP. New user: auto-login (returns tokens). Password reset flow: returns reset token string."
+                "description": "Registration flow: new user OTP verify korle auto-login hoy. Returns access + refresh tokens. refreshToken also set as httpOnly cookie."
               },
               "response": [],
               "event": [
@@ -219,6 +219,34 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Verify OTP — Reset Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"oneTimeCode\": 123456\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/verify-email",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "verify-email"]
+                },
+                "description": "Forgot Password flow: already verified user OTP verify korle reset token return kore. Use this token in Reset Password request."
+              },
+              "response": []
             },
             {
               "name": "Resend Verification Email",
@@ -398,64 +426,7 @@
                   "host": ["{{baseUrl}}"],
                   "path": ["student", "home"]
                 },
-                "description": "Aggregated home data: points, streak, enrolled courses, recent badges. Auth: STUDENT."
-              },
-              "response": []
-            },
-            {
-              "name": "Get Leaderboard",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/gamification/leaderboard?page=1&limit=10",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["gamification", "leaderboard"],
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "10"
-                    }
-                  ]
-                },
-                "description": "Get gamification leaderboard. Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Get All Published Courses",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/courses?page=1&limit=10&sort=-createdAt",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["courses"],
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "10"
-                    },
-                    {
-                      "key": "sort",
-                      "value": "-createdAt"
-                    }
-                  ]
-                },
-                "description": "Get latest published courses. Public endpoint."
+                "description": "Aggregated home data: name, points, streak, progress (course + quiz), enrolled courses (max 10), recent badges (max 5). Auth: STUDENT."
               },
               "response": []
             }
@@ -2031,7 +2002,7 @@
                   "host": ["{{baseUrl}}"],
                   "path": ["dashboard", "summary"]
                 },
-                "description": "Get dashboard summary including total users, courses, enrollments, and completion rate. Requires SUPER_ADMIN role."
+                "description": "Get dashboard summary with growth deltas — totalStudents, activeStudents, totalCourses, completionRate. Each metric returns { value, growth, growthType }. Uses AggregationBuilder.calculateGrowth(). Requires SUPER_ADMIN role."
               },
               "response": []
             },
@@ -2046,11 +2017,18 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/dashboard/trends",
+                  "raw": "{{baseUrl}}/dashboard/trends?months=6",
                   "host": ["{{baseUrl}}"],
-                  "path": ["dashboard", "trends"]
+                  "path": ["dashboard", "trends"],
+                  "query": [
+                    {
+                      "key": "months",
+                      "value": "6",
+                      "description": "Rolling window — koto month er data (default: 6)"
+                    }
+                  ]
                 },
-                "description": "Get time-series trend data for the dashboard. Requires SUPER_ADMIN role."
+                "description": "Get enrollment + completion trend data (monthly grouped, cross-year rolling window). Requires SUPER_ADMIN role."
               },
               "response": []
             },
@@ -2065,11 +2043,24 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/dashboard/recent-activity",
+                  "raw": "{{baseUrl}}/dashboard/recent-activity?limit=20",
                   "host": ["{{baseUrl}}"],
-                  "path": ["dashboard", "recent-activity"]
+                  "path": ["dashboard", "recent-activity"],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "Koto item chaay (default: 20)"
+                    },
+                    {
+                      "key": "type",
+                      "value": "ENROLLMENT",
+                      "description": "Filter by type: ENROLLMENT | COMPLETION | QUIZ_ATTEMPT (empty = all)",
+                      "disabled": true
+                    }
+                  ]
                 },
-                "description": "Get recent platform activity for the admin dashboard. Requires SUPER_ADMIN role."
+                "description": "Get unified recent activity feed — single sorted array with { type, title, timestamp }. Supports ?type= filter for tabs. Requires SUPER_ADMIN role."
               },
               "response": []
             }
@@ -4110,65 +4101,6 @@
           "name": "Gamification Screen",
           "item": [
             {
-              "name": "Create Badge",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}"
-                  }
-                ],
-                "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    {
-                      "key": "name",
-                      "value": "Quiz Master",
-                      "type": "text"
-                    },
-                    {
-                      "key": "slug",
-                      "value": "quiz-master",
-                      "type": "text"
-                    },
-                    {
-                      "key": "description",
-                      "value": "Pass 10 quizzes",
-                      "type": "text"
-                    },
-                    {
-                      "key": "criteria.type",
-                      "value": "QUIZZES_PASSED",
-                      "type": "text"
-                    },
-                    {
-                      "key": "criteria.threshold",
-                      "value": "10",
-                      "type": "text"
-                    },
-                    {
-                      "key": "isActive",
-                      "value": "true",
-                      "type": "text"
-                    },
-                    {
-                      "key": "icon",
-                      "type": "file",
-                      "src": ""
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/gamification/badges",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["gamification", "badges"]
-                },
-                "description": "Create a new badge with icon upload. Requires SUPER_ADMIN role."
-              },
-              "response": []
-            },
-            {
               "name": "Get All Badges",
               "request": {
                 "method": "GET",
@@ -4205,81 +4137,6 @@
                   {
                     "key": "Authorization",
                     "value": "Bearer {{accessToken}}"
-                  }
-                ],
-                "body": {
-                  "mode": "formdata",
-                  "formdata": [
-                    {
-                      "key": "name",
-                      "value": "Updated Badge Name",
-                      "type": "text"
-                    },
-                    {
-                      "key": "description",
-                      "value": "Updated badge description",
-                      "type": "text"
-                    },
-                    {
-                      "key": "isActive",
-                      "value": "true",
-                      "type": "text"
-                    },
-                    {
-                      "key": "icon",
-                      "type": "file",
-                      "src": ""
-                    }
-                  ]
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/gamification/badges/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["gamification", "badges", ":id"],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "BADGE_ID"
-                    }
-                  ]
-                },
-                "description": "Update a badge's details and icon. Requires SUPER_ADMIN role."
-              },
-              "response": []
-            },
-            {
-              "name": "Delete Badge",
-              "request": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/gamification/badges/:id",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["gamification", "badges", ":id"],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "BADGE_ID"
-                    }
-                  ]
-                },
-                "description": "Delete a badge by ID. Requires SUPER_ADMIN role."
-              },
-              "response": []
-            },
-            {
-              "name": "Adjust Student Points",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}"
                   },
                   {
                     "key": "Content-Type",
@@ -4288,14 +4145,20 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"studentId\": \"STUDENT_ID\",\n  \"points\": 50,\n  \"description\": \"Bonus for excellent performance\"\n}"
+                  "raw": "{\n  \"description\": \"Updated badge description\",\n  \"criteria\": { \"threshold\": 15 },\n  \"isActive\": true\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/gamification/points/adjust",
+                  "raw": "{{baseUrl}}/gamification/badges/:id",
                   "host": ["{{baseUrl}}"],
-                  "path": ["gamification", "points", "adjust"]
+                  "path": ["gamification", "badges", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "BADGE_ID"
+                    }
+                  ]
                 },
-                "description": "Manually adjust a student's gamification points. Requires SUPER_ADMIN role."
+                "description": "Update a badge's description, criteria threshold, or isActive status. Only these fields are allowed — name, criteria.type, and icon are fixed (pre-defined badges). Requires SUPER_ADMIN role."
               },
               "response": []
             },

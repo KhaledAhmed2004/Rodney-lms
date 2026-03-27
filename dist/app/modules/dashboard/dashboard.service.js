@@ -8,83 +8,153 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DashboardService = void 0;
 const user_model_1 = require("../user/user.model");
 const course_model_1 = require("../course/course.model");
 const enrollment_model_1 = require("../enrollment/enrollment.model");
 const quiz_model_1 = require("../quiz/quiz.model");
+const AggregationBuilder_1 = __importDefault(require("../../builder/AggregationBuilder"));
 const getSummary = () => __awaiter(void 0, void 0, void 0, function* () {
-    const [totalUsers, totalCourses, totalEnrollments, completedEnrollments, activeStudents,] = yield Promise.all([
-        user_model_1.User.countDocuments({ status: 'ACTIVE', role: 'STUDENT' }),
-        course_model_1.Course.countDocuments({ status: 'PUBLISHED' }),
+    const endOfLastMonth = new Date();
+    endOfLastMonth.setDate(0);
+    endOfLastMonth.setHours(23, 59, 59, 999);
+    const [studentGrowth, courseGrowth, activeEnrollmentGrowth, activeStudentIds, totalEnrollments, completedEnrollments, prevTotalEnrollments, prevCompletedEnrollments,] = yield Promise.all([
+        new AggregationBuilder_1.default(user_model_1.User).calculateGrowth({
+            period: 'month',
+            filter: { role: 'STUDENT', status: 'ACTIVE' },
+        }),
+        new AggregationBuilder_1.default(course_model_1.Course).calculateGrowth({
+            period: 'month',
+            filter: { status: 'PUBLISHED' },
+        }),
+        new AggregationBuilder_1.default(enrollment_model_1.Enrollment).calculateGrowth({
+            period: 'month',
+            filter: { status: 'ACTIVE' },
+        }),
+        enrollment_model_1.Enrollment.distinct('student', { status: 'ACTIVE' }),
         enrollment_model_1.Enrollment.countDocuments(),
         enrollment_model_1.Enrollment.countDocuments({ status: 'COMPLETED' }),
-        enrollment_model_1.Enrollment.distinct('student', { status: 'ACTIVE' }).then(r => r.length),
+        enrollment_model_1.Enrollment.countDocuments({ createdAt: { $lte: endOfLastMonth } }),
+        enrollment_model_1.Enrollment.countDocuments({
+            status: 'COMPLETED',
+            completedAt: { $lte: endOfLastMonth },
+        }),
     ]);
+    // Completion rate + growth
     const completionRate = totalEnrollments > 0
         ? Math.round((completedEnrollments / totalEnrollments) * 100)
         : 0;
+    const prevRate = prevTotalEnrollments > 0
+        ? Math.round((prevCompletedEnrollments / prevTotalEnrollments) * 100)
+        : 0;
+    const rateDiff = completionRate - prevRate;
+    const rateGrowthType = rateDiff > 0 ? 'increase' : rateDiff < 0 ? 'decrease' : 'no_change';
+    const comparisonPeriod = 'month';
     return {
-        totalUsers,
-        totalCourses,
-        totalEnrollments,
-        completedEnrollments,
-        completionRate,
-        activeStudents,
+        comparisonPeriod,
+        totalStudents: {
+            value: studentGrowth.total,
+            growth: studentGrowth.growth,
+            growthType: studentGrowth.growthType,
+        },
+        activeStudents: {
+            value: activeStudentIds.length,
+            growth: activeEnrollmentGrowth.growth,
+            growthType: activeEnrollmentGrowth.growthType,
+        },
+        totalCourses: {
+            value: courseGrowth.total,
+            growth: courseGrowth.growth,
+            growthType: courseGrowth.growthType,
+        },
+        completionRate: {
+            value: completionRate,
+            growth: Math.abs(rateDiff),
+            growthType: rateGrowthType,
+        },
     };
 });
 const getTrends = (...args_1) => __awaiter(void 0, [...args_1], void 0, function* (months = 6) {
     const startDate = new Date();
+    startDate.setDate(1);
     startDate.setMonth(startDate.getMonth() - months);
-    const [enrollmentTrends, userTrends] = yield Promise.all([
-        enrollment_model_1.Enrollment.aggregate([
-            { $match: { createdAt: { $gte: startDate } } },
-            {
-                $group: {
-                    _id: {
-                        year: { $year: '$createdAt' },
-                        month: { $month: '$createdAt' },
-                    },
-                    count: { $sum: 1 },
-                },
-            },
-            { $sort: { '_id.year': 1, '_id.month': 1 } },
-        ]),
-        user_model_1.User.aggregate([
-            { $match: { createdAt: { $gte: startDate }, role: 'STUDENT' } },
-            {
-                $group: {
-                    _id: {
-                        year: { $year: '$createdAt' },
-                        month: { $month: '$createdAt' },
-                    },
-                    count: { $sum: 1 },
-                },
-            },
-            { $sort: { '_id.year': 1, '_id.month': 1 } },
-        ]),
+    const [enrollmentTrends, completionTrends] = yield Promise.all([
+        new AggregationBuilder_1.default(enrollment_model_1.Enrollment).getTimeTrends({
+            timeUnit: 'month',
+            startDate,
+        }),
+        new AggregationBuilder_1.default(enrollment_model_1.Enrollment).getTimeTrends({
+            timeUnit: 'month',
+            dateField: 'completedAt',
+            startDate,
+            filter: { status: 'COMPLETED' },
+        }),
     ]);
-    return { enrollmentTrends, userTrends };
+    return { enrollmentTrends, completionTrends };
 });
-const getRecentActivity = (...args_1) => __awaiter(void 0, [...args_1], void 0, function* (limit = 20) {
-    const [recentEnrollments, recentCompletions, recentQuizAttempts] = yield Promise.all([
-        enrollment_model_1.Enrollment.find()
-            .populate('student', 'name profilePicture')
+const getRecentActivity = (...args_1) => __awaiter(void 0, [...args_1], void 0, function* (limit = 20, type) {
+    const queries = [];
+    const includeTypes = type
+        ? [type]
+        : ['ENROLLMENT', 'COMPLETION', 'QUIZ_ATTEMPT'];
+    if (includeTypes.includes('ENROLLMENT')) {
+        queries.push(enrollment_model_1.Enrollment.find()
+            .populate('student', 'name')
             .populate('course', 'title')
             .sort({ createdAt: -1 })
-            .limit(limit),
-        enrollment_model_1.Enrollment.find({ status: 'COMPLETED' })
-            .populate('student', 'name profilePicture')
+            .limit(limit)
+            .lean()
+            .then(items => items.map((item) => {
+            var _a, _b;
+            return ({
+                _id: item._id,
+                type: 'ENROLLMENT',
+                title: `${((_a = item.student) === null || _a === void 0 ? void 0 : _a.name) || 'Unknown'} enrolled in ${((_b = item.course) === null || _b === void 0 ? void 0 : _b.title) || 'Unknown'}`,
+                timestamp: item.createdAt,
+            });
+        })));
+    }
+    if (includeTypes.includes('COMPLETION')) {
+        queries.push(enrollment_model_1.Enrollment.find({ status: 'COMPLETED' })
+            .populate('student', 'name')
             .populate('course', 'title')
             .sort({ completedAt: -1 })
-            .limit(limit),
-        quiz_model_1.QuizAttempt.find({ status: 'COMPLETED' })
-            .populate('student', 'name profilePicture')
+            .limit(limit)
+            .lean()
+            .then(items => items.map((item) => {
+            var _a, _b;
+            return ({
+                _id: item._id,
+                type: 'COMPLETION',
+                title: `${((_a = item.student) === null || _a === void 0 ? void 0 : _a.name) || 'Unknown'} completed ${((_b = item.course) === null || _b === void 0 ? void 0 : _b.title) || 'Unknown'}`,
+                timestamp: item.completedAt,
+            });
+        })));
+    }
+    if (includeTypes.includes('QUIZ_ATTEMPT')) {
+        queries.push(quiz_model_1.QuizAttempt.find({ status: 'COMPLETED' })
+            .populate('student', 'name')
             .populate('quiz', 'title')
             .sort({ completedAt: -1 })
-            .limit(limit),
-    ]);
-    return { recentEnrollments, recentCompletions, recentQuizAttempts };
+            .limit(limit)
+            .lean()
+            .then(items => items.map((item) => {
+            var _a, _b;
+            return ({
+                _id: item._id,
+                type: 'QUIZ_ATTEMPT',
+                title: `${((_a = item.student) === null || _a === void 0 ? void 0 : _a.name) || 'Unknown'} attempted ${((_b = item.quiz) === null || _b === void 0 ? void 0 : _b.title) || 'Unknown'}`,
+                timestamp: item.completedAt,
+            });
+        })));
+    }
+    const results = yield Promise.all(queries);
+    const merged = results.flat();
+    merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return merged.slice(0, limit);
 });
 exports.DashboardService = { getSummary, getTrends, getRecentActivity };
