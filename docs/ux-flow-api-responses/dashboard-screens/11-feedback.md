@@ -314,6 +314,265 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
+## Frontend Demo Data
+
+> Realistic test data — shob state cover kore. Frontend ei data diye mock/test korte parbe.
+
+### Demo: Summary (11.1)
+
+```json
+{
+  "success": true,
+  "message": "Feedback summary retrieved successfully",
+  "data": {
+    "comparisonPeriod": "month",
+    "totalReviews": { "value": 47, "growth": 23.68, "growthType": "increase" },
+    "averageRating": { "value": 3.8, "growth": 0.2, "growthType": "increase" },
+    "pendingResponses": 12,
+    "ratingDistribution": [
+      { "rating": 5, "count": 15 },
+      { "rating": 4, "count": 12 },
+      { "rating": 3, "count": 9 },
+      { "rating": 2, "count": 7 },
+      { "rating": 1, "count": 4 }
+    ]
+  }
+}
+```
+
+### Demo: Feedback List (11.2) — All States
+
+```json
+{
+  "success": true,
+  "message": "All feedback retrieved successfully",
+  "pagination": { "page": 1, "limit": 10, "total": 47, "totalPage": 5 },
+  "data": [
+    {
+      "_id": "6650a1b2c3d4e5f6a7b8c001",
+      "student": {
+        "_id": "6640a1b2c3d4e5f6a7b8c001",
+        "name": "Rahim Uddin",
+        "email": "rahim@example.com",
+        "profilePicture": "https://cdn.example.com/avatars/rahim.jpg"
+      },
+      "course": {
+        "_id": "6630a1b2c3d4e5f6a7b8c001",
+        "title": "Introduction to Web Development",
+        "slug": "intro-web-dev"
+      },
+      "rating": 5,
+      "review": "Excellent course! The projects were very practical and the instructor explained complex concepts simply. Highly recommend for beginners.",
+      "adminResponse": null,
+      "respondedAt": null,
+      "createdAt": "2026-03-25T09:15:00Z"
+    },
+    {
+      "_id": "6650a1b2c3d4e5f6a7b8c002",
+      "student": {
+        "_id": "6640a1b2c3d4e5f6a7b8c002",
+        "name": "Fatima Akter",
+        "email": "fatima@example.com",
+        "profilePicture": "https://cdn.example.com/avatars/fatima.jpg"
+      },
+      "course": {
+        "_id": "6630a1b2c3d4e5f6a7b8c002",
+        "title": "Advanced JavaScript",
+        "slug": "advanced-javascript"
+      },
+      "rating": 4,
+      "review": "Great course overall. Loved the async/await section. Would appreciate more real-world project examples.",
+      "adminResponse": "Thank you Fatima! We're adding 3 new project modules next month. Stay tuned!",
+      "respondedAt": "2026-03-24T14:30:00Z",
+      "createdAt": "2026-03-22T11:45:00Z"
+    },
+    {
+      "_id": "6650a1b2c3d4e5f6a7b8c003",
+      "student": {
+        "_id": "6640a1b2c3d4e5f6a7b8c003",
+        "name": "Kamal Hossain",
+        "email": "kamal@example.com",
+        "profilePicture": null
+      },
+      "course": {
+        "_id": "6630a1b2c3d4e5f6a7b8c001",
+        "title": "Introduction to Web Development",
+        "slug": "intro-web-dev"
+      },
+      "rating": 2,
+      "review": "Course content is outdated. Some videos are from 2023 and use deprecated methods. Needs a major update.",
+      "adminResponse": null,
+      "respondedAt": null,
+      "createdAt": "2026-03-20T16:20:00Z"
+    },
+    {
+      "_id": "6650a1b2c3d4e5f6a7b8c004",
+      "student": {
+        "_id": "6640a1b2c3d4e5f6a7b8c004",
+        "name": "Nusrat Jahan",
+        "email": "nusrat@example.com",
+        "profilePicture": "https://cdn.example.com/avatars/nusrat.jpg"
+      },
+      "course": {
+        "_id": "6630a1b2c3d4e5f6a7b8c003",
+        "title": "UI/UX Design Fundamentals",
+        "slug": "uiux-design-fundamentals"
+      },
+      "rating": 1,
+      "review": "Very disappointed. The quizzes don't match the lesson content at all. Felt like I wasted my time.",
+      "adminResponse": "We're sorry to hear that, Nusrat. We've flagged this with the content team and will review all quizzes. Thank you for the feedback.",
+      "respondedAt": "2026-03-19T10:00:00Z",
+      "createdAt": "2026-03-18T08:30:00Z"
+    },
+    {
+      "_id": "6650a1b2c3d4e5f6a7b8c005",
+      "student": {
+        "_id": "6640a1b2c3d4e5f6a7b8c005",
+        "name": "Arif Rahman",
+        "email": "arif@example.com",
+        "profilePicture": "https://cdn.example.com/avatars/arif.jpg"
+      },
+      "course": {
+        "_id": "6630a1b2c3d4e5f6a7b8c002",
+        "title": "Advanced JavaScript",
+        "slug": "advanced-javascript"
+      },
+      "rating": 3,
+      "review": "Decent course. Good for intermediate learners but the pace is too fast for some sections. Closures chapter needs better examples.",
+      "adminResponse": null,
+      "respondedAt": null,
+      "createdAt": "2026-03-15T13:00:00Z"
+    }
+  ]
+}
+```
+
+> **States covered:**
+> - ★5 — positive, no admin response (pending) — `Rahim`
+> - ★4 — positive, admin responded — `Fatima`
+> - ★2 — negative, no response (urgent!) — `Kamal`
+> - ★1 — negative, admin responded (damage control) — `Nusrat`
+> - ★3 — neutral, no response — `Arif`
+> - `profilePicture: null` — no avatar case — `Kamal`
+> - Multiple courses — same course e multiple reviews (Intro Web Dev: Rahim + Kamal)
+
+### Demo: Respond (11.4)
+
+**Request:**
+```json
+{
+  "adminResponse": "Thank you for your honest feedback, Kamal. We've scheduled a content update for next month — all deprecated methods will be replaced with modern alternatives."
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Response added successfully",
+  "data": {
+    "_id": "6650a1b2c3d4e5f6a7b8c003",
+    "adminResponse": "Thank you for your honest feedback, Kamal. We've scheduled a content update for next month — all deprecated methods will be replaced with modern alternatives.",
+    "respondedAt": "2026-03-28T11:30:00Z"
+  }
+}
+```
+
+### Demo: Course Options (Dropdown)
+
+```json
+{
+  "success": true,
+  "message": "Course options retrieved successfully",
+  "data": [
+    { "_id": "6630a1b2c3d4e5f6a7b8c002", "title": "Advanced JavaScript" },
+    { "_id": "6630a1b2c3d4e5f6a7b8c001", "title": "Introduction to Web Development" },
+    { "_id": "6630a1b2c3d4e5f6a7b8c004", "title": "Python for Data Science" },
+    { "_id": "6630a1b2c3d4e5f6a7b8c003", "title": "UI/UX Design Fundamentals" }
+  ]
+}
+```
+
+### Demo: Empty State (No Feedback Yet)
+
+```json
+{
+  "success": true,
+  "message": "Feedback summary retrieved successfully",
+  "data": {
+    "comparisonPeriod": "month",
+    "totalReviews": { "value": 0, "growth": 0, "growthType": "no_change" },
+    "averageRating": { "value": 0, "growth": 0, "growthType": "no_change" },
+    "pendingResponses": 0,
+    "ratingDistribution": [
+      { "rating": 5, "count": 0 },
+      { "rating": 4, "count": 0 },
+      { "rating": 3, "count": 0 },
+      { "rating": 2, "count": 0 },
+      { "rating": 1, "count": 0 }
+    ]
+  }
+}
+```
+
+```json
+{
+  "success": true,
+  "message": "All feedback retrieved successfully",
+  "pagination": { "page": 1, "limit": 10, "total": 0, "totalPage": 0 },
+  "data": []
+}
+```
+
+### Demo: Student Create Feedback (App-Side)
+
+**Request:**
+```
+POST /feedback
+Auth: Bearer {{studentAccessToken}}
+Content-Type: application/json
+```
+
+```json
+{
+  "courseId": "6630a1b2c3d4e5f6a7b8c001",
+  "rating": 5,
+  "review": "Best course I've taken so far! The hands-on projects really helped me understand the concepts."
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Feedback submitted successfully",
+  "data": {
+    "_id": "6650a1b2c3d4e5f6a7b8c006",
+    "rating": 5,
+    "review": "Best course I've taken so far! The hands-on projects really helped me understand the concepts.",
+    "createdAt": "2026-03-28T14:00:00Z"
+  }
+}
+```
+
+**Error — Already Reviewed (409):**
+```json
+{
+  "success": false,
+  "message": "You have already reviewed this course"
+}
+```
+
+**Error — Not Enrolled (403):**
+```json
+{
+  "success": false,
+  "message": "You are not enrolled in this course"
+}
+```
+
+---
+
 ## API Response Design — Field Exposure (Admin)
 
 | Field | Get All | Get by ID | Respond | Reason |

@@ -91,6 +91,36 @@ const adminMarkAllNotificationsAsRead = catchAsync(
   }
 );
 
+const sendNotification = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req.user as JwtPayload).id;
+  const { title, text, audience, courseId } = req.body;
+  const result = await NotificationService.sendAdminNotification(
+    title,
+    text,
+    audience,
+    userId,
+    courseId,
+  );
+
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: `Notification sent to ${result.recipientCount} students`,
+    data: result,
+  });
+});
+
+const getSentHistory = catchAsync(async (req: Request, res: Response) => {
+  const result = await NotificationService.getSentHistory(req.query);
+  sendResponse(res, {
+    statusCode: StatusCodes.OK,
+    success: true,
+    message: 'Sent notification history retrieved successfully',
+    pagination: result.pagination,
+    data: result.data,
+  });
+});
+
 export const NotificationController = {
   adminNotificationFromDB,
   getNotificationFromDB,
@@ -98,4 +128,6 @@ export const NotificationController = {
   readNotification,
   adminMarkNotificationAsRead,
   adminMarkAllNotificationsAsRead,
+  sendNotification,
+  getSentHistory,
 };

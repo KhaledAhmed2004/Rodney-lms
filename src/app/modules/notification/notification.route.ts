@@ -1,7 +1,10 @@
 import express from 'express';
-import auth from '../../middlewares/auth';
 import { USER_ROLES } from '../../../enums/user';
+import auth from '../../middlewares/auth';
+import validateRequest from '../../middlewares/validateRequest';
 import { NotificationController } from './notification.controller';
+import { NotificationValidation } from './notification.validation';
+
 const router = express.Router();
 
 // ==================== USER NOTIFICATIONS ====================
@@ -34,6 +37,21 @@ router.get(
   '/admin',
   auth(USER_ROLES.SUPER_ADMIN),
   NotificationController.adminNotificationFromDB
+);
+
+// Sent notification history
+router.get(
+  '/admin/sent',
+  auth(USER_ROLES.SUPER_ADMIN),
+  NotificationController.getSentHistory,
+);
+
+// Send notification to students
+router.post(
+  '/admin/send',
+  auth(USER_ROLES.SUPER_ADMIN),
+  validateRequest(NotificationValidation.sendNotification),
+  NotificationController.sendNotification,
 );
 
 // Mark all admin notifications as read (fixed path BEFORE param path)

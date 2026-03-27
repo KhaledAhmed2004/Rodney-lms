@@ -5,8 +5,9 @@ const submitAssignment = z.object({
     lessonId: z.string({ required_error: 'Lesson ID is required' }),
   }),
   body: z.object({
-    content: z.string().optional(),
     courseId: z.string({ required_error: 'Course ID is required' }),
+    content: z.string().max(5000).optional(),
+    attachments: z.array(z.string().min(1)).optional(),
   }),
 });
 

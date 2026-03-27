@@ -21,17 +21,23 @@ router.post(
   GradebookController.submitAssignment,
 );
 
-// Admin routes
+// Admin routes (fixed paths before shorter paths)
 router.get(
-  '/students',
+  '/students/summary',
   auth(USER_ROLES.SUPER_ADMIN),
-  GradebookController.getAllStudentGradebook,
+  GradebookController.getGradebookSummary,
 );
 
 router.get(
   '/students/export',
   auth(USER_ROLES.SUPER_ADMIN),
   GradebookController.exportStudentGradebook,
+);
+
+router.get(
+  '/students',
+  auth(USER_ROLES.SUPER_ADMIN),
+  GradebookController.getAllStudentGradebook,
 );
 
 export const GradebookRoutes = router;

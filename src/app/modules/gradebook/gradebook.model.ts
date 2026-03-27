@@ -40,9 +40,9 @@ const gradeSchema = new Schema<IGrade, GradeModel>(
       type: String,
       required: true,
     },
-    score: { type: Number, default: 0 },
-    maxScore: { type: Number, required: true },
-    percentage: { type: Number, default: 0 },
+    score: { type: Number, default: 0, min: 0 },
+    maxScore: { type: Number, required: true, min: 0 },
+    percentage: { type: Number, default: 0, min: 0, max: 100 },
     status: {
       type: String,
       enum: Object.values(GRADE_STATUS),
@@ -61,6 +61,7 @@ const gradeSchema = new Schema<IGrade, GradeModel>(
 gradeSchema.index({ student: 1, course: 1 });
 gradeSchema.index({ enrollment: 1 });
 gradeSchema.index({ assessmentType: 1, assessmentId: 1 });
+gradeSchema.index({ assessmentType: 1, status: 1, createdAt: 1 });
 
 export const Grade = model<IGrade, GradeModel>('Grade', gradeSchema);
 
@@ -112,7 +113,7 @@ const assignmentSubmissionSchema = new Schema<
   { timestamps: true },
 );
 
-assignmentSubmissionSchema.index({ student: 1, lesson: 1 });
+assignmentSubmissionSchema.index({ student: 1, lesson: 1, status: 1 }, { unique: true });
 assignmentSubmissionSchema.index({ course: 1 });
 assignmentSubmissionSchema.index({ enrollment: 1 });
 

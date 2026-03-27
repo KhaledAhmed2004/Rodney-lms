@@ -4,6 +4,7 @@ import app from './app';
 import config from './config';
 import { seedSuperAdmin } from './DB/seedAdmin';
 import { seedBadges } from './DB/seedBadges';
+import { seedFeedback } from './DB/seedFeedback';
 import { socketHelper } from './helpers/socketHelper';
 import { errorLogger, logger, notifyCritical } from './shared/logger';
 import { CacheHelper } from './app/shared/CacheHelper';
@@ -81,6 +82,11 @@ async function main() {
     const badgeSpinner = createSpinner({ text: 'Verifying default badges...', color: 'cyan' });
     await seedBadges();
     badgeSpinner.succeed('Default badges ready');
+
+    // Seed demo feedback (development only, skips if data exists)
+    const feedbackSpinner = createSpinner({ text: 'Verifying demo feedback...', color: 'cyan' });
+    await seedFeedback();
+    feedbackSpinner.succeed('Demo feedback ready');
 
     // Initialize CacheHelper (in-memory)
     const cacheSpinner = createSpinner({ text: 'Initializing cache system...', color: 'cyan' });

@@ -95,6 +95,14 @@ new AggregationBuilder(User, req.query).match({ status: 'active' }).lookup(...).
 | `message/` | Message send/receive, Socket.IO real-time | POST /messages, GET /messages/:chatId |
 | `notification/` | Push/email/in-app notifications | GET /notifications, PATCH /notifications/:id |
 | `gamification/` | Points, badges, leaderboard, student summary | GET /gamification/leaderboard, /gamification/badges, PATCH /gamification/badges/:id |
+| `gradebook/` | Student grades, assignment submissions, admin gradebook + summary + export | GET /gradebook/students/summary, /gradebook/students, /gradebook/students/export |
+| `feedback/` | Student course reviews, admin feedback management + summary | POST /feedback, GET /feedback/admin/all, PATCH /feedback/:id/respond |
+| `enrollment/` | Course enrollment, lesson progress tracking | POST /enrollments, GET /enrollments |
+| `quiz/` | Quiz CRUD, quiz attempts, scoring | GET /quizzes, POST /quizzes |
+| `community/` | Community posts, discussions | GET /community, POST /community |
+| `analytics/` | Dashboard analytics, course analytics | GET /analytics |
+| `legal/` | Terms of service, privacy policy management | GET /legal |
+| `activity/` | User activity tracking | GET /activity |
 
 ### Middlewares — `src/app/middlewares/`
 | File | Ki Kore |
@@ -128,6 +136,10 @@ new AggregationBuilder(User, req.query).match({ status: 'active' }).lookup(...).
 | `paginationHelper.ts` | Page/limit calculate |
 | `authHelpers.ts` | Auth utility (hash, compare) |
 | `gamificationHelper.ts` | Points award + badge evaluation (awardPoints, checkAndAwardBadges) |
+| `enrollmentHelper.ts` | Enrollment verification (verifyEnrollment with status check) |
+| `activityHelper.ts` | User activity tracking helper |
+| `presenceHelper.ts` | Socket.IO user presence tracking |
+| `unreadHelper.ts` | Unread message count tracking |
 
 ### Shared — `src/shared/`
 | File | Ki Kore |
@@ -142,6 +154,7 @@ new AggregationBuilder(User, req.query).match({ status: 'active' }).lookup(...).
 |------|---------|
 | `seedAdmin.ts` | Super admin account create kore (if missing) |
 | `seedBadges.ts` | 17 default badges seed kore (if missing) — admin er changes preserve thake |
+| `seedFeedback.ts` | Demo feedback data seed (development only) |
 
 ### API Routes — `src/routes/index.ts`
 | Route | Module |
@@ -152,7 +165,17 @@ new AggregationBuilder(User, req.query).match({ status: 'active' }).lookup(...).
 | `/chats` | ChatRoutes |
 | `/messages` | MessageRoutes |
 | `/notifications` | NotificationRoutes |
+| `/enrollments` | EnrollmentRoutes |
+| `/quizzes` | QuizRoutes |
+| `/gradebook` | GradebookRoutes |
+| `/feedback` | FeedbackRoutes |
 | `/gamification` | GamificationRoutes |
+| `/community` | CommunityRoutes |
+| `/analytics` | AnalyticsRoutes |
+| `/legal` | LegalRoutes |
+| `/activity` | ActivityRoutes |
+| `/dashboard` | DashboardRoutes |
+| `/student` | StudentRoutes |
 
 ## Environment Variables
 

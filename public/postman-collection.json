@@ -3819,6 +3819,66 @@
               "response": []
             },
             {
+              "name": "Get Sent Notification History",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/notifications/admin/sent?page=1&limit=10&sort=-createdAt",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["notifications", "admin", "sent"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-createdAt"
+                    }
+                  ]
+                },
+                "description": "Get history of notifications sent by admin. Shows title, audience, recipient count, sent date. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
+              "name": "Send Notification",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"New Lesson Available\",\n  \"text\": \"Check out the new lesson on React Hooks in Advanced JavaScript!\",\n  \"audience\": \"all\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/notifications/admin/send",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["notifications", "admin", "send"]
+                },
+                "description": "Send notification to all students or specific course students. Uses NotificationBuilder (DB + Socket.IO + Push). Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
               "name": "Mark All Admin Notifications as Read",
               "request": {
                 "method": "PATCH",

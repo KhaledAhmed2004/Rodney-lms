@@ -1,7 +1,12 @@
+import { StatusCodes } from 'http-status-codes';
 import { JwtPayload } from 'jsonwebtoken';
+import ApiError from '../../../errors/ApiError';
+import NotificationBuilder from '../../builder/NotificationBuilder/NotificationBuilder';
+import QueryBuilder from '../../builder/QueryBuilder';
+import { Enrollment } from '../enrollment/enrollment.model';
 import { INotification } from './notification.interface';
 import { Notification } from './notification.model';
-import QueryBuilder from '../../builder/QueryBuilder';
+import { SentNotification } from './sentNotification.model';
 
 // get notifications
 const getNotificationFromDB = async (
@@ -121,6 +126,78 @@ const adminMarkAllNotificationsAsRead = async () => {
   };
 };
 
+// Send notification via NotificationBuilder + save sent record
+const sendAdminNotification = async (
+  title: string,
+  text: string,
+  audience: string,
+  sentBy: string,
+  courseId?: string,
+) => {
+  const builder = new NotificationBuilder()
+    .setTitle(title)
+    .setText(text)
+    .setType('ADMIN')
+    .viaDatabase()
+    .viaSocket()
+    .viaPush();
+
+  if (audience === 'all') {
+    builder.toRole('STUDENT');
+  } else {
+    if (!courseId) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'courseId is required');
+    }
+    const enrollments = await Enrollment.find({
+      course: courseId,
+      status: { $in: ['ACTIVE', 'COMPLETED'] },
+    })
+      .select('student')
+      .lean();
+
+    const studentIds = enrollments.map(e => String(e.student));
+    if (studentIds.length === 0) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'No students enrolled in this course',
+      );
+    }
+    builder.toMany(studentIds);
+  }
+
+  const result = await builder.sendNow();
+  const recipientCount = result?.sent ?? 0;
+
+  // Save sent record for history
+  await SentNotification.create({
+    title,
+    text,
+    audience,
+    ...(courseId && { course: courseId }),
+    recipientCount,
+    sentBy,
+  });
+
+  return { recipientCount };
+};
+
+// Get sent notification history
+const getSentHistory = async (query: Record<string, unknown>) => {
+  const sentQuery = new QueryBuilder(
+    SentNotification.find()
+      .select('-sentBy -updatedAt -__v')
+      .populate('course', 'title'),
+    query,
+  )
+    .search(['title', 'text'])
+    .sort()
+    .paginate();
+
+  const data = await sentQuery.modelQuery;
+  const pagination = await sentQuery.getPaginationInfo();
+  return { pagination, data };
+};
+
 export const NotificationService = {
   adminNotificationFromDB,
   getNotificationFromDB,
@@ -128,4 +205,6 @@ export const NotificationService = {
   adminMarkNotificationAsReadIntoDB,
   markAllNotificationsAsRead,
   adminMarkAllNotificationsAsRead,
+  sendAdminNotification,
+  getSentHistory,
 };

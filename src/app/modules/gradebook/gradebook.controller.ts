@@ -48,6 +48,18 @@ const getAllStudentGradebook = catchAsync(
   },
 );
 
+const getGradebookSummary = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await GradebookService.getGradebookSummary();
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: 'Gradebook summary retrieved successfully',
+      data: result,
+    });
+  },
+);
+
 const exportStudentGradebook = catchAsync(
   async (req: Request, res: Response) => {
     const data = await GradebookService.exportStudentGradebook(req.query);
@@ -60,9 +72,13 @@ const exportStudentGradebook = catchAsync(
         { key: 'studentName', header: 'Student Name', width: 20 },
         { key: 'studentEmail', header: 'Email', width: 30 },
         { key: 'courseTitle', header: 'Course', width: 30 },
-        { key: 'quizScores', header: 'Quiz Scores', width: 40 },
-        { key: 'overallQuizPercentage', header: 'Overall Quiz %', width: 15 },
+        { key: 'quizzesAttempted', header: 'Quizzes Attempted', width: 18 },
+        { key: 'totalQuizzes', header: 'Total Quizzes', width: 15 },
+        { key: 'overallQuizPercentage', header: 'Quiz Avg %', width: 12 },
+        { key: 'assignmentsSubmitted', header: 'Assignments Submitted', width: 22 },
+        { key: 'totalAssignments', header: 'Total Assignments', width: 18 },
         { key: 'completionPercentage', header: 'Completion %', width: 15 },
+        { key: 'lastActivityDate', header: 'Last Activity', width: 18 },
       ])
       .sendResponse(res, filename);
   },
@@ -72,5 +88,6 @@ export const GradebookController = {
   submitAssignment,
   getMyGrades,
   getAllStudentGradebook,
+  getGradebookSummary,
   exportStudentGradebook,
 };
