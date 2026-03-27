@@ -22,7 +22,7 @@ router.get(
 );
 
 // Public
-router.get('/course/:courseId', FeedbackController.getPublishedByCourse);
+router.get('/course/:courseId', FeedbackController.getByCourse);
 
 // Admin routes
 router.get(
@@ -31,10 +31,16 @@ router.get(
   FeedbackController.getAllFeedback,
 );
 
-router.patch(
-  '/:id/publish',
+router.get(
+  '/admin/summary',
   auth(USER_ROLES.SUPER_ADMIN),
-  FeedbackController.togglePublish,
+  FeedbackController.getSummary,
+);
+
+router.get(
+  '/admin/:id',
+  auth(USER_ROLES.SUPER_ADMIN),
+  FeedbackController.getById,
 );
 
 router.patch(

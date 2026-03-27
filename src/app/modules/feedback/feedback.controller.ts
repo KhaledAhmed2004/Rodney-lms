@@ -21,8 +21,8 @@ const createFeedback = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const getPublishedByCourse = catchAsync(async (req: Request, res: Response) => {
-  const result = await FeedbackService.getPublishedByCourse(
+const getByCourse = catchAsync(async (req: Request, res: Response) => {
+  const result = await FeedbackService.getByCourse(
     req.params.courseId,
     req.query,
   );
@@ -46,12 +46,22 @@ const getAllFeedback = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const togglePublish = catchAsync(async (req: Request, res: Response) => {
-  const result = await FeedbackService.togglePublish(req.params.id);
+const getSummary = catchAsync(async (_req: Request, res: Response) => {
+  const result = await FeedbackService.getSummary();
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Feedback publish status toggled',
+    message: 'Feedback summary retrieved successfully',
+    data: result,
+  });
+});
+
+const getById = catchAsync(async (req: Request, res: Response) => {
+  const result = await FeedbackService.getById(req.params.id);
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Feedback retrieved successfully',
     data: result,
   });
 });
@@ -92,9 +102,10 @@ const getMyReviews = catchAsync(async (req: Request, res: Response) => {
 
 export const FeedbackController = {
   createFeedback,
-  getPublishedByCourse,
+  getByCourse,
   getAllFeedback,
-  togglePublish,
+  getById,
+  getSummary,
   respondToFeedback,
   deleteFeedback,
   getMyReviews,

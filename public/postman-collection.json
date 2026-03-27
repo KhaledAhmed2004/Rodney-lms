@@ -3980,6 +3980,25 @@
           "name": "Feedback Screen",
           "item": [
             {
+              "name": "Get Feedback Summary",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/feedback/admin/summary",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["feedback", "admin", "summary"]
+                },
+                "description": "Get feedback summary stats — total reviews with growth, average rating, pending responses, rating distribution. Requires SUPER_ADMIN role."
+              },
+              "response": []
+            },
+            {
               "name": "Get All Feedback",
               "request": {
                 "method": "GET",
@@ -4005,6 +4024,24 @@
                     {
                       "key": "sort",
                       "value": "-createdAt"
+                    },
+                    {
+                      "key": "searchTerm",
+                      "value": "",
+                      "disabled": true,
+                      "description": "Search in review text"
+                    },
+                    {
+                      "key": "course",
+                      "value": "COURSE_ID",
+                      "disabled": true,
+                      "description": "Filter by course ObjectId"
+                    },
+                    {
+                      "key": "rating",
+                      "value": "5",
+                      "disabled": true,
+                      "description": "Filter by star rating (1-5)"
                     }
                   ]
                 },
@@ -4013,9 +4050,9 @@
               "response": []
             },
             {
-              "name": "Toggle Publish",
+              "name": "Get Feedback by ID",
               "request": {
-                "method": "PATCH",
+                "method": "GET",
                 "header": [
                   {
                     "key": "Authorization",
@@ -4023,17 +4060,18 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/feedback/:id/publish",
+                  "raw": "{{baseUrl}}/feedback/admin/:id",
                   "host": ["{{baseUrl}}"],
-                  "path": ["feedback", ":id", "publish"],
+                  "path": ["feedback", "admin", ":id"],
                   "variable": [
                     {
                       "key": "id",
-                      "value": "FEEDBACK_ID"
+                      "value": "FEEDBACK_ID",
+                      "description": "Feedback ID (MongoDB ObjectId)"
                     }
                   ]
                 },
-                "description": "Toggle the published state of a feedback entry. Requires SUPER_ADMIN role."
+                "description": "Get a single feedback entry with student and course details. Requires SUPER_ADMIN role."
               },
               "response": []
             },

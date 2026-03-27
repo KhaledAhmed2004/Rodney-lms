@@ -80,7 +80,7 @@ new AggregationBuilder(User, req.query).match({ status: 'active' }).lookup(...).
 | File | Ki Kore |
 |------|---------|
 | `src/app.ts` | Express app — middleware chain, CORS, cookie, parser |
-| `src/server.ts` | Server start, MongoDB connect, Socket.IO init |
+| `src/server.ts` | Server start, MongoDB connect, Socket.IO init, seed (admin + badges) |
 | `src/config/index.ts` | Shob env variable ek jaygay |
 | `src/routes/index.ts` | Shob module route register kora hoy ekhane |
 | `public/postman-collection.json` | Full Postman collection (all API endpoints) |
@@ -94,6 +94,7 @@ new AggregationBuilder(User, req.query).match({ status: 'active' }).lookup(...).
 | `chat/` | Chat room create, group/private | POST /chats, GET /chats |
 | `message/` | Message send/receive, Socket.IO real-time | POST /messages, GET /messages/:chatId |
 | `notification/` | Push/email/in-app notifications | GET /notifications, PATCH /notifications/:id |
+| `gamification/` | Points, badges, leaderboard, student summary | GET /gamification/leaderboard, /gamification/badges, PATCH /gamification/badges/:id |
 
 ### Middlewares — `src/app/middlewares/`
 | File | Ki Kore |
@@ -126,6 +127,7 @@ new AggregationBuilder(User, req.query).match({ status: 'active' }).lookup(...).
 | `socketHelper.ts` | Socket.IO init + event setup |
 | `paginationHelper.ts` | Page/limit calculate |
 | `authHelpers.ts` | Auth utility (hash, compare) |
+| `gamificationHelper.ts` | Points award + badge evaluation (awardPoints, checkAndAwardBadges) |
 
 ### Shared — `src/shared/`
 | File | Ki Kore |
@@ -134,6 +136,12 @@ new AggregationBuilder(User, req.query).match({ status: 'active' }).lookup(...).
 | `sendResponse.ts` | Standard API response format |
 | `logger.ts` | Winston logger |
 | `pick.ts` | Object theke specific key pick |
+
+### Database Seeds — `src/DB/`
+| File | Ki Kore |
+|------|---------|
+| `seedAdmin.ts` | Super admin account create kore (if missing) |
+| `seedBadges.ts` | 17 default badges seed kore (if missing) — admin er changes preserve thake |
 
 ### API Routes — `src/routes/index.ts`
 | Route | Module |
@@ -144,6 +152,7 @@ new AggregationBuilder(User, req.query).match({ status: 'active' }).lookup(...).
 | `/chats` | ChatRoutes |
 | `/messages` | MessageRoutes |
 | `/notifications` | NotificationRoutes |
+| `/gamification` | GamificationRoutes |
 
 ## Environment Variables
 

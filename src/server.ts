@@ -3,6 +3,7 @@ import { Server } from 'socket.io';
 import app from './app';
 import config from './config';
 import { seedSuperAdmin } from './DB/seedAdmin';
+import { seedBadges } from './DB/seedBadges';
 import { socketHelper } from './helpers/socketHelper';
 import { errorLogger, logger, notifyCritical } from './shared/logger';
 import { CacheHelper } from './app/shared/CacheHelper';
@@ -75,6 +76,11 @@ async function main() {
     const seedSpinner = createSpinner({ text: 'Verifying super admin account...', color: 'cyan' });
     await seedSuperAdmin();
     seedSpinner.succeed('Super admin ready');
+
+    // Seed default badges (creates missing ones, preserves admin changes)
+    const badgeSpinner = createSpinner({ text: 'Verifying default badges...', color: 'cyan' });
+    await seedBadges();
+    badgeSpinner.succeed('Default badges ready');
 
     // Initialize CacheHelper (in-memory)
     const cacheSpinner = createSpinner({ text: 'Initializing cache system...', color: 'cyan' });

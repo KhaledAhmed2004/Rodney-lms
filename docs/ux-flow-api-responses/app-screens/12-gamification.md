@@ -230,6 +230,7 @@ For each active Badge:
 - Admin stats endpoint (`GET /admin/stats` — backend-only, UI te nai)
 - Badge criteria types defined
 - Response field filtering (`.select()` diye `__v`, timestamps exclude)
+- **Auto-seed 17 default badges** on server startup (`src/DB/seedBadges.ts`) — missing badges auto-create hoy, admin er changes preserve thake, deleted badges recreate hoy
 
 ### What's MISSING (Critical)
 
@@ -288,6 +289,23 @@ enrollment.service.ts → enrollInCourse() (first time)
 | **P2** | Points idempotency (unique index) | Prevents double-awarding |
 | **P3** | `totalPoints` reconciliation job | Catches drift |
 | **P3** | Badge slug, rarity, order fields | Polish |
+
+---
+
+### Default Badge Seed (2026-03-28)
+
+Server startup e `seedBadges()` automatically 17 default badges create kore (if missing). Badge delete korle next server start e recreate hoy. Admin er changes (description, threshold, isActive) preserve thake.
+
+| Criteria Type | Badges | Thresholds |
+|---|---|---|
+| `POINTS_THRESHOLD` | Rising Star, Point Collector, Point Master, Point Legend | 100, 500, 1000, 5000 |
+| `COURSES_COMPLETED` | First Steps, Course Explorer, Course Master, Course Legend | 1, 3, 5, 10 |
+| `QUIZZES_PASSED` | Quiz Starter, Quiz Master, Quiz Champion | 1, 10, 25 |
+| `PERFECT_QUIZ` | Perfect Score, Perfectionist | 1, 5 |
+| `STREAK_DAYS` | Consistent Learner, Streak Champion, Streak Legend | 7, 30, 100 |
+| `CUSTOM` | Early Adopter | 0 (manually awarded) |
+
+**Files**: `src/DB/seedBadges.ts` (seed data + logic), `src/server.ts` (calls `seedBadges()` after DB connect)
 
 ---
 

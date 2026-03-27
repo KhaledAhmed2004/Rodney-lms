@@ -3,7 +3,11 @@ import { z } from 'zod';
 const createFeedback = z.object({
   body: z.object({
     courseId: z.string({ required_error: 'Course ID is required' }),
-    rating: z.number({ required_error: 'Rating is required' }).min(1).max(5),
+    rating: z
+      .number({ required_error: 'Rating is required' })
+      .int({ message: 'Rating must be a whole number' })
+      .min(1)
+      .max(5),
     review: z.string({ required_error: 'Review is required' }).min(1).max(5000),
   }),
 });

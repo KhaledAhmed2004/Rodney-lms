@@ -29,10 +29,6 @@ const feedbackSchema = new Schema<IFeedback, FeedbackModel>(
       required: true,
       maxlength: 5000,
     },
-    isPublished: {
-      type: Boolean,
-      default: true,
-    },
     adminResponse: { type: String },
     respondedAt: { type: Date },
   },
@@ -40,7 +36,7 @@ const feedbackSchema = new Schema<IFeedback, FeedbackModel>(
 );
 
 feedbackSchema.index({ student: 1, course: 1 }, { unique: true });
-feedbackSchema.index({ course: 1, isPublished: 1 });
+feedbackSchema.index({ course: 1 });
 feedbackSchema.index({ rating: 1 });
 
 export const Feedback = model<IFeedback, FeedbackModel>(

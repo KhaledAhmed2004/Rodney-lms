@@ -6,11 +6,12 @@ import { IEnrollment } from '../modules/enrollment/enrollment.interface';
 const verifyEnrollment = async (
   studentId: string,
   courseId: string,
+  allowedStatuses: string[] = ['ACTIVE'],
 ): Promise<IEnrollment> => {
   const enrollment = await Enrollment.findOne({
     student: studentId,
     course: courseId,
-    status: 'ACTIVE',
+    status: { $in: allowedStatuses },
   });
   if (!enrollment) {
     throw new ApiError(

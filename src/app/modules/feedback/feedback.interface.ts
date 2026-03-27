@@ -6,7 +6,6 @@ export type IFeedback = {
   enrollment: Types.ObjectId;
   rating: number;
   review: string;
-  isPublished: boolean;
   adminResponse?: string;
   respondedAt?: Date;
   createdAt?: Date;
