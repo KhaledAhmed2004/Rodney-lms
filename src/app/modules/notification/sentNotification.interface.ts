@@ -1,12 +1,11 @@
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 
 export type ISentNotification = {
   title: string;
   text: string;
   audience: 'all' | 'course';
-  course?: Types.ObjectId;
+  courseTitle?: string;
   recipientCount: number;
-  sentBy: Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
 };

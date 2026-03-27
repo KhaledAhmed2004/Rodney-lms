@@ -92,13 +92,11 @@ const adminMarkAllNotificationsAsRead = catchAsync(
 );
 
 const sendNotification = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req.user as JwtPayload).id;
   const { title, text, audience, courseId } = req.body;
   const result = await NotificationService.sendAdminNotification(
     title,
     text,
     audience,
-    userId,
     courseId,
   );
 

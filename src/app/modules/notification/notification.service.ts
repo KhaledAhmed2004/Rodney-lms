@@ -131,7 +131,6 @@ const sendAdminNotification = async (
   title: string,
   text: string,
   audience: string,
-  sentBy: string,
   courseId?: string,
 ) => {
   const builder = new NotificationBuilder()
@@ -141,6 +140,8 @@ const sendAdminNotification = async (
     .viaDatabase()
     .viaSocket()
     .viaPush();
+
+  let courseTitle: string | undefined;
 
   if (audience === 'all') {
     builder.toRole('STUDENT');
@@ -153,29 +154,31 @@ const sendAdminNotification = async (
       status: { $in: ['ACTIVE', 'COMPLETED'] },
     })
       .select('student')
+      .populate('course', 'title')
       .lean();
 
-    const studentIds = enrollments.map(e => String(e.student));
-    if (studentIds.length === 0) {
+    if (enrollments.length === 0) {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
         'No students enrolled in this course',
       );
     }
+
+    courseTitle = (enrollments[0].course as unknown as { title: string })?.title;
+    const studentIds = enrollments.map(e => String(e.student));
     builder.toMany(studentIds);
   }
 
   const result = await builder.sendNow();
   const recipientCount = result?.sent ?? 0;
 
-  // Save sent record for history
+  // Save sent record for history (flat — no ObjectId refs, no populate needed)
   await SentNotification.create({
     title,
     text,
     audience,
-    ...(courseId && { course: courseId }),
+    ...(courseTitle && { courseTitle }),
     recipientCount,
-    sentBy,
   });
 
   return { recipientCount };
@@ -184,9 +187,7 @@ const sendAdminNotification = async (
 // Get sent notification history
 const getSentHistory = async (query: Record<string, unknown>) => {
   const sentQuery = new QueryBuilder(
-    SentNotification.find()
-      .select('-sentBy -updatedAt -__v')
-      .populate('course', 'title'),
+    SentNotification.find().select('-updatedAt -__v'),
     query,
   )
     .search(['title', 'text'])

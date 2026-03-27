@@ -16,14 +16,13 @@ const sentNotificationSchema = new Schema<
       enum: ['all', 'course'],
       required: true,
     },
-    course: { type: Schema.Types.ObjectId, ref: 'Course' },
+    courseTitle: { type: String },
     recipientCount: { type: Number, required: true },
-    sentBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true },
 );
 
-sentNotificationSchema.index({ sentBy: 1, createdAt: -1 });
+sentNotificationSchema.index({ createdAt: -1 });
 
 export const SentNotification = model<
   ISentNotification,

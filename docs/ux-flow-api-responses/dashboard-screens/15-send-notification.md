@@ -68,7 +68,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
       "title": "New Lesson Available",
       "text": "Check out the new lesson on React Hooks in Advanced JavaScript!",
       "audience": "course",
-      "course": { "_id": "6630a1b2c3d4e5f6a7b8c001", "title": "Advanced JavaScript" },
+      "courseTitle": "Advanced JavaScript",
       "recipientCount": 28,
       "createdAt": "2026-03-28T14:30:00Z"
     },
@@ -77,7 +77,6 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
       "title": "Platform Maintenance Scheduled",
       "text": "The platform will be under maintenance on March 30th from 2 AM to 4 AM.",
       "audience": "all",
-      "course": null,
       "recipientCount": 156,
       "createdAt": "2026-03-27T10:00:00Z"
     }
@@ -85,7 +84,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 }
 ```
 
-> `course` populate: shudhu `title` — `audience: "all"` hole `course: null`. `sentBy` response e nai — shudhu admin-i send korte pare, redundant info.
+> `courseTitle` — flat string, no ObjectId ref. `audience: "all"` hole field absent. No populate needed — course delete/rename holeo history intact thake.
 
 ---
 
