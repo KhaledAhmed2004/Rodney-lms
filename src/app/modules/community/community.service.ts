@@ -4,6 +4,8 @@ import QueryBuilder from '../../builder/QueryBuilder';
 import { deleteFile } from '../../middlewares/fileHandler';
 import { IPost, IPostReply } from './community.interface';
 import { Course } from '../course/course.model';
+import { User } from '../user/user.model';
+import { USER_STATUS } from '../../../enums/user';
 import { Post, PostLike, PostReply } from './community.model';
 import { GamificationHelper } from '../../helpers/gamificationHelper';
 import { POINTS_REASON } from '../gamification/gamification.interface';
@@ -50,14 +52,16 @@ const getAllPosts = async (query: Record<string, unknown>, userId?: string) => {
     baseFilter.course = query.courseId;
   }
 
+  // Pre-filter: exclude posts by deleted users for accurate pagination
+  const deletedUserIds = await User.find({ status: USER_STATUS.DELETE }).distinct('_id');
+  if (deletedUserIds.length > 0) {
+    baseFilter.author = { $nin: deletedUserIds };
+  }
+
   const postQuery = new QueryBuilder(
     Post.find(baseFilter)
       .select('author title course content image likesCount repliesCount createdAt')
-      .populate({
-        path: 'author',
-        select: 'name profilePicture role',
-        match: { status: { $ne: 'DELETE' } },
-      })
+      .populate('author', 'name profilePicture role')
       .populate('course', 'title'),
     query,
   )
@@ -89,11 +93,6 @@ const getAllPosts = async (query: Record<string, unknown>, userId?: string) => {
       course: p.course?.title || null,
     }));
   }
-
-  // Filter out posts from deleted/removed users
-  postsWithLikeStatus = postsWithLikeStatus.filter(
-    (p: any) => p.author !== null,
-  );
 
   return { pagination, data: postsWithLikeStatus };
 };
@@ -193,15 +192,21 @@ const toggleLike = async (postId: string, userId: string) => {
     user: userId,
   });
 
+  // Recalculate count from source of truth (self-healing, no drift)
+  const syncLikesCount = async () => {
+    const count = await PostLike.countDocuments({ post: postId });
+    await Post.findByIdAndUpdate(postId, { likesCount: count });
+  };
+
   if (removed) {
-    await Post.findByIdAndUpdate(postId, { $inc: { likesCount: -1 } });
+    await syncLikesCount();
     return { liked: false };
   }
 
   // Like — catch duplicate key (race condition: concurrent double-click)
   try {
     await PostLike.create({ post: postId, user: userId });
-    await Post.findByIdAndUpdate(postId, { $inc: { likesCount: 1 } });
+    await syncLikesCount();
     return { liked: true };
   } catch (err: any) {
     if (err.code === 11000) {
@@ -248,7 +253,8 @@ const createReply = async (
     parentReply: parentReplyId || null,
   });
 
-  await Post.findByIdAndUpdate(postId, { $inc: { repliesCount: 1 } });
+  const repliesCount = await PostReply.countDocuments({ post: postId });
+  await Post.findByIdAndUpdate(postId, { repliesCount });
 
   return (await PostReply.findById(reply._id).select(
     '_id content parentReply createdAt',
@@ -280,10 +286,8 @@ const deleteReply = async (
   }
 
   await PostReply.findByIdAndDelete(replyId);
-  await Post.findByIdAndUpdate(
-    { _id: reply.post, repliesCount: { $gte: deleteCount } },
-    { $inc: { repliesCount: -deleteCount } },
-  );
+  const repliesCount = await PostReply.countDocuments({ post: reply.post });
+  await Post.findByIdAndUpdate(reply.post, { repliesCount });
 };
 
 const getMyPosts = async (userId: string, query: Record<string, unknown>) => {
@@ -378,7 +382,7 @@ const updatePost = async (
   const updated = await Post.findByIdAndUpdate(postId, updateQuery, {
     new: true,
   })
-    .select('_id title content course image')
+    .select('_id title content course image updatedAt')
     .populate('course', 'title');
 
   const result: any = updated!.toObject();
@@ -405,9 +409,59 @@ const updateReply = async (
     replyId,
     { content },
     { new: true },
-  ).select('_id content');
+  ).select('_id content updatedAt');
 
   return updated!;
+};
+
+const getPostReplies = async (postId: string, query: Record<string, unknown>) => {
+  const post = await Post.findById(postId);
+  if (!post) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
+  }
+
+  // Paginate top-level replies, fetch their children in batch
+  const replyQuery = new QueryBuilder(
+    PostReply.find({ post: postId, parentReply: null })
+      .select('author content createdAt')
+      .populate({
+        path: 'author',
+        select: 'name profilePicture role',
+        match: { status: { $ne: 'DELETE' } },
+      }),
+    query,
+  )
+    .sort()
+    .paginate();
+
+  const topReplies = await replyQuery.modelQuery;
+  const pagination = await replyQuery.getPaginationInfo();
+
+  // Batch fetch children for this page's top-level replies
+  const topReplyIds = topReplies.map((r: any) => r._id);
+  const children = await PostReply.find({ parentReply: { $in: topReplyIds } })
+    .select('author content parentReply createdAt')
+    .populate({
+      path: 'author',
+      select: 'name profilePicture role',
+      match: { status: { $ne: 'DELETE' } },
+    })
+    .sort({ createdAt: 1 })
+    .lean();
+
+  const childrenMap = new Map<string, any[]>();
+  for (const child of children) {
+    const parentId = child.parentReply!.toString();
+    if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
+    childrenMap.get(parentId)!.push(child);
+  }
+
+  const data = topReplies.map((r: any) => ({
+    ...r.toObject(),
+    children: childrenMap.get(r._id.toString()) || [],
+  }));
+
+  return { pagination, data };
 };
 
 export const CommunityService = {
@@ -421,4 +475,5 @@ export const CommunityService = {
   getMyPosts,
   updatePost,
   updateReply,
+  getPostReplies,
 };

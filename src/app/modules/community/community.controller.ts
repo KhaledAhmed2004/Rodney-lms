@@ -137,6 +137,17 @@ const updateReply = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getPostReplies = catchAsync(async (req: Request, res: Response) => {
+  const result = await CommunityService.getPostReplies(req.params.id, req.query);
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Replies retrieved successfully',
+    pagination: result.pagination,
+    data: result.data,
+  });
+});
+
 export const CommunityController = {
   createPost,
   getAllPosts,
@@ -148,4 +159,5 @@ export const CommunityController = {
   getMyPosts,
   updatePost,
   updateReply,
+  getPostReplies,
 };

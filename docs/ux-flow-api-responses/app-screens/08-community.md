@@ -358,7 +358,8 @@ Auth: Bearer {{accessToken}}
     "title": "Updated title",
     "content": "Updated content...",
     "course": "JavaScript Basics",
-    "image": "https://cdn.example.com/new-image.jpg"
+    "image": "https://cdn.example.com/new-image.jpg",
+    "updatedAt": "2026-03-14T14:00:00Z"
   }
 }
 ```
@@ -389,7 +390,8 @@ Auth: Bearer {{accessToken}}
   "success": true,
   "data": {
     "_id": "664l...",
-    "content": "Updated reply content"
+    "content": "Updated reply content",
+    "updatedAt": "2026-03-14T14:10:00Z"
   }
 }
 ```
@@ -400,7 +402,63 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 8.10 Course Options (Filter Dropdown)
+### 8.10 Get Post Replies (Paginated)
+
+```
+GET /community/posts/:id/replies?page=1&limit=20&sort=-createdAt
+Auth: Bearer {{accessToken}}
+```
+
+> Paginated top-level replies with their children. Use for "Load more" when `hasMoreReplies: true` in 8.3.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Replies retrieved successfully",
+  "pagination": { "page": 1, "limit": 20, "total": 45, "totalPage": 3 },
+  "data": [
+    {
+      "_id": "664l...",
+      "author": {
+        "_id": "664b...",
+        "name": "Alice Student",
+        "profilePicture": "https://cdn.example.com/alice.jpg",
+        "role": "STUDENT"
+      },
+      "content": "I had the same question! Anyone?",
+      "children": [],
+      "createdAt": "2026-03-14T13:20:00Z"
+    },
+    {
+      "_id": "664m...",
+      "author": {
+        "_id": "664c...",
+        "name": "Admin Jane",
+        "profilePicture": "https://cdn.example.com/jane.jpg",
+        "role": "SUPER_ADMIN"
+      },
+      "content": "A closure is when a function remembers its outer scope...",
+      "children": [
+        {
+          "_id": "664n...",
+          "author": { "_id": "664a...", "name": "John Doe", "profilePicture": "...", "role": "STUDENT" },
+          "content": "Thanks, that makes sense now!",
+          "parentReply": "664m...",
+          "createdAt": "2026-03-14T13:45:00Z"
+        }
+      ],
+      "createdAt": "2026-03-14T13:30:00Z"
+    }
+  ]
+}
+```
+
+> Pagination top-level replies er upor kaje kore. Children batch fetch hoy per page — separate pagination nai. Default sort: `createdAt ASC` (oldest first).
+
+---
+
+### 8.11 Course Options (Filter Dropdown)
 
 ```
 GET /courses/options
@@ -474,3 +532,27 @@ Auth: Bearer {{accessToken}}
 - **Problem:** Edit Post e image replace kora jeto (notun file upload), course remove kora jeto (`courseId: "null"`), kintu existing image just delete korar (replace chara) kono mechanism chilo na — user image niye stuck thakto
 - **Fix:** `removeImage: "true"` form-data field add kora hoise. Validation e `z.union([z.literal('true'), z.literal('false')]).transform(v => v === 'true')`. Service e logic: `removeImage === true && new image nai` hole purano file storage theke delete + `$unset: { image: 1 }` diye DB theke field remove. New image dile removeImage ignore hoy
 - **Affected:** 8.8 Edit Post
+
+---
+
+#### Round 3 — Staff Engineer Audit (2026-03-29)
+
+**1. [P1] Pagination count mismatch — deleted user filter applied AFTER pagination**
+- **Problem:** `getAllPosts` e deleted-user posts filter hoto pagination calculate howar POR. 10 item per page e 3 ta deleted-user post filter out hole 7 ta item dekhay but pagination bole `total: 25`. Empty pages o possible
+- **Fix:** Pre-filter approach — deleted user IDs query diye `baseFilter.author = { $nin: deletedUserIds }` add kora hoise QueryBuilder er age. Pagination ekhon accurate. Post-filter remove kora hoise
+- **Affected:** 8.2 Get Feed
+
+**2. [P1] `hasMoreReplies: true` but no paginated replies endpoint**
+- **Problem:** `getPostById` e `hasMoreReplies` flag chilo but 200+ replies load korar kono API chilo na — "Load more" button dead
+- **Fix:** `GET /community/posts/:id/replies?page=1&limit=20` endpoint add kora hoise. Top-level replies paginate hoy, children batch fetch hoy per page. Nested tree structure same as 8.3
+- **Affected:** New endpoint 8.10
+
+**3. [P2] `likesCount` / `repliesCount` counter drift**
+- **Problem:** `PostLike.create()` ar `Post.$inc({ likesCount: 1 })` — 2 ta separate operation. First succeed kore second fail korle count drift hoy. Same for replies
+- **Fix:** `$inc` replace kora hoise `countDocuments` diye — source of truth (PostLike/PostReply collection) theke fresh count set hoy. Self-healing — previous drift o correct hoy
+- **Affected:** 8.4 Toggle Like, 8.5 Reply, 8.6 Delete Reply
+
+**4. [P2] Edit response e `updatedAt` missing**
+- **Problem:** Post/reply edit korle response e `updatedAt` chilo na — client "edited" indicator dekhate parto na
+- **Fix:** `updatePost` select e `updatedAt` add, `updateReply` select e `updatedAt` add
+- **Affected:** 8.8 Edit Post, 8.9 Edit Reply
