@@ -29,7 +29,8 @@
       "Bash(xargs grep:*)",
       "Bash(grep -r \"isValidObjectId\\\\|Types.ObjectId\" D:web projectsoffice-starodneysrcappmodulesgradebook --include=*.ts)",
       "Bash(find 'D:\\\\web projects\\\\office-sta\\\\rodney\\\\src\\\\app\\\\modules' -name *validation* -type f)",
-      "Bash(npx prettier:*)"
+      "Bash(npx prettier:*)",
+      "Bash(sed 's/\\\\.md//')"
     ],
     "deny": [],
     "ask": []

@@ -113,24 +113,30 @@ Auth: Bearer {{accessToken}} (STUDENT)
 | Route | `GET /student/home` | `student-home.route.ts:8` | Match |
 | Auth | STUDENT | `auth(USER_ROLES.STUDENT)` | Match |
 | Message | `"Home data retrieved successfully"` | `controller.ts:14` | Match |
-| `name` | string | `service.ts:56` — `user?.name` | Match |
-| `points` | number | `service.ts:57` — `user?.totalPoints` | Match |
-| `streak` | `{ current, longest }` | `service.ts:58-61` | Match |
-| `yourProgress` | `{ courseProgress, quizProgress }` | `service.ts:62-65` | Match |
-| `enrolledCourses` fields | `title, slug, thumbnail, completionPercentage` | `service.ts:67-70` | Match |
-| `enrolledCourses` limit | max 10 | `service.ts:16` — `.limit(10)` | Match |
+| `name` | string | `service.ts:55` — `user?.name` | Match |
+| `points` | number | `service.ts:56` — `user?.totalPoints` | Match |
+| `streak` | `{ current, longest }` | `service.ts:57-60` | Match |
+| `yourProgress` | `{ courseProgress, quizProgress }` | `service.ts:61-64` | Match |
+| `enrolledCourses` fields | `title, slug, thumbnail, completionPercentage` | `service.ts:66-69` | Match |
+| `enrolledCourses` limit | max 10 | `service.ts:65` — `.slice(0, 10)` | Match |
 | `enrolledCourses` sort | lastAccessedAt desc | `service.ts:15` | Match |
 | `enrolledCourses` filter | ACTIVE + COMPLETED | `service.ts:12` | Match |
-| `enrolledCourses` null guard | deleted courses filtered | `service.ts:34` | Match |
-| `recentBadges` fields | `name, icon, earnedAt` | `service.ts:73-75` | Match |
-| `recentBadges` limit | max 5 | `service.ts:20` — `.limit(5)` | Match |
-| `recentBadges` sort | earnedAt desc | `service.ts:19` | Match |
-| `recentBadges` null guard | deleted badges filtered | `service.ts:35` | Match |
+| `enrolledCourses` null guard | deleted courses filtered | `service.ts:33` | Match |
+| `recentBadges` fields | `name, icon, earnedAt` | `service.ts:72-74` | Match |
+| `recentBadges` limit | max 5 | `service.ts:19` — `.limit(5)` | Match |
+| `recentBadges` sort | earnedAt desc | `service.ts:18` | Match |
+| `recentBadges` null guard | deleted badges filtered | `service.ts:34` | Match |
+
+### Bug Fix (2026-03-29)
+
+| Bug | Before | After |
+|-----|--------|-------|
+| `courseProgress` inflated for 10+ courses | `.limit(10)` on enrollment query — `courseProgress` calculated from top 10 only, not all courses. Home vs Progress screen inconsistent. | `.limit(10)` removed, all enrollments fetched. `courseProgress` uses ALL courses. `.slice(0, 10)` applied at response mapping for display. |
 
 ### Files Checked
 
 | File | What Checked |
 |------|-------------|
-| `src/app/modules/student-home/student-home.service.ts:7-77` | `getHome` — populate fields, response mapping, limits, sorts, filters, null guards |
+| `src/app/modules/student-home/student-home.service.ts:7-77` | `getHome` — populate fields, response mapping, limits, sorts, filters, null guards, courseProgress calculation |
 | `src/app/modules/student-home/student-home.controller.ts:14` | Message: "Home data retrieved successfully" |
 | `src/app/modules/student-home/student-home.route.ts:8` | Route: `GET /home`, auth STUDENT only |

@@ -12,8 +12,7 @@ const getHome = async (studentId: string) => {
       status: { $in: ['ACTIVE', 'COMPLETED'] },
     })
       .populate('course', 'title slug thumbnail')
-      .sort({ 'progress.lastAccessedAt': -1 })
-      .limit(10),
+      .sort({ 'progress.lastAccessedAt': -1 }),
     StudentBadge.find({ student: studentId })
       .populate('badge', 'name icon')
       .sort({ earnedAt: -1 })
@@ -34,7 +33,7 @@ const getHome = async (studentId: string) => {
   const validEnrolledCourses = enrolledCourses.filter((e: any) => e.course);
   const validRecentBadges = recentBadges.filter((sb: any) => sb.badge);
 
-  // Calculate course progress (average completion across all courses)
+  // Calculate course progress from ALL enrolled courses, not just displayed ones
   const totalCourses = validEnrolledCourses.length;
   const courseProgress =
     totalCourses > 0
@@ -63,7 +62,7 @@ const getHome = async (studentId: string) => {
       courseProgress,
       quizProgress: quizPercentage,
     },
-    enrolledCourses: validEnrolledCourses.map((e: any) => ({
+    enrolledCourses: validEnrolledCourses.slice(0, 10).map((e: any) => ({
       title: e.course.title,
       slug: e.course.slug,
       thumbnail: e.course.thumbnail,
