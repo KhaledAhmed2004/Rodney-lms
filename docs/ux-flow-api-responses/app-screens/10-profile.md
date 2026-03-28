@@ -67,8 +67,6 @@ Auth: Bearer {{accessToken}}
     "dateOfBirth": "1998-05-15",
     "location": "Chittagong, Bangladesh",
     "role": "STUDENT",
-    "status": "ACTIVE",
-    "verified": true,
     "totalPoints": 450,
     "streak": {
       "current": 7,
@@ -172,32 +170,35 @@ Auth: None
 
 ```
 GET /gamification/my-badges
-Auth: Bearer {{accessToken}}
+Auth: Bearer {{accessToken}} (STUDENT)
 ```
 
 **Response:**
 ```json
 {
   "success": true,
-  "message": "Badges retrieved successfully",
-  "data": [
-    {
-      "name": "Quiz Master",
-      "icon": "https://cdn.example.com/badge.png",
-      "description": "Pass 10 quizzes",
-      "earnedAt": "2026-03-10T12:00:00Z"
-    },
-    {
-      "name": "First Steps",
-      "icon": "https://cdn.example.com/first-steps.png",
-      "description": "Complete your first lesson",
-      "earnedAt": "2026-03-05T08:30:00Z"
-    }
-  ]
+  "message": "Achievements retrieved successfully",
+  "data": {
+    "totalBadges": 17,
+    "earnedBadges": 3,
+    "badges": [
+      {
+        "name": "Quiz Master",
+        "icon": "https://cdn.example.com/badge-quiz.png",
+        "earnedAt": "2026-03-10T12:00:00Z"
+      },
+      {
+        "name": "First Steps",
+        "icon": "https://cdn.example.com/first-steps.png",
+        "earnedAt": "2026-03-05T08:30:00Z"
+      }
+    ]
+  }
 }
 ```
 
-> Sorted by `earnedAt: -1` (newest first). Typically 10-20 badges per student — no pagination needed.
+> `totalBadges`: shob active badges er count. `earnedBadges`: student er earned count.
+> `badges`: sorted by `earnedAt: -1` (newest first). Deleted badges filtered out. No pagination — typically 10-20 badges max.
 
 ---
 
@@ -268,7 +269,7 @@ Auth: Bearer {{accessToken}}
 **1. [HIGH] GET /users/profile — STUDENT Role e `.select()` Chilo Na**
 - **Problem:** Non-STUDENT role er jonno exclusion chilo (`-achievements -totalPoints -streak -onboardingCompleted -deviceTokens`) but STUDENT er jonno kono `.select()` chilo na — full User document return hoto. `deviceTokens` (push notification tokens), `about`, `achievements`, `__v`, `createdAt`, `updatedAt` shob leak hoto
 - **Security:** `deviceTokens` client e expose howa — push notification tokens sensitive data
-- **Fix:** STUDENT role er jonno positive `.select()` add kora hoise: `name email profilePicture phone gender dateOfBirth location role status verified totalPoints streak onboardingCompleted`. Ekhon response exactly doc er 10.1 response example match kore
+- **Fix:** STUDENT role er jonno positive `.select()` add kora hoise: `name email profilePicture phone gender dateOfBirth location role totalPoints streak onboardingCompleted`. Ekhon response exactly doc er 10.1 response example match kore
 - **Affected:** 10.1 Get Own Profile
 
 **2. [HIGH] PATCH /users/profile — STUDENT Role e `.select()` Chilo Na**
@@ -297,7 +298,7 @@ Auth: Bearer {{accessToken}}
 
 **QA-4 [HIGH]: Soft-Deleted User Can Access & Update Profile**
 - **Problem:** Auth middleware shudhu JWT validity + role check kore, user status check kore na. `status: DELETE` er user er JWT expire howar age porjonto profile access + modify korte parto
-- **Fix:** `getUserProfileFromDB` e DELETE status check add kora hoise → 403 "Your account has been deleted". `updateProfileToDB` e ACTIVE-only check add kora hoise → non-ACTIVE user (DELETE, RESTRICTED, INACTIVE) profile update korte parbe na → 403 "Your account is not active"
+- **Fix:** `getUserProfileFromDB` e query-level filter add kora hoise: `User.findOne({ _id: id, status: { $ne: 'DELETE' } })` — deleted user er query null return kore → "User doesn't exist!" error (info leak nai). `updateProfileToDB` e ACTIVE-only check add kora hoise → non-ACTIVE user (DELETE, RESTRICTED, INACTIVE) profile update korte parbe na → 403 "Your account is not active"
 - **Affected:** 10.1 Get Own Profile, 10.2 Update Profile
 
 **QA-5 [MEDIUM]: Whitespace-Only Name Passes Validation**
@@ -317,5 +318,19 @@ Auth: Bearer {{accessToken}}
 
 **Systemic Note: `validateRequest` Doesn't Sanitize `req.body`**
 - `validateRequest` middleware e `schema.parseAsync()` er parsed result `req.body` te assign hoy na — raw body untouched thake. `.strict()` dile unknown fields reject hoy (400), chara dile silently pass through kore. **Shob module er validation e ei risk ache.** Recommend: `validateRequest` e `req.body = result.body` add koro — but app-wide impact er jonno separate PR e test kore deploy korte hobe
+
+---
+
+#### Round 3 — Response Cleanup (2026-03-29)
+
+**1. `status` field removed from student profile response**
+- **Reason:** `status` admin concern — student UI te kothao display hoy na. Admin user management e status dekhay/change kore, student er nijer profile e irrelevant
+- **Fix:** `studentProfileFields` theke `status` remove. Deleted account check `User.findOne({ status: { $ne: 'DELETE' } })` diye query-level e move kora hoise — manual `if` check er bodole
+- **Affected:** 10.1 Get Own Profile
+
+**2. `verified` field removed from student profile response**
+- **Reason:** Logged-in user always verified — unverified user login e dhukteoi pare na (OTP verify → auto-login flow). Tai profile e `verified: true` meaningless, always same value
+- **Fix:** `studentProfileFields` theke `verified` remove
+- **Affected:** 10.1 Get Own Profile
 
 ---

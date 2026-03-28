@@ -39,7 +39,7 @@ const getAll = async (): Promise<ILegalPage[]> => {
 
 const getBySlug = async (slug: string): Promise<ILegalPage> => {
   const result = await LegalPage.findOne({ slug }).select(
-    'slug title content updatedAt',
+    '-_id slug title content updatedAt',
   );
   if (!result) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');

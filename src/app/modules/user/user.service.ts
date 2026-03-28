@@ -58,9 +58,9 @@ const getUserProfileFromDB = async (
     '-achievements -totalPoints -streak -onboardingCompleted -deviceTokens';
 
   const studentProfileFields =
-    'name email profilePicture phone gender dateOfBirth location role status verified totalPoints streak onboardingCompleted';
+    'name email profilePicture phone gender dateOfBirth location role totalPoints streak onboardingCompleted';
 
-  const query = User.findById(id);
+  const query = User.findOne({ _id: id, status: { $ne: USER_STATUS.DELETE } });
 
   if (user.role === USER_ROLES.STUDENT) {
     query.select(studentProfileFields);
@@ -71,10 +71,6 @@ const getUserProfileFromDB = async (
   const result = await query;
   if (!result) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
-  }
-
-  if (result.status === USER_STATUS.DELETE) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Your account has been deleted');
   }
 
   return result;
