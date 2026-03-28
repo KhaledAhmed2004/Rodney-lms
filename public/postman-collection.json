@@ -3938,11 +3938,45 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/analytics/user-engagement",
+                  "raw": "{{baseUrl}}/analytics/user-engagement?period=month",
                   "host": ["{{baseUrl}}"],
-                  "path": ["analytics", "user-engagement"]
+                  "path": ["analytics", "user-engagement"],
+                  "query": [
+                    {
+                      "key": "period",
+                      "value": "month",
+                      "description": "week | month | quarter | year",
+                      "disabled": true
+                    }
+                  ]
                 },
-                "description": "Get user engagement analytics data. Requires SUPER_ADMIN role."
+                "description": "Get user engagement analytics data (daily active users). Requires SUPER_ADMIN role. Used for User Growth chart."
+              },
+              "response": []
+            },
+            {
+              "name": "Engagement Heatmap",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/analytics/engagement-heatmap?period=quarter",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["analytics", "engagement-heatmap"],
+                  "query": [
+                    {
+                      "key": "period",
+                      "value": "quarter",
+                      "description": "week | month | quarter | year (default: quarter)"
+                    }
+                  ]
+                },
+                "description": "Get engagement heatmap data with dayOfWeek, weekIndex, and intensity (0-4). Requires SUPER_ADMIN role. Default period: quarter."
               },
               "response": []
             },
@@ -3957,11 +3991,19 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/analytics/course-completion",
+                  "raw": "{{baseUrl}}/analytics/course-completion?period=month",
                   "host": ["{{baseUrl}}"],
-                  "path": ["analytics", "course-completion"]
+                  "path": ["analytics", "course-completion"],
+                  "query": [
+                    {
+                      "key": "period",
+                      "value": "month",
+                      "description": "week | month | quarter | year (omit for all-time)",
+                      "disabled": true
+                    }
+                  ]
                 },
-                "description": "Get course completion analytics data. Requires SUPER_ADMIN role."
+                "description": "Get course completion rates for published courses. Requires SUPER_ADMIN role. Used for Top Performing Courses table."
               },
               "response": []
             },
@@ -3976,11 +4018,57 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/analytics/quiz-performance",
+                  "raw": "{{baseUrl}}/analytics/quiz-performance?period=month",
                   "host": ["{{baseUrl}}"],
-                  "path": ["analytics", "quiz-performance"]
+                  "path": ["analytics", "quiz-performance"],
+                  "query": [
+                    {
+                      "key": "period",
+                      "value": "month",
+                      "description": "week | month | quarter | year (omit for all-time)",
+                      "disabled": true
+                    }
+                  ]
                 },
-                "description": "Get quiz performance analytics data. Requires SUPER_ADMIN role."
+                "description": "Get quiz performance stats (avg score, pass rate, attempts). Requires SUPER_ADMIN role. Used for Quiz Score Distribution chart."
+              },
+              "response": []
+            },
+            {
+              "name": "Export Analytics",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/analytics/export?type=courses",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["analytics", "export"],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "courses",
+                      "description": "courses | quizzes | engagement (required)"
+                    },
+                    {
+                      "key": "format",
+                      "value": "csv",
+                      "description": "csv | xlsx (default: csv)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "period",
+                      "value": "month",
+                      "description": "week | month | quarter | year (omit for all-time)",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Export analytics data as CSV or XLSX file. Requires SUPER_ADMIN role. Type: courses (completion rates), quizzes (performance stats), engagement (daily active users)."
               },
               "response": []
             },

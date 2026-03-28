@@ -74,6 +74,26 @@ const adminMarkAllNotificationsAsRead = (0, catchAsync_1.default)((req, res) => 
         data: { updated: result.modifiedCount },
     });
 }));
+const sendNotification = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { title, text, audience, courseId } = req.body;
+    const result = yield notification_service_1.NotificationService.sendAdminNotification(title, text, audience, courseId);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: `Notification sent to ${result.recipientCount} students`,
+        data: result,
+    });
+}));
+const getSentHistory = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield notification_service_1.NotificationService.getSentHistory(req.query);
+    (0, sendResponse_1.default)(res, {
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        success: true,
+        message: 'Sent notification history retrieved successfully',
+        pagination: result.pagination,
+        data: result.data,
+    });
+}));
 exports.NotificationController = {
     adminNotificationFromDB,
     getNotificationFromDB,
@@ -81,4 +101,6 @@ exports.NotificationController = {
     readNotification,
     adminMarkNotificationAsRead,
     adminMarkAllNotificationsAsRead,
+    sendNotification,
+    getSentHistory,
 };

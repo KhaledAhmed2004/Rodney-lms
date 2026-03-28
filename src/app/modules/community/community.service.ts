@@ -5,6 +5,8 @@ import { deleteFile } from '../../middlewares/fileHandler';
 import { IPost, IPostReply } from './community.interface';
 import { Course } from '../course/course.model';
 import { Post, PostLike, PostReply } from './community.model';
+import { GamificationHelper } from '../../helpers/gamificationHelper';
+import { POINTS_REASON } from '../gamification/gamification.interface';
 
 const validateCourseId = async (courseId: string) => {
   const course = await Course.findById(courseId).select('_id');
@@ -32,6 +34,13 @@ const createPost = async (
       .select('_id title content course image createdAt')
       .populate('course', 'title')
   )!.toObject();
+
+  // Gamification: award points for community post
+  try {
+    await GamificationHelper.awardPoints(authorId, POINTS_REASON.COMMUNITY_POST, post._id.toString(), 'Post');
+    await GamificationHelper.checkAndAwardBadges(authorId);
+  } catch { /* points failure should not block post creation */ }
+
   return { ...result, course: result.course?.title || null };
 };
 

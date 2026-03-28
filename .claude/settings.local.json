@@ -28,7 +28,8 @@
       "Bash(cmd //c \"taskkill /pid 24612 /T /F\")",
       "Bash(xargs grep:*)",
       "Bash(grep -r \"isValidObjectId\\\\|Types.ObjectId\" D:web projectsoffice-starodneysrcappmodulesgradebook --include=*.ts)",
-      "Bash(find 'D:\\\\web projects\\\\office-sta\\\\rodney\\\\src\\\\app\\\\modules' -name *validation* -type f)"
+      "Bash(find 'D:\\\\web projects\\\\office-sta\\\\rodney\\\\src\\\\app\\\\modules' -name *validation* -type f)",
+      "Bash(npx prettier:*)"
     ],
     "deny": [],
     "ask": []

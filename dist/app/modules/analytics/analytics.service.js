@@ -8,12 +8,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AnalyticsService = void 0;
+const http_status_codes_1 = require("http-status-codes");
+const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const enrollment_model_1 = require("../enrollment/enrollment.model");
 const quiz_model_1 = require("../quiz/quiz.model");
 const activity_model_1 = require("../activity/activity.model");
-const course_model_1 = require("../course/course.model");
 const getUserEngagement = (...args_1) => __awaiter(void 0, [...args_1], void 0, function* (period = 'month') {
     const startDate = getStartDate(period);
     const activeUsers = yield activity_model_1.DailyActivity.aggregate([
@@ -34,28 +38,67 @@ const getUserEngagement = (...args_1) => __awaiter(void 0, [...args_1], void 0, 
     ]);
     return activeUsers;
 });
-const getCourseCompletion = () => __awaiter(void 0, void 0, void 0, function* () {
-    const courses = yield course_model_1.Course.find({ status: 'PUBLISHED' }).select('title slug');
-    const completionData = yield Promise.all(courses.map((course) => __awaiter(void 0, void 0, void 0, function* () {
-        const total = yield enrollment_model_1.Enrollment.countDocuments({ course: course._id });
-        const completed = yield enrollment_model_1.Enrollment.countDocuments({
-            course: course._id,
-            status: 'COMPLETED',
-        });
-        const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
-        return {
-            courseId: course._id,
-            title: course.title,
-            totalEnrollments: total,
-            completedEnrollments: completed,
-            completionRate: rate,
-        };
-    })));
-    return completionData;
+const getCourseCompletion = (period) => __awaiter(void 0, void 0, void 0, function* () {
+    const matchStage = {};
+    if (period) {
+        matchStage.createdAt = { $gte: getStartDate(period) };
+    }
+    const pipeline = [
+        ...(Object.keys(matchStage).length > 0
+            ? [{ $match: matchStage }]
+            : []),
+        {
+            $group: {
+                _id: '$course',
+                totalEnrollments: { $sum: 1 },
+                completedEnrollments: {
+                    $sum: { $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0] },
+                },
+            },
+        },
+        {
+            $lookup: {
+                from: 'courses',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'course',
+                pipeline: [
+                    { $match: { status: 'PUBLISHED' } },
+                    { $project: { title: 1 } },
+                ],
+            },
+        },
+        { $unwind: '$course' },
+        {
+            $project: {
+                courseId: '$_id',
+                title: '$course.title',
+                totalEnrollments: 1,
+                completedEnrollments: 1,
+                completionRate: {
+                    $round: [
+                        {
+                            $multiply: [
+                                { $divide: ['$completedEnrollments', '$totalEnrollments'] },
+                                100,
+                            ],
+                        },
+                        0,
+                    ],
+                },
+            },
+        },
+        { $sort: { completionRate: -1 } },
+    ];
+    return enrollment_model_1.Enrollment.aggregate(pipeline);
 });
-const getQuizPerformance = () => __awaiter(void 0, void 0, void 0, function* () {
+const getQuizPerformance = (period) => __awaiter(void 0, void 0, void 0, function* () {
+    const matchConditions = { status: 'COMPLETED' };
+    if (period) {
+        matchConditions.createdAt = { $gte: getStartDate(period) };
+    }
     const quizStats = yield quiz_model_1.QuizAttempt.aggregate([
-        { $match: { status: 'COMPLETED' } },
+        { $match: matchConditions },
         {
             $group: {
                 _id: '$quiz',
@@ -159,6 +202,18 @@ const getStudentAnalytics = (studentId) => __awaiter(void 0, void 0, void 0, fun
         activitySummary: activitySummary[0] || null,
     };
 });
+const getExportData = (type, period) => __awaiter(void 0, void 0, void 0, function* () {
+    switch (type) {
+        case 'courses':
+            return getCourseCompletion(period);
+        case 'quizzes':
+            return getQuizPerformance(period);
+        case 'engagement':
+            return getUserEngagement(period);
+        default:
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid export type');
+    }
+});
 function getStartDate(period) {
     const now = new Date();
     switch (period) {
@@ -185,4 +240,5 @@ exports.AnalyticsService = {
     getQuizPerformance,
     getCourseAnalytics,
     getStudentAnalytics,
+    getExportData,
 };

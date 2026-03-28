@@ -16,11 +16,11 @@ exports.EnrollmentHelper = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const enrollment_model_1 = require("../modules/enrollment/enrollment.model");
-const verifyEnrollment = (studentId, courseId) => __awaiter(void 0, void 0, void 0, function* () {
+const verifyEnrollment = (studentId_1, courseId_1, ...args_1) => __awaiter(void 0, [studentId_1, courseId_1, ...args_1], void 0, function* (studentId, courseId, allowedStatuses = ['ACTIVE']) {
     const enrollment = yield enrollment_model_1.Enrollment.findOne({
         student: studentId,
         course: courseId,
-        status: 'ACTIVE',
+        status: { $in: allowedStatuses },
     });
     if (!enrollment) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'You are not enrolled in this course');

@@ -13,8 +13,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationService = exports.markAllNotificationsAsRead = void 0;
-const notification_model_1 = require("./notification.model");
+const http_status_codes_1 = require("http-status-codes");
+const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
+const NotificationBuilder_1 = __importDefault(require("../../builder/NotificationBuilder/NotificationBuilder"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
+const course_model_1 = require("../course/course.model");
+const enrollment_model_1 = require("../enrollment/enrollment.model");
+const notification_model_1 = require("./notification.model");
+const sentNotification_model_1 = require("./sentNotification.model");
 // get notifications
 const getNotificationFromDB = (user, query) => __awaiter(void 0, void 0, void 0, function* () {
     // 1️⃣ Initialize QueryBuilder for user's notifications
@@ -42,7 +48,7 @@ const getNotificationFromDB = (user, query) => __awaiter(void 0, void 0, void 0,
 const markNotificationAsReadIntoDB = (notificationId, userId) => __awaiter(void 0, void 0, void 0, function* () {
     const notification = yield notification_model_1.Notification.findOneAndUpdate({ _id: notificationId, receiver: userId }, { isRead: true }, { new: true });
     if (!notification) {
-        throw new Error('Notification not found');
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Notification not found');
     }
     return notification;
 });
@@ -79,7 +85,7 @@ const adminNotificationFromDB = (query) => __awaiter(void 0, void 0, void 0, fun
 const adminMarkNotificationAsReadIntoDB = (notificationId) => __awaiter(void 0, void 0, void 0, function* () {
     const notification = yield notification_model_1.Notification.findOneAndUpdate({ _id: notificationId, type: 'ADMIN' }, { isRead: true }, { new: true });
     if (!notification) {
-        throw new Error('Admin notification not found');
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Admin notification not found');
     }
     return notification;
 });
@@ -91,6 +97,63 @@ const adminMarkAllNotificationsAsRead = () => __awaiter(void 0, void 0, void 0, 
         message: 'All admin notifications marked as read',
     };
 });
+// Send notification via NotificationBuilder + save sent record
+const sendAdminNotification = (title, text, audience, courseId) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const builder = new NotificationBuilder_1.default()
+        .setTitle(title)
+        .setText(text)
+        .setType('ADMIN')
+        .viaDatabase()
+        .viaSocket()
+        .viaPush();
+    let courseTitle;
+    if (audience === 'all') {
+        builder.toRole('STUDENT');
+    }
+    else {
+        if (!courseId) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'courseId is required when audience is course');
+        }
+        const [enrollments, course] = yield Promise.all([
+            enrollment_model_1.Enrollment.find({
+                course: courseId,
+                status: { $in: ['ACTIVE', 'COMPLETED'] },
+            })
+                .select('student')
+                .lean(),
+            course_model_1.Course.findById(courseId).select('title').lean(),
+        ]);
+        if (!course) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Course not found');
+        }
+        if (enrollments.length === 0) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'No students enrolled in this course');
+        }
+        courseTitle = course.title;
+        const studentIds = enrollments.map(e => String(e.student));
+        builder.toMany(studentIds);
+    }
+    const result = yield builder.sendNow();
+    const sent = result === null || result === void 0 ? void 0 : result.sent;
+    const recipientCount = typeof sent === 'number' ? sent : (_b = (_a = sent === null || sent === void 0 ? void 0 : sent.database) !== null && _a !== void 0 ? _a : sent === null || sent === void 0 ? void 0 : sent.socket) !== null && _b !== void 0 ? _b : 0;
+    // Save sent record for history (flat — no ObjectId refs, no populate needed)
+    yield sentNotification_model_1.SentNotification.create(Object.assign(Object.assign({ title,
+        text,
+        audience }, (courseTitle && { courseTitle })), { recipientCount }));
+    return { recipientCount };
+});
+// Get sent notification history
+const getSentHistory = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    const sentQuery = new QueryBuilder_1.default(sentNotification_model_1.SentNotification.find().select('-updatedAt -__v'), query)
+        .search(['title', 'text'])
+        .filter()
+        .sort()
+        .paginate();
+    const data = yield sentQuery.modelQuery;
+    const pagination = yield sentQuery.getPaginationInfo();
+    return { pagination, data };
+});
 exports.NotificationService = {
     adminNotificationFromDB,
     getNotificationFromDB,
@@ -98,4 +161,6 @@ exports.NotificationService = {
     adminMarkNotificationAsReadIntoDB,
     markAllNotificationsAsRead: exports.markAllNotificationsAsRead,
     adminMarkAllNotificationsAsRead,
+    sendAdminNotification,
+    getSentHistory,
 };

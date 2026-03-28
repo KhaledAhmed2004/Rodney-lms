@@ -27,8 +27,8 @@ const createFeedback = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
         data: result,
     });
 }));
-const getPublishedByCourse = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield feedback_service_1.FeedbackService.getPublishedByCourse(req.params.courseId, req.query);
+const getByCourse = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield feedback_service_1.FeedbackService.getByCourse(req.params.courseId, req.query);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -47,12 +47,21 @@ const getAllFeedback = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
         data: result.data,
     });
 }));
-const togglePublish = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield feedback_service_1.FeedbackService.togglePublish(req.params.id);
+const getSummary = (0, catchAsync_1.default)((_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield feedback_service_1.FeedbackService.getSummary();
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Feedback publish status toggled',
+        message: 'Feedback summary retrieved successfully',
+        data: result,
+    });
+}));
+const getById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield feedback_service_1.FeedbackService.getById(req.params.id);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Feedback retrieved successfully',
         data: result,
     });
 }));
@@ -86,9 +95,10 @@ const getMyReviews = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
 }));
 exports.FeedbackController = {
     createFeedback,
-    getPublishedByCourse,
+    getByCourse,
     getAllFeedback,
-    togglePublish,
+    getById,
+    getSummary,
     respondToFeedback,
     deleteFeedback,
     getMyReviews,

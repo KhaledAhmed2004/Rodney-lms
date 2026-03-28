@@ -6,6 +6,80 @@
 
 ---
 
+## Points System Architecture
+
+> Full flow doc: **[`docs/decisions/gamification-points-flow.md`](../../decisions/gamification-points-flow.md)** — detailed event flows, duplicate rules, badge criteria
+
+```
+Student Action (quiz pass, lesson complete, course finish...)
+    ↓
+Service function (enrollment / quiz / community)
+    ↓
+GamificationHelper.awardPoints(studentId, reason, referenceId)
+    ├── Duplicate check (PointsLedger e same reason + referenceId ache kina → skip)
+    ├── PointsLedger.create() — audit trail
+    ├── User.totalPoints $inc — running total
+    └── DailyActivity.pointsEarned $inc — daily tracking
+    ↓
+GamificationHelper.checkAndAwardBadges(studentId)
+    ↓
+Protita active badge er criteria check → threshold meet korle → StudentBadge create
+    ↓
+Leaderboard e totalPoints diye rank hoy
+```
+
+**Helper**: `src/app/helpers/gamificationHelper.ts` — `awardPoints()` + `checkAndAwardBadges()`
+
+### Point Values
+
+| Action | Points | Reason Enum |
+|--------|:------:|-------------|
+| Lesson complete | 10 | `LESSON_COMPLETE` |
+| Quiz pass | 25 | `QUIZ_PASS` |
+| Quiz perfect (100%) | 50 | `QUIZ_PERFECT` |
+| Course complete | 100 | `COURSE_COMPLETE` |
+| First enrollment | 5 | `FIRST_ENROLLMENT` |
+| Streak bonus | 15 | `STREAK_BONUS` |
+| Community post | 5 | `COMMUNITY_POST` |
+
+### 17 Badges (Auto-Seeded)
+
+| Category | Badges | Unlock Criteria |
+|----------|--------|-----------------|
+| Points | Rising Star → Point Collector → Point Master → Point Legend | 100 / 500 / 1,000 / 5,000 total points |
+| Courses | First Steps → Course Explorer → Course Master → Course Legend | 1 / 3 / 5 / 10 courses completed |
+| Quizzes | Quiz Starter → Quiz Master → Quiz Champion | 1 / 10 / 25 quizzes passed |
+| Perfect Quiz | Perfect Score → Perfectionist | 1 / 5 perfect (100%) quiz scores |
+| Streak | Consistent Learner → Streak Champion → Streak Legend | 7 / 30 / 100 day streak |
+| Custom | Early Adopter | Admin-awarded manually (threshold: 0) |
+
+> Badges are **seeded on app startup** (`src/DB/seedBadges.ts`). No create/delete API — admin shudhu description, threshold, isActive edit korte pare.
+
+### Database Collections
+
+| Collection | Purpose | Key Index |
+|------------|---------|-----------|
+| `pointsledgers` | Audit trail — every point award | `{ student: 1, createdAt: -1 }`, `{ reason: 1 }` |
+| `badges` | Master badge definitions (17 seeded) | `{ isActive: 1 }` |
+| `studentbadges` | Earned badges per student | `{ student: 1, badge: 1 }` (unique) |
+
+### Integration Status — ACTIVE
+
+> Points system **fully wired up**. Duplicate prevention built-in. All calls wrapped in try-catch (failure doesn't block main action).
+
+| Service | Function | Event | Points | Status |
+|---------|----------|-------|:------:|:------:|
+| `enrollment.service.ts` | `enrollInCourse()` | First enrollment | 5 | Active |
+| `enrollment.service.ts` | `completeLesson()` | Lesson complete | 10 | Active |
+| `enrollment.service.ts` | `completeLesson()` | Course auto-complete | 100 | Active |
+| `enrollment.service.ts` | `updateStatus()` | Course manual complete | 100 | Active |
+| `quiz.service.ts` | `submitAttempt()` | Quiz pass (not perfect) | 25 | Active |
+| `quiz.service.ts` | `submitAttempt()` | Quiz perfect (100%) | 50 | Active |
+| `community.service.ts` | `createPost()` | New community post | 5 | Active |
+| _(streak logic)_ | — | Streak milestone | 15 | Not yet |
+
+---
+
 ## UX Flow
 
 ### Badge Management
@@ -232,31 +306,15 @@ For each active Badge:
 - Response field filtering (`.select()` diye `__v`, timestamps exclude)
 - **Auto-seed 17 default badges** on server startup (`src/DB/seedBadges.ts`) — missing badges auto-create hoy, admin er changes preserve thake, deleted badges recreate hoy
 
-### What's MISSING (Critical)
+### What's MISSING (Remaining)
 
 | Gap | Impact | Priority |
 |-----|--------|----------|
-| **No automatic point awarding** on lesson/course/quiz completion | Gamification non-functional — no points flow | P0 |
-| **No badge evaluation logic** (`checkAndAwardBadges()`) | Badges defined but never auto-awarded | P0 |
+| ~~**No automatic point awarding**~~ | ~~Gamification non-functional~~ | ~~P0~~ | **FIXED** |
+| ~~**No badge evaluation logic**~~ | ~~Badges never auto-awarded~~ | ~~P0~~ | **FIXED** |
+| ~~**No points idempotency**~~ | ~~Double-awarding possible~~ | ~~P2~~ | **FIXED** — duplicate check in awardPoints() |
 | **No badge notification** (Socket.IO + push) | Silent achievements = no engagement | P2 |
-| **No streak calculation** | `streak` fields exist in User but never updated | P2 |
-| **No points idempotency** (duplicate award prevention) | Double-awarding possible | P2 |
-
-### Integration Hooks Needed
-
-```
-enrollment.service.ts → completeLesson()
-    ↓ Should award LESSON_COMPLETE points
-
-enrollment.service.ts → updateStatus(COMPLETED)
-    ↓ Should award COURSE_COMPLETE points
-
-quiz.service.ts → submitQuiz()
-    ↓ Should award QUIZ_PASS / QUIZ_PERFECT points
-
-enrollment.service.ts → enrollInCourse() (first time)
-    ↓ Should award FIRST_ENROLLMENT points
-```
+| **Streak bonus points** not wired | Streak tracking works, but milestone points (7/14/30 days) not triggered | P1 |
 
 ---
 
@@ -280,15 +338,15 @@ enrollment.service.ts → enrollInCourse() (first time)
 
 ## Priority Roadmap
 
-| Priority | What | Why |
-|----------|------|-----|
-| **P0** | `awardPoints()` + hooks in enrollment/quiz | Without this, gamification is dead |
-| **P0** | `checkAndAwardBadges()` evaluation | Badges exist but never auto-awarded |
-| **P2** | Badge notifications (Socket.IO + push) | Silent achievements = no engagement |
-| **P2** | Streak calculation logic | Fields exist but never updated |
-| **P2** | Points idempotency (unique index) | Prevents double-awarding |
-| **P3** | `totalPoints` reconciliation job | Catches drift |
-| **P3** | Badge slug, rarity, order fields | Polish |
+| Priority | What | Status |
+|----------|------|:------:|
+| ~~**P0**~~ | ~~`awardPoints()` + hooks in enrollment/quiz/community~~ | **Done** |
+| ~~**P0**~~ | ~~`checkAndAwardBadges()` evaluation~~ | **Done** |
+| ~~**P2**~~ | ~~Points idempotency (duplicate prevention)~~ | **Done** |
+| **P1** | Streak bonus points at milestones (7/14/30/60/90 days) | Pending |
+| **P2** | Badge notifications (Socket.IO + push) | Pending |
+| **P3** | `totalPoints` reconciliation job | Pending |
+| **P3** | Badge slug, rarity, order fields | Pending |
 
 ---
 
@@ -355,6 +413,15 @@ Full API design, response design, edge case audit — RESTful standards, field e
 - Deleted user in leaderboard: `$unwind` silently excludes — correct behavior
 - Badge deleted after earning: `validBadges.filter()` removes orphaned entries — correct
 - `params.id` invalid ObjectId: Mongoose CastError → globalErrorHandler catches — acceptable
+
+### Points System Wire-up (2026-03-28)
+
+- Points system fully wired — enrollment, quiz, community services e awardPoints() + checkAndAwardBadges() calls added
+- Duplicate prevention added to awardPoints() — PointsLedger.findOne check
+- DailyActivity.pointsEarned update added to awardPoints()
+- All calls try-catch wrapped — failure doesn't block main actions
+- Flow doc: `docs/decisions/gamification-points-flow.md`
+- Rule file: `.claude/rules/gamification.md` — auto-enforces doc update
 
 ### Files Analyzed
 

@@ -5,7 +5,11 @@ const zod_1 = require("zod");
 const createFeedback = zod_1.z.object({
     body: zod_1.z.object({
         courseId: zod_1.z.string({ required_error: 'Course ID is required' }),
-        rating: zod_1.z.number({ required_error: 'Rating is required' }).min(1).max(5),
+        rating: zod_1.z
+            .number({ required_error: 'Rating is required' })
+            .int({ message: 'Rating must be a whole number' })
+            .min(1)
+            .max(5),
         review: zod_1.z.string({ required_error: 'Review is required' }).min(1).max(5000),
     }),
 });

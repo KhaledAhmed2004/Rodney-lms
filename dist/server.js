@@ -40,6 +40,8 @@ const socket_io_1 = require("socket.io");
 const app_1 = __importDefault(require("./app"));
 const config_1 = __importDefault(require("./config"));
 const seedAdmin_1 = require("./DB/seedAdmin");
+const seedBadges_1 = require("./DB/seedBadges");
+const seedFeedback_1 = require("./DB/seedFeedback");
 const socketHelper_1 = require("./helpers/socketHelper");
 const logger_1 = require("./shared/logger");
 const CacheHelper_1 = require("./app/shared/CacheHelper");
@@ -105,6 +107,14 @@ function main() {
             const seedSpinner = (0, spinnerHelper_1.createSpinner)({ text: 'Verifying super admin account...', color: 'cyan' });
             yield (0, seedAdmin_1.seedSuperAdmin)();
             seedSpinner.succeed('Super admin ready');
+            // Seed default badges (creates missing ones, preserves admin changes)
+            const badgeSpinner = (0, spinnerHelper_1.createSpinner)({ text: 'Verifying default badges...', color: 'cyan' });
+            yield (0, seedBadges_1.seedBadges)();
+            badgeSpinner.succeed('Default badges ready');
+            // Seed demo feedback (development only, skips if data exists)
+            const feedbackSpinner = (0, spinnerHelper_1.createSpinner)({ text: 'Verifying demo feedback...', color: 'cyan' });
+            yield (0, seedFeedback_1.seedFeedback)();
+            feedbackSpinner.succeed('Demo feedback ready');
             // Initialize CacheHelper (in-memory)
             const cacheSpinner = (0, spinnerHelper_1.createSpinner)({ text: 'Initializing cache system...', color: 'cyan' });
             const cache = CacheHelper_1.CacheHelper.getInstance();

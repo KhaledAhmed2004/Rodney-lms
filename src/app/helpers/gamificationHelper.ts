@@ -10,6 +10,7 @@ import {
 import { User } from '../modules/user/user.model';
 import { Enrollment } from '../modules/enrollment/enrollment.model';
 import { QuizAttempt } from '../modules/quiz/quiz.model';
+import { DailyActivity } from '../modules/activity/activity.model';
 
 const POINTS_MAP: Record<string, number> = {
   [POINTS_REASON.LESSON_COMPLETE]: 10,
@@ -31,6 +32,16 @@ const awardPoints = async (
   const points = customPoints || POINTS_MAP[reason] || 0;
   if (points === 0) return;
 
+  // Duplicate prevention — skip if already awarded for same reason + reference
+  if (referenceId) {
+    const existing = await PointsLedger.findOne({
+      student: studentId,
+      reason,
+      referenceId,
+    });
+    if (existing) return;
+  }
+
   const descriptions: Record<string, string> = {
     [POINTS_REASON.LESSON_COMPLETE]: 'Completed a lesson',
     [POINTS_REASON.QUIZ_PASS]: 'Passed a quiz',
@@ -51,6 +62,15 @@ const awardPoints = async (
   });
 
   await User.findByIdAndUpdate(studentId, { $inc: { totalPoints: points } });
+
+  // Update daily activity pointsEarned
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  await DailyActivity.findOneAndUpdate(
+    { student: studentId, date: today },
+    { $inc: { pointsEarned: points }, $set: { isActive: true } },
+    { upsert: true },
+  );
 };
 
 const checkAndAwardBadges = async (studentId: string) => {

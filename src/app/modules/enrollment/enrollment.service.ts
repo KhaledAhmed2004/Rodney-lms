@@ -1,6 +1,8 @@
 import { StatusCodes } from 'http-status-codes';
 import ApiError from '../../../errors/ApiError';
 import QueryBuilder from '../../builder/QueryBuilder';
+import { GamificationHelper } from '../../helpers/gamificationHelper';
+import { POINTS_REASON } from '../gamification/gamification.interface';
 import { IEnrollment } from './enrollment.interface';
 import { Enrollment } from './enrollment.model';
 import { Course } from '../course/course.model';
@@ -41,6 +43,15 @@ const enrollInCourse = async (
     await Course.findByIdAndUpdate(courseId, {
       $inc: { enrollmentCount: 1 },
     });
+
+    // Gamification: first enrollment bonus
+    try {
+      const enrollmentCount = await Enrollment.countDocuments({ student: studentId });
+      if (enrollmentCount === 1) {
+        await GamificationHelper.awardPoints(studentId, POINTS_REASON.FIRST_ENROLLMENT, courseId, 'Course');
+      }
+      await GamificationHelper.checkAndAwardBadges(studentId);
+    } catch { /* points failure should not block enrollment */ }
 
     return result;
   } catch (error: any) {
@@ -179,6 +190,20 @@ const updateStatus = async (
   const result = await Enrollment.findByIdAndUpdate(id, updateData, {
     new: true,
   });
+
+  // Gamification: manual course completion
+  if (status === 'COMPLETED' && result) {
+    try {
+      await GamificationHelper.awardPoints(
+        enrollment.student.toString(),
+        POINTS_REASON.COURSE_COMPLETE,
+        enrollment.course.toString(),
+        'Course',
+      );
+      await GamificationHelper.checkAndAwardBadges(enrollment.student.toString());
+    } catch { /* points failure should not block status update */ }
+  }
+
   return result;
 };
 
@@ -230,6 +255,16 @@ const completeLesson = async (
   const result = await Enrollment.findByIdAndUpdate(enrollmentId, updateData, {
     new: true,
   });
+
+  // Gamification: lesson complete + auto course complete
+  try {
+    await GamificationHelper.awardPoints(studentId, POINTS_REASON.LESSON_COMPLETE, lessonId, 'Lesson');
+    if (result?.status === 'COMPLETED') {
+      await GamificationHelper.awardPoints(studentId, POINTS_REASON.COURSE_COMPLETE, enrollment.course.toString(), 'Course');
+    }
+    await GamificationHelper.checkAndAwardBadges(studentId);
+  } catch { /* points failure should not block lesson completion */ }
+
   return result;
 };
 

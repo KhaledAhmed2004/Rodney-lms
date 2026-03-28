@@ -49,6 +49,15 @@ const getAllStudentGradebook = (0, catchAsync_1.default)((req, res) => __awaiter
         data: result.data,
     });
 }));
+const getGradebookSummary = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield gradebook_service_1.GradebookService.getGradebookSummary();
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Gradebook summary retrieved successfully',
+        data: result,
+    });
+}));
 const exportStudentGradebook = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const data = yield gradebook_service_1.GradebookService.exportStudentGradebook(req.query);
     const format = req.query.format === 'xlsx' ? 'excel' : 'csv';
@@ -59,9 +68,13 @@ const exportStudentGradebook = (0, catchAsync_1.default)((req, res) => __awaiter
         { key: 'studentName', header: 'Student Name', width: 20 },
         { key: 'studentEmail', header: 'Email', width: 30 },
         { key: 'courseTitle', header: 'Course', width: 30 },
-        { key: 'quizScores', header: 'Quiz Scores', width: 40 },
-        { key: 'overallQuizPercentage', header: 'Overall Quiz %', width: 15 },
+        { key: 'quizzesAttempted', header: 'Quizzes Attempted', width: 18 },
+        { key: 'totalQuizzes', header: 'Total Quizzes', width: 15 },
+        { key: 'overallQuizPercentage', header: 'Quiz Avg %', width: 12 },
+        { key: 'assignmentsSubmitted', header: 'Assignments Submitted', width: 22 },
+        { key: 'totalAssignments', header: 'Total Assignments', width: 18 },
         { key: 'completionPercentage', header: 'Completion %', width: 15 },
+        { key: 'lastActivityDate', header: 'Last Activity', width: 18 },
     ])
         .sendResponse(res, filename);
 }));
@@ -69,5 +82,6 @@ exports.GradebookController = {
     submitAssignment,
     getMyGrades,
     getAllStudentGradebook,
+    getGradebookSummary,
     exportStudentGradebook,
 };

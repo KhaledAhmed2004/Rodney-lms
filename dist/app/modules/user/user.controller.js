@@ -30,7 +30,6 @@ const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const user_service_1 = require("./user.service");
 const user_1 = require("../../../enums/user");
 const ExportBuilder_1 = __importDefault(require("../../builder/ExportBuilder"));
-const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const createUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userData = __rest(req.body, []);
     const result = yield user_service_1.UserService.createUserToDB(userData);
@@ -75,7 +74,8 @@ const getAllUsers = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
 }));
 const blockUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
-    const result = yield user_service_1.UserService.updateUserStatus(id, user_1.USER_STATUS.RESTRICTED);
+    const requesterId = req.user.id;
+    const result = yield user_service_1.UserService.updateUserStatus(id, user_1.USER_STATUS.RESTRICTED, requesterId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -85,7 +85,8 @@ const blockUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void
 }));
 const unblockUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
-    const result = yield user_service_1.UserService.updateUserStatus(id, user_1.USER_STATUS.ACTIVE);
+    const requesterId = req.user.id;
+    const result = yield user_service_1.UserService.updateUserStatus(id, user_1.USER_STATUS.ACTIVE, requesterId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -126,10 +127,7 @@ const updateUserByAdmin = (0, catchAsync_1.default)((req, res) => __awaiter(void
 const deleteUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
     const requesterId = req.user.id;
-    if (id === requesterId) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Cannot delete your own account');
-    }
-    yield user_service_1.UserService.updateUserStatus(id, user_1.USER_STATUS.DELETE);
+    yield user_service_1.UserService.updateUserStatus(id, user_1.USER_STATUS.DELETE, requesterId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -146,8 +144,6 @@ const exportUsers = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
         { key: 'name', header: 'Name', width: 20 },
         { key: 'email', header: 'Email', width: 30 },
         { key: 'status', header: 'Status', width: 12 },
-        { key: 'role', header: 'Role', width: 12 },
-        { key: 'verified', header: 'Verified', width: 10 },
         { key: 'enrollmentCount', header: 'Enrolled Courses', width: 16 },
         { key: 'lastActiveDate', header: 'Last Active', width: 18 },
         { key: 'createdAt', header: 'Joined Date', width: 18 },

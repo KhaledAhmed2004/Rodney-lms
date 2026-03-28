@@ -135,7 +135,7 @@ new AggregationBuilder(User, req.query).match({ status: 'active' }).lookup(...).
 | `socketHelper.ts` | Socket.IO init + event setup |
 | `paginationHelper.ts` | Page/limit calculate |
 | `authHelpers.ts` | Auth utility (hash, compare) |
-| `gamificationHelper.ts` | Points award + badge evaluation (awardPoints, checkAndAwardBadges) |
+| `gamificationHelper.ts` | Points award + badge evaluation (awardPoints, checkAndAwardBadges). Flow doc: `docs/decisions/gamification-points-flow.md` |
 | `enrollmentHelper.ts` | Enrollment verification (verifyEnrollment with status check) |
 | `activityHelper.ts` | User activity tracking helper |
 | `presenceHelper.ts` | Socket.IO user presence tracking |
@@ -193,6 +193,7 @@ IMPORTANT: Always update documentation when making code changes. See `.claude/ru
 Docs in `docs/` directory:
 - `docs/architecture/` - System overview, auth flow, data flow, DB design, module structure, Socket.IO
 - `docs/ux-flow-api-responses/` - Screen-wise API flow docs (app-screens/ + dashboard-screens/)
+- `docs/decisions/` - Feature decisions & flow docs (gamification points, UX flows)
 - `docs/code-quality-audit-report.md` - Code quality audit
 
 ## Core Principles

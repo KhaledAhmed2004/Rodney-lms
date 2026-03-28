@@ -43,7 +43,7 @@ const submitAssignment = (lessonId, studentId, courseId, content, attachments) =
         url,
         name: url.split('/').pop() || 'file',
     }));
-    const submission = yield gradebook_model_1.AssignmentSubmission.create({
+    const created = yield gradebook_model_1.AssignmentSubmission.create({
         student: studentId,
         course: courseId,
         lesson: lessonId,
@@ -51,7 +51,7 @@ const submitAssignment = (lessonId, studentId, courseId, content, attachments) =
         content: content || '',
         attachments: attachmentData,
     });
-    return submission;
+    return gradebook_model_1.AssignmentSubmission.findById(created._id).select('content attachments status submittedAt createdAt');
 });
 const getMyGrades = (studentId, query) => __awaiter(void 0, void 0, void 0, function* () {
     const gradeQuery = new QueryBuilder_1.default(gradebook_model_1.Grade.find({ student: studentId }).populate('course', 'title slug thumbnail'), query)
@@ -100,7 +100,7 @@ const buildGradebookPipeline = (query) => {
             },
         },
         { $unwind: '$courseInfo' },
-        // Lookup quiz grades (pipeline lookup for filtered join)
+        // Lookup student's graded quiz grades
         {
             $lookup: {
                 from: 'grades',
@@ -118,28 +118,74 @@ const buildGradebookPipeline = (query) => {
                             },
                         },
                     },
-                    {
-                        $project: {
-                            title: '$assessmentTitle',
-                            percentage: 1,
-                            _id: 0,
-                        },
-                    },
-                    { $sort: { title: 1 } },
+                    { $project: { percentage: 1, _id: 0 } },
                 ],
-                as: 'quizzes',
+                as: 'quizGrades',
             },
         },
-        // Calculate overall quiz % and flatten fields
+        // Total quizzes per course
+        {
+            $lookup: {
+                from: 'quizzes',
+                localField: 'course',
+                foreignField: 'course',
+                pipeline: [{ $project: { _id: 1 } }],
+                as: 'courseQuizzes',
+            },
+        },
+        // Student's assignment submissions
+        {
+            $lookup: {
+                from: 'assignmentsubmissions',
+                let: { studentId: '$student', courseId: '$course' },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ['$student', '$$studentId'] },
+                                    { $eq: ['$course', '$$courseId'] },
+                                ],
+                            },
+                        },
+                    },
+                    { $project: { _id: 1 } },
+                ],
+                as: 'studentSubmissions',
+            },
+        },
+        // Total assignment-type lessons per course
+        {
+            $lookup: {
+                from: 'lessons',
+                let: { courseId: '$course' },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: { $eq: ['$courseId', '$$courseId'] },
+                            type: 'ASSIGNMENT',
+                        },
+                    },
+                    { $project: { _id: 1 } },
+                ],
+                as: 'courseAssignments',
+            },
+        },
+        // Calculate summary fields
         {
             $addFields: {
+                quizzesAttempted: { $size: '$quizGrades' },
+                totalQuizzes: { $size: '$courseQuizzes' },
                 overallQuizPercentage: {
                     $cond: [
-                        { $gt: [{ $size: '$quizzes' }, 0] },
-                        { $round: [{ $avg: '$quizzes.percentage' }, 2] },
+                        { $gt: [{ $size: '$quizGrades' }, 0] },
+                        { $round: [{ $avg: '$quizGrades.percentage' }, 2] },
                         0,
                     ],
                 },
+                assignmentsSubmitted: { $size: '$studentSubmissions' },
+                totalAssignments: { $size: '$courseAssignments' },
+                lastActivityDate: '$progress.lastAccessedAt',
             },
         },
         // Project final shape
@@ -150,16 +196,20 @@ const buildGradebookPipeline = (query) => {
                 studentEmail: '$studentInfo.email',
                 studentAvatar: '$studentInfo.profilePicture',
                 courseTitle: '$courseInfo.title',
-                quizzes: 1,
+                quizzesAttempted: 1,
+                totalQuizzes: 1,
                 overallQuizPercentage: 1,
+                assignmentsSubmitted: 1,
+                totalAssignments: 1,
                 completionPercentage: '$progress.completionPercentage',
+                lastActivityDate: 1,
                 enrolledAt: 1,
             },
         },
     ];
-    // Search filter (after lookups)
+    // Search filter (after lookups, capped at 200 chars)
     if (query.searchTerm) {
-        const sanitized = (0, escape_string_regexp_1.default)(String(query.searchTerm));
+        const sanitized = (0, escape_string_regexp_1.default)(String(query.searchTerm).slice(0, 200));
         pipeline.push({
             $match: {
                 $or: [
@@ -173,8 +223,8 @@ const buildGradebookPipeline = (query) => {
 };
 const getAllStudentGradebook = (query) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d, _e;
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(query.limit) || 10));
     const skip = (page - 1) * limit;
     const pipeline = buildGradebookPipeline(query);
     // Add $facet for pagination
@@ -200,15 +250,109 @@ const getAllStudentGradebook = (query) => __awaiter(void 0, void 0, void 0, func
 const exportStudentGradebook = (query) => __awaiter(void 0, void 0, void 0, function* () {
     const pipeline = buildGradebookPipeline(query);
     pipeline.push({ $sort: { studentName: 1 } });
-    const data = yield enrollment_model_1.Enrollment.aggregate(pipeline);
-    // Format quizzes array into readable string for export
-    return data.map((row) => (Object.assign(Object.assign({}, row), { quizScores: row.quizzes
-            .map(q => `${q.title}: ${q.percentage}%`)
-            .join(', ') || 'N/A' })));
+    return enrollment_model_1.Enrollment.aggregate(pipeline);
+});
+// ==================== ADMIN SUMMARY (Stat Cards) ====================
+const AT_RISK_COMPLETION_THRESHOLD = 20;
+const AT_RISK_INACTIVE_DAYS = 14;
+const getGradebookSummary = () => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+    const now = new Date();
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    endOfLastMonth.setHours(23, 59, 59, 999);
+    const inactiveCutoff = new Date(now.getTime() - AT_RISK_INACTIVE_DAYS * 24 * 60 * 60 * 1000);
+    const [allTimeQuizAvg, thisMonthQuizAvg, lastMonthQuizAvg, currentCompletionAvg, previousCompletionAvg, pendingAssignments, atRiskStudents,] = yield Promise.all([
+        // All-time avg quiz score
+        gradebook_model_1.Grade.aggregate([
+            { $match: { assessmentType: gradebook_interface_1.ASSESSMENT_TYPE.QUIZ, status: gradebook_interface_1.GRADE_STATUS.GRADED } },
+            { $group: { _id: null, avg: { $avg: '$percentage' } } },
+        ]),
+        // This month graded quizzes avg
+        gradebook_model_1.Grade.aggregate([
+            {
+                $match: {
+                    assessmentType: gradebook_interface_1.ASSESSMENT_TYPE.QUIZ,
+                    status: gradebook_interface_1.GRADE_STATUS.GRADED,
+                    createdAt: { $gte: startOfThisMonth },
+                },
+            },
+            { $group: { _id: null, avg: { $avg: '$percentage' } } },
+        ]),
+        // Last month graded quizzes avg
+        gradebook_model_1.Grade.aggregate([
+            {
+                $match: {
+                    assessmentType: gradebook_interface_1.ASSESSMENT_TYPE.QUIZ,
+                    status: gradebook_interface_1.GRADE_STATUS.GRADED,
+                    createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth },
+                },
+            },
+            { $group: { _id: null, avg: { $avg: '$percentage' } } },
+        ]),
+        // Current avg completion (all active enrollments)
+        enrollment_model_1.Enrollment.aggregate([
+            { $match: { status: enrollment_interface_1.ENROLLMENT_STATUS.ACTIVE } },
+            { $group: { _id: null, avg: { $avg: '$progress.completionPercentage' } } },
+        ]),
+        // Previous avg completion (active enrollments created before this month)
+        enrollment_model_1.Enrollment.aggregate([
+            { $match: { status: enrollment_interface_1.ENROLLMENT_STATUS.ACTIVE, createdAt: { $lt: startOfThisMonth } } },
+            { $group: { _id: null, avg: { $avg: '$progress.completionPercentage' } } },
+        ]),
+        // Pending assignment submissions (waiting for grading)
+        gradebook_model_1.AssignmentSubmission.countDocuments({ status: gradebook_interface_1.SUBMISSION_STATUS.SUBMITTED }),
+        // At-risk: active, low completion, inactive or never accessed
+        enrollment_model_1.Enrollment.countDocuments({
+            status: enrollment_interface_1.ENROLLMENT_STATUS.ACTIVE,
+            'progress.completionPercentage': { $lt: AT_RISK_COMPLETION_THRESHOLD },
+            $or: [
+                { 'progress.lastAccessedAt': { $lt: inactiveCutoff } },
+                { 'progress.lastAccessedAt': null },
+            ],
+        }),
+    ]);
+    // Avg quiz score + growth (absolute delta like avgRating pattern)
+    const quizValue = Math.round(((_b = (_a = allTimeQuizAvg[0]) === null || _a === void 0 ? void 0 : _a.avg) !== null && _b !== void 0 ? _b : 0) * 100) / 100;
+    const thisMonthQuiz = (_d = (_c = thisMonthQuizAvg[0]) === null || _c === void 0 ? void 0 : _c.avg) !== null && _d !== void 0 ? _d : 0;
+    const lastMonthQuiz = (_f = (_e = lastMonthQuizAvg[0]) === null || _e === void 0 ? void 0 : _e.avg) !== null && _f !== void 0 ? _f : 0;
+    const hasLastMonthQuiz = lastMonthQuizAvg[0] != null;
+    const quizDelta = hasLastMonthQuiz
+        ? Math.round((thisMonthQuiz - lastMonthQuiz) * 10) / 10
+        : 0;
+    const quizGrowthType = quizDelta > 0 ? 'increase' : quizDelta < 0 ? 'decrease' : 'no_change';
+    // Avg completion + growth (absolute delta)
+    const completionValue = Math.round(((_h = (_g = currentCompletionAvg[0]) === null || _g === void 0 ? void 0 : _g.avg) !== null && _h !== void 0 ? _h : 0) * 100) / 100;
+    const prevCompletion = (_k = (_j = previousCompletionAvg[0]) === null || _j === void 0 ? void 0 : _j.avg) !== null && _k !== void 0 ? _k : 0;
+    const hasPrevCompletion = previousCompletionAvg[0] != null;
+    const completionDelta = hasPrevCompletion
+        ? Math.round((completionValue - prevCompletion) * 10) / 10
+        : 0;
+    const completionGrowthType = completionDelta > 0
+        ? 'increase'
+        : completionDelta < 0
+            ? 'decrease'
+            : 'no_change';
+    return {
+        avgQuizScore: {
+            value: quizValue,
+            growth: Math.abs(quizDelta),
+            growthType: quizGrowthType,
+        },
+        avgCompletion: {
+            value: completionValue,
+            growth: Math.abs(completionDelta),
+            growthType: completionGrowthType,
+        },
+        pendingAssignments,
+        atRiskStudents,
+    };
 });
 exports.GradebookService = {
     submitAssignment,
     getMyGrades,
     getAllStudentGradebook,
     exportStudentGradebook,
+    getGradebookSummary,
 };

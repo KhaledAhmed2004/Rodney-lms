@@ -9,6 +9,8 @@ import {
   QUESTION_TYPE,
 } from './quiz.interface';
 import { Quiz, QuizAttempt } from './quiz.model';
+import { GamificationHelper } from '../../helpers/gamificationHelper';
+import { POINTS_REASON } from '../gamification/gamification.interface';
 
 // ==================== ADMIN SERVICES ====================
 
@@ -388,6 +390,15 @@ const submitAttempt = async (
     },
     { new: true },
   );
+
+  // Gamification: award points for quiz pass/perfect
+  if (passed) {
+    try {
+      const reason = percentage === 100 ? POINTS_REASON.QUIZ_PERFECT : POINTS_REASON.QUIZ_PASS;
+      await GamificationHelper.awardPoints(studentId, reason, attempt.quiz.toString(), 'Quiz');
+      await GamificationHelper.checkAndAwardBadges(studentId);
+    } catch { /* points failure should not block quiz submission */ }
+  }
 
   return result;
 };

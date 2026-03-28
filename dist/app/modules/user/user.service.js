@@ -126,14 +126,16 @@ const getAllUsers = (query) => __awaiter(void 0, void 0, void 0, function* () {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
-    // Build sort spec from ?sort=field or ?sort=-field
+    // Build sort spec from ?sort=field or ?sort=-field (whitelisted)
+    const SORTABLE_FIELDS = ['name', 'email', 'status', 'enrollmentCount', 'lastActiveDate', 'createdAt'];
     const sortParam = query.sort ? String(query.sort) : '-createdAt';
+    const sortField = sortParam.startsWith('-') ? sortParam.slice(1) : sortParam;
     const sortSpec = {};
-    if (sortParam.startsWith('-')) {
-        sortSpec[sortParam.slice(1)] = -1;
+    if (SORTABLE_FIELDS.includes(sortField)) {
+        sortSpec[sortField] = sortParam.startsWith('-') ? -1 : 1;
     }
     else {
-        sortSpec[sortParam] = 1;
+        sortSpec.createdAt = -1;
     }
     const matchConditions = buildUserMatchConditions(query);
     const pipeline = [
@@ -212,22 +214,26 @@ const exportUsers = (query) => __awaiter(void 0, void 0, void 0, function* () {
     ];
     return user_model_1.User.aggregate(pipeline);
 });
-const updateUserStatus = (id, status) => __awaiter(void 0, void 0, void 0, function* () {
+const updateUserStatus = (id, status, requesterId) => __awaiter(void 0, void 0, void 0, function* () {
+    if (requesterId && id === requesterId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Cannot change your own status');
+    }
     const user = yield user_model_1.User.isExistUserById(id);
     if (!user) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
     }
-    const updatedUser = yield user_model_1.User.findByIdAndUpdate(id, { status }, { new: true });
+    const updatedUser = yield user_model_1.User.findByIdAndUpdate(id, { status }, { new: true }).select('_id name status');
     return updatedUser;
 });
 const getUserById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
-    const user = yield user_model_1.User.findById(id).select('-password -authentication -deviceTokens -role');
+    const user = yield user_model_1.User.findById(id).select('name email profilePicture status verified totalPoints streak');
     if (!user) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, "User doesn't exist!");
     }
     const enrollments = yield enrollment_model_1.Enrollment.find({ student: id })
         .populate('course', '_id title thumbnail')
+        .sort({ enrolledAt: -1 })
         .lean();
     const courseStats = {
         total: enrollments.length,
@@ -264,7 +270,7 @@ const updateUserByAdmin = (id, payload) => __awaiter(void 0, void 0, void 0, fun
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Email already in use');
         }
     }
-    const updatedUser = yield user_model_1.User.findByIdAndUpdate(id, payload, { new: true }).select('-password -authentication -deviceTokens');
+    const updatedUser = yield user_model_1.User.findByIdAndUpdate(id, payload, { new: true }).select('_id name email status role verified');
     return updatedUser;
 });
 const getUserDetailsById = (id) => __awaiter(void 0, void 0, void 0, function* () {

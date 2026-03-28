@@ -29,14 +29,10 @@ const feedbackSchema = new mongoose_1.Schema({
         required: true,
         maxlength: 5000,
     },
-    isPublished: {
-        type: Boolean,
-        default: true,
-    },
     adminResponse: { type: String },
     respondedAt: { type: Date },
 }, { timestamps: true });
 feedbackSchema.index({ student: 1, course: 1 }, { unique: true });
-feedbackSchema.index({ course: 1, isPublished: 1 });
+feedbackSchema.index({ course: 1 });
 feedbackSchema.index({ rating: 1 });
 exports.Feedback = (0, mongoose_1.model)('Feedback', feedbackSchema);

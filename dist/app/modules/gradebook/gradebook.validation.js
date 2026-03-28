@@ -7,8 +7,9 @@ const submitAssignment = zod_1.z.object({
         lessonId: zod_1.z.string({ required_error: 'Lesson ID is required' }),
     }),
     body: zod_1.z.object({
-        content: zod_1.z.string().optional(),
         courseId: zod_1.z.string({ required_error: 'Course ID is required' }),
+        content: zod_1.z.string().max(5000).optional(),
+        attachments: zod_1.z.array(zod_1.z.string().min(1)).optional(),
     }),
 });
 exports.GradebookValidation = { submitAssignment };
