@@ -6,17 +6,6 @@ const optionSchema = z.object({
   isCorrect: z.boolean(),
 });
 
-const questionSchema = z.object({
-  questionId: z.string(),
-  type: z.enum(['MCQ', 'TRUE_FALSE', 'SHORT_ANSWER']),
-  text: z.string().min(1),
-  options: z.array(optionSchema).optional(),
-  correctAnswer: z.string().optional(),
-  marks: z.number().min(0).default(1),
-  explanation: z.string().optional(),
-  order: z.number().min(0),
-});
-
 const settingsSchema = z.object({
   timeLimit: z.number().min(0).optional(),
   maxAttempts: z.number().min(0).optional(),
@@ -26,24 +15,61 @@ const settingsSchema = z.object({
   showResults: z.boolean().optional(),
 });
 
+// Shared question schema — createQuiz + updateQuiz both use this
+const questionBodySchema = z
+  .object({
+    type: z.enum(['MCQ', 'TRUE_FALSE']),
+    text: z.string().min(1),
+    options: z.array(optionSchema).optional(),
+    marks: z.number().min(0).default(1),
+    explanation: z.string().optional(),
+    questionId: z.string().optional(),
+    order: z.number().min(0).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.type === 'MCQ') {
+      if (!data.options || data.options.length < 2) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'MCQ requires at least 2 options',
+          path: ['options'],
+        });
+      }
+      const correctCount =
+        data.options?.filter(o => o.isCorrect).length ?? 0;
+      if (correctCount !== 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'MCQ requires exactly 1 correct option',
+          path: ['options'],
+        });
+      }
+    } else if (data.type === 'TRUE_FALSE') {
+      if (!data.options || data.options.length !== 2) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'TRUE_FALSE requires exactly 2 options',
+          path: ['options'],
+        });
+      }
+      const correctCount =
+        data.options?.filter(o => o.isCorrect).length ?? 0;
+      if (correctCount !== 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'TRUE_FALSE requires exactly 1 correct option',
+          path: ['options'],
+        });
+      }
+    }
+  });
+
 const createQuiz = z.object({
   body: z.object({
     title: z.string({ required_error: 'Title is required' }).min(1).max(200),
+    course: z.string({ required_error: 'Course is required' }),
     description: z.string().max(5000).optional(),
-    questions: z
-      .array(
-        z.object({
-          type: z.enum(['MCQ', 'TRUE_FALSE', 'SHORT_ANSWER']),
-          text: z.string().min(1),
-          options: z.array(optionSchema).optional(),
-          correctAnswer: z.string().optional(),
-          marks: z.number().min(0).default(1),
-          explanation: z.string().optional(),
-          questionId: z.string().optional(),
-          order: z.number().min(0).optional(),
-        }),
-      )
-      .optional(),
+    questions: z.array(questionBodySchema).optional(),
     settings: settingsSchema.optional(),
   }),
 });
@@ -56,38 +82,7 @@ const updateQuiz = z.object({
     title: z.string().min(1).max(200).optional(),
     description: z.string().max(5000).optional(),
     settings: settingsSchema.optional(),
-  }),
-});
-
-const addQuestion = z.object({
-  params: z.object({
-    id: z.string({ required_error: 'Quiz ID is required' }),
-  }),
-  body: questionSchema,
-});
-
-const updateQuestion = z.object({
-  params: z.object({
-    id: z.string({ required_error: 'Quiz ID is required' }),
-    questionId: z.string({ required_error: 'Question ID is required' }),
-  }),
-  body: z.object({
-    type: z.enum(['MCQ', 'TRUE_FALSE', 'SHORT_ANSWER']).optional(),
-    text: z.string().min(1).optional(),
-    options: z.array(optionSchema).optional(),
-    correctAnswer: z.string().optional(),
-    marks: z.number().min(0).optional(),
-    explanation: z.string().optional(),
-    order: z.number().min(0).optional(),
-  }),
-});
-
-const reorderQuestions = z.object({
-  params: z.object({
-    id: z.string({ required_error: 'Quiz ID is required' }),
-  }),
-  body: z.object({
-    questionIds: z.array(z.string()).min(1),
+    questions: z.array(questionBodySchema).optional(),
   }),
 });
 
@@ -100,7 +95,6 @@ const submitAttempt = z.object({
       z.object({
         questionId: z.string(),
         selectedOptionId: z.string().optional(),
-        textAnswer: z.string().optional(),
       }),
     ),
   }),
@@ -109,8 +103,5 @@ const submitAttempt = z.object({
 export const QuizValidation = {
   createQuiz,
   updateQuiz,
-  addQuestion,
-  updateQuestion,
-  reorderQuestions,
   submitAttempt,
 };

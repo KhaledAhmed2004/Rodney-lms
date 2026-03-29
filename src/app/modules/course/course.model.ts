@@ -131,7 +131,10 @@ const lessonSchema = new Schema<ILesson, LessonModel>(
     video: { type: VideoMetaSchema },
     contentFile: { type: LessonAttachmentSchema },
     readingContent: { type: String },
-    assignmentInstructions: { type: String },
+    quiz: {
+      type: Schema.Types.ObjectId,
+      ref: 'Quiz',
+    },
     attachments: { type: [LessonAttachmentSchema], default: [] },
   },
   { timestamps: true }

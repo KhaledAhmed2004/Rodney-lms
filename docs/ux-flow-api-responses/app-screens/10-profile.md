@@ -166,7 +166,7 @@ Auth: None
 
 ### 10.5 Top Badges
 
-> Same API as [6.3 Get My Achievements](./06-progress.md). Profile screen e all earned badges dekhay.
+> Same API as [6.3 Get My Achievements](./06-progress.md). Profile screen e shudhu earned badges dekhay — client side `badges.filter(b => b.earned)` diye filter kore.
 
 ```
 GET /gamification/my-badges
@@ -183,22 +183,39 @@ Auth: Bearer {{accessToken}} (STUDENT)
     "earnedBadges": 3,
     "badges": [
       {
+        "name": "First Steps",
+        "icon": "https://cdn.example.com/first-steps.png",
+        "description": "Complete your first lesson",
+        "earned": true,
+        "earnedAt": "2026-03-05T08:30:00Z"
+      },
+      {
         "name": "Quiz Master",
-        "icon": "https://cdn.example.com/badge-quiz.png",
+        "icon": "https://cdn.example.com/quiz-master.png",
+        "description": "Pass 10 quizzes",
+        "earned": true,
         "earnedAt": "2026-03-10T12:00:00Z"
       },
       {
-        "name": "First Steps",
-        "icon": "https://cdn.example.com/first-steps.png",
-        "earnedAt": "2026-03-05T08:30:00Z"
+        "name": "Rising Star",
+        "icon": "https://cdn.example.com/rising-star.png",
+        "description": "Earn 100 total points",
+        "earned": false,
+        "earnedAt": null
+      },
+      {
+        "name": "Streak Champion",
+        "icon": "https://cdn.example.com/streak-champion.png",
+        "description": "Maintain a 30-day streak",
+        "earned": false,
+        "earnedAt": null
       }
     ]
   }
 }
 ```
 
-> `totalBadges`: shob active badges er count. `earnedBadges`: student er earned count.
-> `badges`: sorted by `earnedAt: -1` (newest first). Deleted badges filtered out. No pagination — typically 10-20 badges max.
+> Same API as [6.3](./06-progress.md). Profile e shudhu `earned: true` badges render hoy — client side `badges.filter(b => b.earned)` diye filter kore. Gray/locked badges dekhay na — seta Progress screen er concern.
 
 ---
 

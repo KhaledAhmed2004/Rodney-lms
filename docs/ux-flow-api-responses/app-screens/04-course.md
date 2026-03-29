@@ -28,12 +28,17 @@
 3. Success → navigate to Course Content screen (→ [5.2](./05-course-content.md))
 4. Already enrolled card e "Continue" button dekhay — tap e directly course content e navigate
 
-### Filter
-1. Student filter icon e tap kore — bottom sheet open hoy
-2. Filter options dekhay (enrollment status, rating etc.)
-3. Filter apply korle page 1 e reset hoy → `GET /courses/browse?enrollmentStatus=NOT_ENROLLED&page=1` (→ 4.1)
-4. Active filter count badge dekhay filter icon e
-5. "Clear All" e shob filter reset hoy
+### Filter (Tab Bar)
+1. Screen er top e 4 ta filter tab dekhay:
+   | Tab | `enrollment` param | Ki dekhay |
+   |-----|--------------------------|-----------|
+   | **All** | `all` (default) | Shob course |
+   | **In Progress** | `active` | Enrolled + ACTIVE status |
+   | **Completed** | `completed` | Enrolled + COMPLETED status |
+   | **Unenrolled** | `none` | Not enrolled (enrollment null) |
+2. Tab tap korle page 1 e reset hoy → `GET /courses/browse?enrollment=active&page=1` (→ 4.1)
+3. Search + filter eksathe kaje kore → `GET /courses/browse?searchTerm=js&enrollment=completed&page=1`
+4. Server-side filter — pagination accurate thake (client-side filter korle page e item count mismatch hoy)
 
 ### Pagination (Infinite Scroll)
 1. Student scroll kore list er niche
@@ -48,9 +53,18 @@
 ### 4.1 Browse Courses with Enrollment Status
 
 ```
-GET /courses/browse?page=1&limit=10&searchTerm=javascript&sort=-createdAt
+GET /courses/browse?page=1&limit=10&searchTerm=javascript&enrollment=all&sort=-createdAt
 Auth: Bearer {{accessToken}} (STUDENT)
 ```
+
+**Query Params:**
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `page` | number | 1 | Page number |
+| `limit` | number | 10 | Items per page |
+| `searchTerm` | string | — | Search by title + description |
+| `enrollment` | string | `all` | `all` \| `active` \| `completed` \| `none` |
+| `sort` | string | `-createdAt` | Sort field (prefix `-` for desc) |
 
 **Response:**
 ```json
@@ -69,7 +83,6 @@ Auth: Bearer {{accessToken}} (STUDENT)
       "averageRating": 4.5,
       "enrollmentCount": 150,
       "enrollment": {
-        "enrollmentId": "664b...",
         "status": "ACTIVE",
         "completionPercentage": 45
       }
@@ -90,7 +103,7 @@ Auth: Bearer {{accessToken}} (STUDENT)
 ```
 
 > **Notes:**
-> - `enrollment` is `null` for non-enrolled courses. Enrolled courses include `enrollmentId`, `status`, and `completionPercentage`
+> - `enrollment` is `null` for non-enrolled courses. Enrolled courses include `status` and `completionPercentage`
 > - `slug` included for client-side navigation to course detail screen (→ [5.2](./05-course-content.md))
 
 ---

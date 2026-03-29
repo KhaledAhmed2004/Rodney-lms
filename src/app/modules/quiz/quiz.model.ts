@@ -29,7 +29,6 @@ const QuestionSchema = new Schema(
     },
     text: { type: String, required: true },
     options: { type: [OptionSchema], default: [] },
-    correctAnswer: { type: String },
     marks: { type: Number, required: true, default: 1 },
     explanation: { type: String },
     order: { type: Number, required: true, default: 0 },
@@ -58,6 +57,7 @@ const quizSchema = new Schema<IQuiz, QuizModel>(
     course: {
       type: Schema.Types.ObjectId,
       ref: 'Course',
+      required: true,
     },
     questions: { type: [QuestionSchema], default: [] },
     settings: {
@@ -80,7 +80,6 @@ const StudentAnswerSchema = new Schema(
   {
     questionId: { type: String, required: true },
     selectedOptionId: { type: String },
-    textAnswer: { type: String },
     isCorrect: { type: Boolean, default: false },
     marksAwarded: { type: Number, default: 0 },
   },

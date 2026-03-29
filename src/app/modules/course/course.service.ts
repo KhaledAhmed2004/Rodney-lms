@@ -389,7 +389,7 @@ const createLesson = async (
     video: videoMeta,
     contentFile,
     readingContent: payload.readingContent,
-    assignmentInstructions: payload.assignmentInstructions,
+    quiz: payload.quiz,
     attachments,
   };
 
@@ -489,7 +489,7 @@ const updateLesson = async (
   if (payload.isVisible !== undefined) updateData.isVisible = payload.isVisible;
   if (payload.prerequisiteLesson !== undefined) updateData.prerequisiteLesson = payload.prerequisiteLesson || null;
   if (payload.readingContent !== undefined) updateData.readingContent = payload.readingContent;
-  if (payload.assignmentInstructions !== undefined) updateData.assignmentInstructions = payload.assignmentInstructions;
+  if (payload.quiz !== undefined) updateData.quiz = payload.quiz;
 
   // Handle contentFile replacement based on lesson type
   if (payload.contentFile) {
@@ -683,7 +683,6 @@ const getStudentCourseDetail = async (
   // Shape enrollment
   const enrollmentData = enrollment
     ? {
-        enrollmentId: String(enrollment._id),
         status: enrollment.status,
         completionPercentage: enrollment.progress.completionPercentage,
         completedLessons: enrollment.progress.completedLessons.map(String),
@@ -739,7 +738,6 @@ const browseCourses = async (
           { $limit: 1 },
           {
             $project: {
-              enrollmentId: '$_id',
               status: 1,
               completionPercentage: '$progress.completionPercentage',
               _id: 0,

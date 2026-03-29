@@ -3,7 +3,6 @@ import { Model, Types } from 'mongoose';
 export enum QUESTION_TYPE {
   MCQ = 'MCQ',
   TRUE_FALSE = 'TRUE_FALSE',
-  SHORT_ANSWER = 'SHORT_ANSWER',
 }
 
 export enum ATTEMPT_STATUS {
@@ -23,7 +22,6 @@ export type IQuestion = {
   type: QUESTION_TYPE;
   text: string;
   options: IOption[];
-  correctAnswer?: string;
   marks: number;
   explanation?: string;
   order: number;
@@ -41,7 +39,7 @@ export type IQuizSettings = {
 export type IQuiz = {
   title: string;
   description?: string;
-  course?: Types.ObjectId;
+  course: Types.ObjectId;
   questions: IQuestion[];
   settings: IQuizSettings;
   totalMarks: number;
@@ -57,7 +55,6 @@ export type QuizModel = {
 export type IStudentAnswer = {
   questionId: string;
   selectedOptionId?: string;
-  textAnswer?: string;
   isCorrect: boolean;
   marksAwarded: number;
 };

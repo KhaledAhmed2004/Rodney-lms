@@ -1,4 +1,6 @@
+import { StatusCodes } from 'http-status-codes';
 import { Types } from 'mongoose';
+import ApiError from '../../../errors/ApiError';
 import { Enrollment } from '../enrollment/enrollment.model';
 import { QuizAttempt } from '../quiz/quiz.model';
 import { StudentBadge } from '../gamification/gamification.model';
@@ -78,7 +80,9 @@ const getHome = async (studentId: string) => {
 
 const getProgress = async (studentId: string) => {
   const [user, enrollments] = await Promise.all([
-    User.findById(studentId).select('streak totalPoints'),
+    User.findOne({ _id: studentId, status: { $ne: 'DELETE' } }).select(
+      'streak totalPoints',
+    ),
     Enrollment.find({
       student: studentId,
       status: { $in: ['ACTIVE', 'COMPLETED'] },
@@ -86,6 +90,10 @@ const getProgress = async (studentId: string) => {
       .populate('course', 'title slug')
       .select('course progress'),
   ]);
+
+  if (!user) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'User not found');
+  }
 
   const validEnrollments = enrollments.filter((e: any) => e.course);
   const totalCourses = validEnrollments.length;
@@ -102,10 +110,10 @@ const getProgress = async (studentId: string) => {
 
   return {
     overallPercentage,
-    points: (user as any)?.totalPoints || 0,
+    points: (user as any).totalPoints || 0,
     streak: {
-      current: (user as any)?.streak?.current || 0,
-      longest: (user as any)?.streak?.longest || 0,
+      current: (user as any).streak?.current || 0,
+      longest: (user as any).streak?.longest || 0,
     },
     courses: validEnrollments.map((e: any) => ({
       title: e.course.title,

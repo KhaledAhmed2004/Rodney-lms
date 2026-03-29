@@ -85,7 +85,7 @@ const createLessonZodSchema = z.object({
       .min(1)
       .max(300),
     type: z.enum(
-      [LESSON_TYPE.VIDEO, LESSON_TYPE.READING, LESSON_TYPE.ASSIGNMENT],
+      [LESSON_TYPE.VIDEO, LESSON_TYPE.READING, LESSON_TYPE.QUIZ],
       { required_error: 'Lesson type is required' }
     ),
     description: z.string().max(10000).optional(),
@@ -93,7 +93,7 @@ const createLessonZodSchema = z.object({
     isVisible: z.coerce.boolean().optional(),
     prerequisiteLesson: z.string().optional(),
     readingContent: z.string().optional(),
-    assignmentInstructions: z.string().optional(),
+    quiz: z.string().optional(),
     contentFile: z.string().optional(),
     attachments: z.union([z.string(), z.array(z.string())]).optional(),
   }),
@@ -107,14 +107,14 @@ const updateLessonZodSchema = z.object({
   body: z.object({
     title: z.string().min(1).max(300).optional(),
     type: z
-      .enum([LESSON_TYPE.VIDEO, LESSON_TYPE.READING, LESSON_TYPE.ASSIGNMENT])
+      .enum([LESSON_TYPE.VIDEO, LESSON_TYPE.READING, LESSON_TYPE.QUIZ])
       .optional(),
     description: z.string().max(10000).optional(),
     learningObjectives: z.array(z.string().max(500)).max(20).optional(),
     isVisible: z.coerce.boolean().optional(),
     prerequisiteLesson: z.string().nullable().optional(),
     readingContent: z.string().optional(),
-    assignmentInstructions: z.string().optional(),
+    quiz: z.string().optional(),
     contentFile: z.string().optional(),
     attachments: z.union([z.string(), z.array(z.string())]).optional(),
   }),

@@ -57,56 +57,6 @@ const deleteQuiz = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const addQuestion = catchAsync(async (req: Request, res: Response) => {
-  const result = await QuizService.addQuestion(req.params.id, req.body);
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.CREATED,
-    message: 'Question added successfully',
-    data: result,
-  });
-});
-
-const updateQuestion = catchAsync(async (req: Request, res: Response) => {
-  const result = await QuizService.updateQuestion(
-    req.params.id,
-    req.params.questionId,
-    req.body,
-  );
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Question updated successfully',
-    data: result,
-  });
-});
-
-const deleteQuestion = catchAsync(async (req: Request, res: Response) => {
-  const result = await QuizService.deleteQuestion(
-    req.params.id,
-    req.params.questionId,
-  );
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Question deleted successfully',
-    data: result,
-  });
-});
-
-const reorderQuestions = catchAsync(async (req: Request, res: Response) => {
-  const result = await QuizService.reorderQuestions(
-    req.params.id,
-    req.body.questionIds,
-  );
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Questions reordered successfully',
-    data: result,
-  });
-});
-
 const getQuizAttempts = catchAsync(async (req: Request, res: Response) => {
   const result = await QuizService.getQuizAttempts(req.params.id, req.query);
   sendResponse(res, {
@@ -158,7 +108,13 @@ const submitAttempt = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAttemptById = catchAsync(async (req: Request, res: Response) => {
-  const result = await QuizService.getAttemptById(req.params.attemptId);
+  const userId = (req.user as JwtPayload).id;
+  const userRole = (req.user as JwtPayload).role;
+  const result = await QuizService.getAttemptById(
+    req.params.attemptId,
+    userId,
+    userRole,
+  );
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -185,10 +141,6 @@ export const QuizController = {
   getQuizById,
   updateQuiz,
   deleteQuiz,
-  addQuestion,
-  updateQuestion,
-  deleteQuestion,
-  reorderQuestions,
   getQuizAttempts,
   getStudentView,
   startAttempt,

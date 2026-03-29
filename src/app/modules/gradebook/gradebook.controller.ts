@@ -6,23 +6,6 @@ import sendResponse from '../../../shared/sendResponse';
 import ExportBuilder from '../../builder/ExportBuilder';
 import { GradebookService } from './gradebook.service';
 
-const submitAssignment = catchAsync(async (req: Request, res: Response) => {
-  const userId = (req.user as JwtPayload).id;
-  const result = await GradebookService.submitAssignment(
-    req.params.lessonId,
-    userId,
-    req.body.courseId,
-    req.body.content,
-    req.body.attachments,
-  );
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.CREATED,
-    message: 'Assignment submitted successfully',
-    data: result,
-  });
-});
-
 const getMyGrades = catchAsync(async (req: Request, res: Response) => {
   const userId = (req.user as JwtPayload).id;
   const result = await GradebookService.getMyGrades(userId, req.query);
@@ -75,8 +58,6 @@ const exportStudentGradebook = catchAsync(
         { key: 'quizzesAttempted', header: 'Quizzes Attempted', width: 18 },
         { key: 'totalQuizzes', header: 'Total Quizzes', width: 15 },
         { key: 'overallQuizPercentage', header: 'Quiz Avg %', width: 12 },
-        { key: 'assignmentsSubmitted', header: 'Assignments Submitted', width: 22 },
-        { key: 'totalAssignments', header: 'Total Assignments', width: 18 },
         { key: 'completionPercentage', header: 'Completion %', width: 15 },
         { key: 'lastActivityDate', header: 'Last Activity', width: 18 },
       ])
@@ -85,7 +66,6 @@ const exportStudentGradebook = catchAsync(
 );
 
 export const GradebookController = {
-  submitAssignment,
   getMyGrades,
   getAllStudentGradebook,
   getGradebookSummary,

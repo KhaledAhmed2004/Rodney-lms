@@ -5,6 +5,113 @@
 > **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
 > **Related screens**: [Quiz Builder](./08-quiz-builder.md), [Enrollment Management](./05-enrollment-management.md)
 
+## UX Flow
+
+### Course List Page Load
+1. Admin sidebar e "Courses" e click kore
+2. Course list load hoy → `GET /courses/manage?page=1&limit=10` (→ 4.2)
+3. Table dekhay: thumbnail, title, total lessons, avg rating, enrollment count, status (DRAFT/PUBLISHED), created date
+4. Search bar e `searchTerm` diye course title search kora jay
+5. Status filter diye DRAFT / PUBLISHED / ARCHIVED filter kora jay
+
+### Create Course
+1. Admin "Create Course" button e click kore
+2. Form e fill kore:
+   - Title (mandatory)
+   - Description (optional)
+   - Thumbnail upload (file — image)
+   - Status select: DRAFT (default) / PUBLISHED
+   - Publish schedule date (optional — future date e auto-publish)
+3. Submit → `POST /courses` (→ 4.1)
+4. Success → course detail page e redirect — empty course (no modules/lessons yet)
+
+> Course create korle initially `modules: []`, `totalLessons: 0`. Module + lesson por e add kore.
+
+### View Course Detail (Module + Lesson Management)
+1. Admin course list theke kono course e click kore
+2. Course detail page load hoy — course info + module list + each module er lessons
+3. **3-level hierarchy dekhay:**
+   ```
+   Course: "Introduction to Web Development"
+   ├── Module 1: Getting Started
+   │   ├── Lesson 1: Introduction to HTML (VIDEO)
+   │   ├── Lesson 2: CSS Basics (READING)
+   │   └── Lesson 3: Module 1 Quiz (QUIZ)
+   ├── Module 2: JavaScript Fundamentals
+   │   ├── Lesson 1: Variables & Types (VIDEO)
+   │   └── Lesson 2: Functions (VIDEO)
+   └── Module 3: Advanced Topics
+       └── (empty — no lessons yet)
+   ```
+
+### Edit Course
+1. Course detail page e "Edit" button e click kore
+2. Title, description, status, thumbnail edit kore
+3. Submit → `PATCH /courses/:courseId` (→ 4.3)
+4. Success → updated course detail dekhay
+
+### Manage Modules
+Course detail page theke module add/edit/delete/reorder:
+
+**Add Module:**
+1. "Add Module" button e click kore
+2. Module title input kore
+3. Submit → `POST /courses/:courseId/modules` (→ 4.5)
+4. New module course er sheshe add hoy (auto order)
+
+**Edit Module:**
+1. Module card e edit icon → title edit kore
+2. Submit → `PATCH /courses/:courseId/modules/:moduleId` (→ 4.7)
+
+**Reorder Modules:**
+1. Drag-and-drop diye module order change kore
+2. Drop → `PATCH /courses/:courseId/modules/reorder` (→ 4.6) — ordered moduleId array pathay
+
+**Delete Module:**
+1. Module card e delete icon → confirm dialog (module er shob lesson-o delete hobe warning)
+2. Confirm → `DELETE /courses/:courseId/modules/:moduleId` (→ 4.8)
+
+### Manage Lessons
+Module expand korle lesson list dekhay — lesson add/edit/delete/reorder/visibility:
+
+**Add Lesson:**
+1. Module er moddhe "Add Lesson" button e click kore
+2. Form e fill kore:
+   - Title (mandatory)
+   - Type select: VIDEO / READING / QUIZ
+   - Description, learning objectives
+   - **VIDEO**: video file upload
+   - **READING**: rich text content
+   - **QUIZ**: existing quiz select kore dropdown theke (Quiz Builder e create kora quiz list dekhabe)
+   - Attachments (optional files)
+   - Prerequisite lesson (optional — dropdown theke select)
+   - Visibility toggle (default: visible)
+3. Submit → `POST /courses/:courseId/modules/:moduleId/lessons` (→ 4.9)
+
+**Edit Lesson:**
+1. Lesson card e edit icon → form pre-filled thake
+2. Change korte chay je fields shegula edit kore
+3. Submit → `PATCH /courses/:courseId/modules/:moduleId/lessons/:lessonId` (→ 4.11)
+
+**Reorder Lessons:**
+1. Module er moddhe drag-and-drop diye lesson order change kore
+2. Drop → `PATCH /courses/:courseId/modules/:moduleId/lessons/reorder` (→ 4.10)
+
+**Toggle Visibility:**
+1. Lesson card e visibility toggle (eye icon) e click kore
+2. Instant → `PATCH /courses/:courseId/lessons/:lessonId/visibility` (→ 4.13)
+3. Response dekhay: visible / hidden state
+
+**Delete Lesson:**
+1. Lesson card e delete icon → confirm dialog
+2. Confirm → `DELETE /courses/:courseId/modules/:moduleId/lessons/:lessonId` (→ 4.12)
+
+### Delete Course
+1. Admin course list / detail page theke delete icon e click kore
+2. Confirm dialog dekhay — warning: course er shob modules, lessons, enrollments affected hobe
+3. Confirm → `DELETE /courses/:courseId` (→ 4.4)
+4. Success → course list e redirect
+
 ---
 
 ### Courses
@@ -224,13 +331,13 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 **Form Data:**
 - `title`: "Introduction to HTML"
-- `type`: "VIDEO" | "READING" | "ASSIGNMENT"
+- `type`: "VIDEO" | "READING" | "QUIZ"
 - `description`: "Learn the basics..."
 - `learningObjectives[]`: "Understand HTML structure"
 - `isVisible`: "true" (optional)
 - `prerequisiteLesson`: "LESSON_ID" (optional)
 - `readingContent`: "<h1>...</h1>" (optional, for READING type)
-- `assignmentInstructions`: "..." (optional, for ASSIGNMENT type)
+- `quiz`: "QUIZ_ID" (optional, for QUIZ type — existing quiz er ObjectId)
 - `contentFile`: (file, optional)
 - `attachments`: (file, optional)
 
@@ -256,7 +363,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
     },
     "contentFile": null,
     "readingContent": null,
-    "assignmentInstructions": null,
+    "quiz": null,
     "attachments": [],
     "createdAt": "2026-03-14T10:00:00Z"
   }

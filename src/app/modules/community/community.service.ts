@@ -97,8 +97,6 @@ const getAllPosts = async (query: Record<string, unknown>, userId?: string) => {
   return { pagination, data: postsWithLikeStatus };
 };
 
-const REPLY_LIMIT = 200;
-
 const getPostById = async (id: string, userId?: string) => {
   const post = await Post.findById(id)
     .select('author title course content image likesCount repliesCount createdAt')
@@ -120,7 +118,6 @@ const getPostById = async (id: string, userId?: string) => {
       match: { status: { $ne: 'DELETE' } },
     })
     .sort({ createdAt: 1 })
-    .limit(REPLY_LIMIT)
     .lean();
 
   // Build nested reply structure (1-level)
@@ -153,7 +150,6 @@ const getPostById = async (id: string, userId?: string) => {
     course: postObj.course?.title || null,
     isLiked,
     replies: topLevelReplies,
-    hasMoreReplies: post.repliesCount > REPLY_LIMIT,
   };
 };
 
@@ -414,56 +410,6 @@ const updateReply = async (
   return updated!;
 };
 
-const getPostReplies = async (postId: string, query: Record<string, unknown>) => {
-  const post = await Post.findById(postId);
-  if (!post) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Post not found');
-  }
-
-  // Paginate top-level replies, fetch their children in batch
-  const replyQuery = new QueryBuilder(
-    PostReply.find({ post: postId, parentReply: null })
-      .select('author content createdAt')
-      .populate({
-        path: 'author',
-        select: 'name profilePicture role',
-        match: { status: { $ne: 'DELETE' } },
-      }),
-    query,
-  )
-    .sort()
-    .paginate();
-
-  const topReplies = await replyQuery.modelQuery;
-  const pagination = await replyQuery.getPaginationInfo();
-
-  // Batch fetch children for this page's top-level replies
-  const topReplyIds = topReplies.map((r: any) => r._id);
-  const children = await PostReply.find({ parentReply: { $in: topReplyIds } })
-    .select('author content parentReply createdAt')
-    .populate({
-      path: 'author',
-      select: 'name profilePicture role',
-      match: { status: { $ne: 'DELETE' } },
-    })
-    .sort({ createdAt: 1 })
-    .lean();
-
-  const childrenMap = new Map<string, any[]>();
-  for (const child of children) {
-    const parentId = child.parentReply!.toString();
-    if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
-    childrenMap.get(parentId)!.push(child);
-  }
-
-  const data = topReplies.map((r: any) => ({
-    ...r.toObject(),
-    children: childrenMap.get(r._id.toString()) || [],
-  }));
-
-  return { pagination, data };
-};
-
 export const CommunityService = {
   createPost,
   getAllPosts,
@@ -475,5 +421,4 @@ export const CommunityService = {
   getMyPosts,
   updatePost,
   updateReply,
-  getPostReplies,
 };

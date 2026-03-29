@@ -1,5 +1,4 @@
 import { StatusCodes } from 'http-status-codes';
-import { Types } from 'mongoose';
 import ApiError from '../../../errors/ApiError';
 import { DailyActivity } from './activity.model';
 import { User } from '../user/user.model';
@@ -16,42 +15,17 @@ const getCalendar = async (
   const startDate = new Date(y, m - 1, 1);
   const endDate = new Date(y, m, 1);
 
-  const [days, summaryResult] = await Promise.all([
-    DailyActivity.find({
-      student: studentId,
-      date: { $gte: startDate, $lt: endDate },
-    })
-      .sort({ date: 1 })
-      .select('date lessonsCompleted quizzesTaken pointsEarned -_id'),
+  const activeDays = await DailyActivity.find({
+    student: studentId,
+    date: { $gte: startDate, $lt: endDate },
+  })
+    .sort({ date: 1 })
+    .select('date -_id')
+    .lean();
 
-    DailyActivity.aggregate([
-      {
-        $match: {
-          student: new Types.ObjectId(studentId),
-          date: { $gte: startDate, $lt: endDate },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalActiveDays: { $sum: 1 },
-          totalLessons: { $sum: '$lessonsCompleted' },
-          totalQuizzes: { $sum: '$quizzesTaken' },
-          totalPoints: { $sum: '$pointsEarned' },
-        },
-      },
-    ]),
-  ]);
+  const days = activeDays.map(d => d.date);
 
-  const summary = summaryResult[0] ?? {
-    totalActiveDays: 0,
-    totalLessons: 0,
-    totalQuizzes: 0,
-    totalPoints: 0,
-  };
-  delete summary._id;
-
-  return { month: m, year: y, summary, days };
+  return { month: m, year: y, days };
 };
 
 const getStreak = async (studentId: string) => {

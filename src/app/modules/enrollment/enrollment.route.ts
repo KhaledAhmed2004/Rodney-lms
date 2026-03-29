@@ -56,7 +56,7 @@ router.patch(
 
 // Lesson completion
 router.post(
-  '/:enrollmentId/lessons/:lessonId/complete',
+  '/:courseId/lessons/:lessonId/complete',
   auth(USER_ROLES.STUDENT),
   validateRequest(EnrollmentValidation.completeLesson),
   EnrollmentController.completeLesson,

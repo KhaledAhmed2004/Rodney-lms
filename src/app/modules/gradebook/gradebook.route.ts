@@ -1,9 +1,7 @@
 import express from 'express';
 import { USER_ROLES } from '../../../enums/user';
 import auth from '../../middlewares/auth';
-import validateRequest from '../../middlewares/validateRequest';
 import { GradebookController } from './gradebook.controller';
-import { GradebookValidation } from './gradebook.validation';
 
 const router = express.Router();
 
@@ -12,13 +10,6 @@ router.get(
   '/my-grades',
   auth(USER_ROLES.STUDENT),
   GradebookController.getMyGrades,
-);
-
-router.post(
-  '/assignments/:lessonId/submit',
-  auth(USER_ROLES.STUDENT),
-  validateRequest(GradebookValidation.submitAssignment),
-  GradebookController.submitAssignment,
 );
 
 // Admin routes (fixed paths before shorter paths)

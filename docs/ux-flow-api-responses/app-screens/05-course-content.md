@@ -23,11 +23,11 @@
 3. Lesson type onujayi content render hoy:
    - **VIDEO**: Video player + attachments
    - **READING**: Reading content + attachments
-   - **ASSIGNMENT**: Instructions + submission form
+   - **QUIZ**: Quiz attempt flow (→ Quiz Builder)
 
 ### Mark Lesson Complete
 1. Student lesson content dekhse / video shesh koreche
-2. "Mark Complete" button e tap kore → `POST /enrollments/:enrollmentId/lessons/:lessonId/complete` (→ 5.5)
+2. "Mark Complete" button e tap kore → `POST /enrollments/:courseId/lessons/:lessonId/complete` (→ 5.5)
 3. Progress update hoy — `completionPercentage` + `completedLessons` update
 
 ### Quiz Flow
@@ -143,7 +143,6 @@ Auth: Bearer {{accessToken}} (STUDENT)
       }
     ],
     "enrollment": {
-      "enrollmentId": "665a...",
       "status": "ACTIVE",
       "completionPercentage": 45,
       "completedLessons": ["664c..."],
@@ -241,7 +240,7 @@ Auth: Bearer {{accessToken}}
 ### 5.5 Mark Lesson Complete
 
 ```
-POST /enrollments/:enrollmentId/lessons/:lessonId/complete
+POST /enrollments/:courseId/lessons/:lessonId/complete
 Auth: Bearer {{accessToken}}
 ```
 

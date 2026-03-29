@@ -22,8 +22,7 @@
 
 ### View Post Detail + Replies
 1. Student feed theke ekta post e tap kore
-2. Post detail load hoy → `GET /community/posts/:id` (replies shoh ashe, max 200)
-3. `hasMoreReplies: true` hole "Load more" dekhay
+2. Post detail load hoy → `GET /community/posts/:id` (post + all replies nested tree)
 
 ### Like / Unlike
 1. Student post er like button e tap kore → `PATCH /community/posts/:id/like`
@@ -195,13 +194,12 @@ Auth: Bearer {{accessToken}}
         "createdAt": "2026-03-14T13:30:00Z"
       }
     ],
-    "hasMoreReplies": false,
     "createdAt": "2026-03-14T13:00:00Z"
   }
 }
 ```
 
-> `hasMoreReplies: true` means the post has more than 200 replies — frontend should show a "Load more" option or indicate there are additional replies.
+> All replies returned in nested tree (1-level). LMS context e post e typically 10-50 replies — shob ekbare load hoy.
 
 ---
 
@@ -402,63 +400,7 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 8.10 Get Post Replies (Paginated)
-
-```
-GET /community/posts/:id/replies?page=1&limit=20&sort=-createdAt
-Auth: Bearer {{accessToken}}
-```
-
-> Paginated top-level replies with their children. Use for "Load more" when `hasMoreReplies: true` in 8.3.
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Replies retrieved successfully",
-  "pagination": { "page": 1, "limit": 20, "total": 45, "totalPage": 3 },
-  "data": [
-    {
-      "_id": "664l...",
-      "author": {
-        "_id": "664b...",
-        "name": "Alice Student",
-        "profilePicture": "https://cdn.example.com/alice.jpg",
-        "role": "STUDENT"
-      },
-      "content": "I had the same question! Anyone?",
-      "children": [],
-      "createdAt": "2026-03-14T13:20:00Z"
-    },
-    {
-      "_id": "664m...",
-      "author": {
-        "_id": "664c...",
-        "name": "Admin Jane",
-        "profilePicture": "https://cdn.example.com/jane.jpg",
-        "role": "SUPER_ADMIN"
-      },
-      "content": "A closure is when a function remembers its outer scope...",
-      "children": [
-        {
-          "_id": "664n...",
-          "author": { "_id": "664a...", "name": "John Doe", "profilePicture": "...", "role": "STUDENT" },
-          "content": "Thanks, that makes sense now!",
-          "parentReply": "664m...",
-          "createdAt": "2026-03-14T13:45:00Z"
-        }
-      ],
-      "createdAt": "2026-03-14T13:30:00Z"
-    }
-  ]
-}
-```
-
-> Pagination top-level replies er upor kaje kore. Children batch fetch hoy per page — separate pagination nai. Default sort: `createdAt ASC` (oldest first).
-
----
-
-### 8.11 Course Options (Filter Dropdown)
+### 8.10 Course Options (Filter Dropdown)
 
 ```
 GET /courses/options
@@ -542,10 +484,10 @@ Auth: Bearer {{accessToken}}
 - **Fix:** Pre-filter approach — deleted user IDs query diye `baseFilter.author = { $nin: deletedUserIds }` add kora hoise QueryBuilder er age. Pagination ekhon accurate. Post-filter remove kora hoise
 - **Affected:** 8.2 Get Feed
 
-**2. [P1] `hasMoreReplies: true` but no paginated replies endpoint**
-- **Problem:** `getPostById` e `hasMoreReplies` flag chilo but 200+ replies load korar kono API chilo na — "Load more" button dead
-- **Fix:** `GET /community/posts/:id/replies?page=1&limit=20` endpoint add kora hoise. Top-level replies paginate hoy, children batch fetch hoy per page. Nested tree structure same as 8.3
-- **Affected:** New endpoint 8.10
+**2. [P1] `hasMoreReplies` + `REPLY_LIMIT` removed — unnecessary complexity**
+- **Problem:** `REPLY_LIMIT = 200` + `hasMoreReplies` flag chilo but LMS e 200+ reply realistic na (typical 10-50). Paginated reply endpoint YAGNI chilo
+- **Fix:** `.limit(200)` remove — shob reply ekbare fetch hoy. `hasMoreReplies` field response theke remove. Simpler, no dead UX
+- **Affected:** 8.3 Get Post by ID
 
 **3. [P2] `likesCount` / `repliesCount` counter drift**
 - **Problem:** `PostLike.create()` ar `Post.$inc({ likesCount: 1 })` — 2 ta separate operation. First succeed kore second fail korle count drift hoy. Same for replies

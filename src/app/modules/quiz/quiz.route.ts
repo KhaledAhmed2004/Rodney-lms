@@ -60,34 +60,6 @@ router.patch(
 
 router.delete('/:id', auth(USER_ROLES.SUPER_ADMIN), QuizController.deleteQuiz);
 
-// Question management
-router.post(
-  '/:id/questions',
-  auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(QuizValidation.addQuestion),
-  QuizController.addQuestion,
-);
-
-router.patch(
-  '/:id/questions/reorder',
-  auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(QuizValidation.reorderQuestions),
-  QuizController.reorderQuestions,
-);
-
-router.patch(
-  '/:id/questions/:questionId',
-  auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(QuizValidation.updateQuestion),
-  QuizController.updateQuestion,
-);
-
-router.delete(
-  '/:id/questions/:questionId',
-  auth(USER_ROLES.SUPER_ADMIN),
-  QuizController.deleteQuestion,
-);
-
 // Attempts (admin view)
 router.get(
   '/:id/attempts',

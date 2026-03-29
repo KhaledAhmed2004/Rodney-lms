@@ -37,7 +37,7 @@ const updateStatus = z.object({
 
 const completeLesson = z.object({
   params: z.object({
-    enrollmentId: z.string({ required_error: 'Enrollment ID is required' }),
+    courseId: z.string({ required_error: 'Course ID is required' }),
     lessonId: z.string({ required_error: 'Lesson ID is required' }),
   }),
 });

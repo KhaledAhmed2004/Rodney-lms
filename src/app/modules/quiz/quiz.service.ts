@@ -3,11 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import { PipelineStage, Types } from 'mongoose';
 import ApiError from '../../../errors/ApiError';
 import QueryBuilder from '../../builder/QueryBuilder';
-import {
-  IQuiz,
-  IQuizAttempt,
-  QUESTION_TYPE,
-} from './quiz.interface';
+import { IQuiz, IQuizAttempt } from './quiz.interface';
 import { Quiz, QuizAttempt } from './quiz.model';
 import { GamificationHelper } from '../../helpers/gamificationHelper';
 import { POINTS_REASON } from '../gamification/gamification.interface';
@@ -17,6 +13,7 @@ import { POINTS_REASON } from '../gamification/gamification.interface';
 const createQuiz = async (payload: Record<string, unknown>): Promise<IQuiz> => {
   const quizData: Record<string, unknown> = {
     title: payload.title,
+    course: payload.course,
     description: payload.description,
     settings: payload.settings,
   };
@@ -33,12 +30,16 @@ const createQuiz = async (payload: Record<string, unknown>): Promise<IQuiz> => {
     );
   }
 
-  const result = await Quiz.create(quizData);
-  return result;
+  const created = await Quiz.create(quizData);
+  const result = await Quiz.findById(created._id).select('-__v');
+  return result!;
 };
 
 const getAllQuizzes = async (query: Record<string, unknown>) => {
-  const quizQuery = new QueryBuilder(Quiz.find(), query)
+  const quizQuery = new QueryBuilder(
+    Quiz.find().populate('course', 'title').select('-questions'),
+    query,
+  )
     .search(['title'])
     .filter()
     .sort()
@@ -59,13 +60,38 @@ const getQuizById = async (id: string): Promise<IQuiz> => {
 
 const updateQuiz = async (
   id: string,
-  payload: Partial<IQuiz>,
+  payload: Record<string, unknown>,
 ): Promise<IQuiz | null> => {
   const existing = await Quiz.findById(id);
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Quiz not found');
   }
-  const result = await Quiz.findByIdAndUpdate(id, payload, { new: true });
+
+  const updateData: Record<string, unknown> = {};
+  if (payload.title !== undefined) updateData.title = payload.title;
+  if (payload.description !== undefined)
+    updateData.description = payload.description;
+  if (payload.settings !== undefined) {
+    updateData.settings = {
+      ...(existing.settings as any).toObject?.() ?? existing.settings,
+      ...(payload.settings as Record<string, unknown>),
+    };
+  }
+
+  // Questions array replace — auto-generate questionId + order, recalculate totalMarks
+  if (payload.questions && Array.isArray(payload.questions)) {
+    updateData.questions = (payload.questions as any[]).map((q, index) => ({
+      ...q,
+      questionId: q.questionId || crypto.randomUUID(),
+      order: q.order ?? index,
+    }));
+    updateData.totalMarks = (updateData.questions as any[]).reduce(
+      (sum: number, q: any) => sum + (q.marks || 1),
+      0,
+    );
+  }
+
+  const result = await Quiz.findByIdAndUpdate(id, updateData, { new: true });
   return result;
 };
 
@@ -76,123 +102,6 @@ const deleteQuiz = async (id: string): Promise<void> => {
   }
   await QuizAttempt.deleteMany({ quiz: id });
   await Quiz.findByIdAndDelete(id);
-};
-
-const addQuestion = async (
-  quizId: string,
-  questionData: Record<string, unknown>,
-): Promise<IQuiz | null> => {
-  const quiz = await Quiz.findById(quizId);
-  if (!quiz) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Quiz not found');
-  }
-
-  if (!questionData.questionId) {
-    questionData.questionId = crypto.randomUUID();
-  }
-
-  const marks = (questionData.marks as number) || 1;
-
-  const result = await Quiz.findByIdAndUpdate(
-    quizId,
-    {
-      $push: { questions: questionData },
-      $inc: { totalMarks: marks },
-    },
-    { new: true },
-  );
-  return result;
-};
-
-const updateQuestion = async (
-  quizId: string,
-  questionId: string,
-  payload: Record<string, unknown>,
-): Promise<IQuiz | null> => {
-  const quiz = await Quiz.findById(quizId);
-  if (!quiz) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Quiz not found');
-  }
-
-  const questionIndex = quiz.questions.findIndex(
-    q => q.questionId === questionId,
-  );
-  if (questionIndex === -1) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Question not found');
-  }
-
-  const updateFields: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(payload)) {
-    updateFields[`questions.${questionIndex}.${key}`] = value;
-  }
-
-  const result = await Quiz.findByIdAndUpdate(
-    quizId,
-    { $set: updateFields },
-    { new: true },
-  );
-
-  // Recalculate total marks
-  if (result) {
-    const totalMarks = result.questions.reduce((sum, q) => sum + q.marks, 0);
-    await Quiz.findByIdAndUpdate(quizId, { totalMarks });
-  }
-
-  return result;
-};
-
-const deleteQuestion = async (
-  quizId: string,
-  questionId: string,
-): Promise<IQuiz | null> => {
-  const quiz = await Quiz.findById(quizId);
-  if (!quiz) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Quiz not found');
-  }
-
-  const question = quiz.questions.find(q => q.questionId === questionId);
-  if (!question) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Question not found');
-  }
-
-  const result = await Quiz.findByIdAndUpdate(
-    quizId,
-    {
-      $pull: { questions: { questionId } },
-      $inc: { totalMarks: -question.marks },
-    },
-    { new: true },
-  );
-  return result;
-};
-
-const reorderQuestions = async (
-  quizId: string,
-  questionIds: string[],
-): Promise<IQuiz | null> => {
-  const quiz = await Quiz.findById(quizId);
-  if (!quiz) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Quiz not found');
-  }
-
-  const reorderedQuestions = questionIds.map((qId, index) => {
-    const question = quiz.questions.find(q => q.questionId === qId);
-    if (!question) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, `Question ${qId} not found`);
-    }
-    const questionObj =
-      typeof (question as any).toObject === 'function'
-        ? (question as any).toObject()
-        : { ...question };
-    return { ...questionObj, order: index };
-  });
-
-  const result = await Quiz.findByIdAndUpdate(
-    quizId,
-    { $set: { questions: reorderedQuestions } },
-    { new: true },
-  );
-  return result;
 };
 
 const getQuizAttempts = async (
@@ -217,6 +126,16 @@ const getQuizAttempts = async (
 
 // ==================== STUDENT SERVICES ====================
 
+// Fisher-Yates shuffle
+const shuffleArray = <T>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 const getStudentView = async (
   quizId: string,
   studentId: string,
@@ -225,8 +144,9 @@ const getStudentView = async (
   if (!quiz) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Quiz not found');
   }
-  // Strip correct answers
-  const sanitizedQuestions = quiz.questions.map(q => ({
+
+  // Strip correct answers + explanation
+  let questions = quiz.questions.map(q => ({
     questionId: q.questionId,
     type: q.type,
     text: q.text,
@@ -238,11 +158,22 @@ const getStudentView = async (
     order: q.order,
   }));
 
+  // Server-side shuffle (anti-cheating)
+  if (quiz.settings.shuffleQuestions) {
+    questions = shuffleArray(questions);
+  }
+  if (quiz.settings.shuffleOptions) {
+    questions = questions.map(q => ({
+      ...q,
+      options: shuffleArray(q.options),
+    }));
+  }
+
   return {
     _id: (quiz as any)._id,
     title: quiz.title,
     description: quiz.description,
-    questions: sanitizedQuestions as any,
+    questions: questions as any,
     settings: {
       timeLimit: quiz.settings.timeLimit,
       maxAttempts: quiz.settings.maxAttempts,
@@ -304,7 +235,6 @@ const submitAttempt = async (
   answers: Array<{
     questionId: string;
     selectedOptionId?: string;
-    textAnswer?: string;
   }>,
 ): Promise<IQuizAttempt | null> => {
   const attempt = await QuizAttempt.findById(attemptId);
@@ -323,6 +253,20 @@ const submitAttempt = async (
     throw new ApiError(StatusCodes.NOT_FOUND, 'Quiz not found');
   }
 
+  // Enforce time limit (30 sec grace period for network delay)
+  if (quiz.settings.timeLimit > 0) {
+    const elapsedSeconds = Math.floor(
+      (Date.now() - attempt.startedAt.getTime()) / 1000,
+    );
+    const limitSeconds = quiz.settings.timeLimit * 60 + 30;
+    if (elapsedSeconds > limitSeconds) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Time limit exceeded. Quiz submission rejected.',
+      );
+    }
+  }
+
   // Grade answers
   let totalScore = 0;
   const gradedAnswers = answers.map(answer => {
@@ -333,7 +277,6 @@ const submitAttempt = async (
       return {
         questionId: answer.questionId,
         selectedOptionId: answer.selectedOptionId,
-        textAnswer: answer.textAnswer,
         isCorrect: false,
         marksAwarded: 0,
       };
@@ -342,19 +285,10 @@ const submitAttempt = async (
     let isCorrect = false;
     let marksAwarded = 0;
 
-    if (
-      question.type === QUESTION_TYPE.MCQ ||
-      question.type === QUESTION_TYPE.TRUE_FALSE
-    ) {
-      const correctOption = question.options.find(o => o.isCorrect);
-      if (correctOption && answer.selectedOptionId === correctOption.optionId) {
-        isCorrect = true;
-        marksAwarded = question.marks;
-      }
-    } else if (question.type === QUESTION_TYPE.SHORT_ANSWER) {
-      // Short answer requires manual grading — mark as pending (0 marks for now)
-      isCorrect = false;
-      marksAwarded = 0;
+    const correctOption = question.options.find(o => o.isCorrect);
+    if (correctOption && answer.selectedOptionId === correctOption.optionId) {
+      isCorrect = true;
+      marksAwarded = question.marks;
     }
 
     totalScore += marksAwarded;
@@ -362,7 +296,6 @@ const submitAttempt = async (
     return {
       questionId: answer.questionId,
       selectedOptionId: answer.selectedOptionId,
-      textAnswer: answer.textAnswer,
       isCorrect,
       marksAwarded,
     };
@@ -403,13 +336,23 @@ const submitAttempt = async (
   return result;
 };
 
-const getAttemptById = async (attemptId: string): Promise<IQuizAttempt> => {
+const getAttemptById = async (
+  attemptId: string,
+  userId: string,
+  userRole: string,
+): Promise<IQuizAttempt> => {
   const result = await QuizAttempt.findById(attemptId)
     .populate('quiz', 'title totalMarks settings')
     .populate('student', 'name email profilePicture');
   if (!result) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Attempt not found');
   }
+
+  // Students can only view their own attempts
+  if (userRole !== 'SUPER_ADMIN' && result.student._id.toString() !== userId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Not authorized');
+  }
+
   return result;
 };
 
@@ -417,8 +360,8 @@ const getMyAttempts = async (
   studentId: string,
   query: Record<string, unknown>,
 ) => {
-  const page = Number(query.page) || 1;
-  const limit = Number(query.limit) || 10;
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.min(Math.max(1, Number(query.limit) || 10), 100);
   const skip = (page - 1) * limit;
 
   const pipeline: PipelineStage[] = [
@@ -486,10 +429,6 @@ export const QuizService = {
   getQuizById,
   updateQuiz,
   deleteQuiz,
-  addQuestion,
-  updateQuestion,
-  deleteQuestion,
-  reorderQuestions,
   getQuizAttempts,
   getStudentView,
   startAttempt,

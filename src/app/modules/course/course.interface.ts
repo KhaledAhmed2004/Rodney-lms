@@ -9,7 +9,7 @@ export enum COURSE_STATUS {
 export enum LESSON_TYPE {
   VIDEO = 'VIDEO',
   READING = 'READING',
-  ASSIGNMENT = 'ASSIGNMENT',
+  QUIZ = 'QUIZ',
 }
 
 export enum VIDEO_PROCESSING_STATUS {
@@ -75,7 +75,7 @@ export type ILesson = {
   video?: IVideoMeta;
   contentFile?: ILessonAttachment;
   readingContent?: string;
-  assignmentInstructions?: string;
+  quiz?: Types.ObjectId;
   attachments: ILessonAttachment[];
   createdAt?: Date;
   updatedAt?: Date;

@@ -8,14 +8,6 @@ export enum GRADE_STATUS {
 
 export enum ASSESSMENT_TYPE {
   QUIZ = 'QUIZ',
-  ASSIGNMENT = 'ASSIGNMENT',
-}
-
-export enum SUBMISSION_STATUS {
-  SUBMITTED = 'SUBMITTED',
-  GRADED = 'GRADED',
-  RETURNED = 'RETURNED',
-  RESUBMITTED = 'RESUBMITTED',
 }
 
 export type IGrade = {
@@ -38,23 +30,3 @@ export type IGrade = {
 
 export type GradeModel = Model<IGrade>;
 
-export type IAttachment = {
-  url: string;
-  name: string;
-  size?: number;
-};
-
-export type IAssignmentSubmission = {
-  student: Types.ObjectId;
-  course: Types.ObjectId;
-  lesson: Types.ObjectId;
-  enrollment: Types.ObjectId;
-  content: string;
-  attachments: IAttachment[];
-  status: SUBMISSION_STATUS;
-  submittedAt: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
-};
-
-export type AssignmentSubmissionModel = Model<IAssignmentSubmission>;

@@ -1,60 +1,10 @@
-import { StatusCodes } from 'http-status-codes';
 import { PipelineStage, Types } from 'mongoose';
 import escapeRegex from 'escape-string-regexp';
-import ApiError from '../../../errors/ApiError';
 import QueryBuilder from '../../builder/QueryBuilder';
-import { EnrollmentHelper } from '../../helpers/enrollmentHelper';
 import { Enrollment } from '../enrollment/enrollment.model';
 import { ENROLLMENT_STATUS } from '../enrollment/enrollment.interface';
-import { ASSESSMENT_TYPE, GRADE_STATUS, SUBMISSION_STATUS } from './gradebook.interface';
-import { Grade, AssignmentSubmission } from './gradebook.model';
-
-const submitAssignment = async (
-  lessonId: string,
-  studentId: string,
-  courseId: string,
-  content: string,
-  attachments: string[],
-) => {
-  // Verify enrollment
-  const enrollment = await EnrollmentHelper.verifyEnrollment(
-    studentId,
-    courseId,
-  );
-
-  // Check for existing submission
-  const existing = await AssignmentSubmission.findOne({
-    student: studentId,
-    lesson: lessonId,
-    status: { $in: ['SUBMITTED', 'GRADED'] },
-  });
-
-  if (existing) {
-    // Allow resubmission if returned
-    if (existing.status === 'GRADED') {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Assignment already graded');
-    }
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Assignment already submitted');
-  }
-
-  const attachmentData = (attachments || []).map((url: string) => ({
-    url,
-    name: url.split('/').pop() || 'file',
-  }));
-
-  const created = await AssignmentSubmission.create({
-    student: studentId,
-    course: courseId,
-    lesson: lessonId,
-    enrollment: (enrollment as unknown as { _id: Types.ObjectId })._id,
-    content: content || '',
-    attachments: attachmentData,
-  });
-
-  return AssignmentSubmission.findById(created._id).select(
-    'content attachments status submittedAt createdAt',
-  );
-};
+import { ASSESSMENT_TYPE, GRADE_STATUS } from './gradebook.interface';
+import { Grade } from './gradebook.model';
 
 const getMyGrades = async (
   studentId: string,
@@ -151,44 +101,6 @@ const buildGradebookPipeline = (query: Record<string, unknown>) => {
         as: 'courseQuizzes',
       },
     },
-    // Student's assignment submissions
-    {
-      $lookup: {
-        from: 'assignmentsubmissions',
-        let: { studentId: '$student', courseId: '$course' },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ['$student', '$$studentId'] },
-                  { $eq: ['$course', '$$courseId'] },
-                ],
-              },
-            },
-          },
-          { $project: { _id: 1 } },
-        ],
-        as: 'studentSubmissions',
-      },
-    },
-    // Total assignment-type lessons per course
-    {
-      $lookup: {
-        from: 'lessons',
-        let: { courseId: '$course' },
-        pipeline: [
-          {
-            $match: {
-              $expr: { $eq: ['$courseId', '$$courseId'] },
-              type: 'ASSIGNMENT',
-            },
-          },
-          { $project: { _id: 1 } },
-        ],
-        as: 'courseAssignments',
-      },
-    },
     // Calculate summary fields
     {
       $addFields: {
@@ -201,8 +113,6 @@ const buildGradebookPipeline = (query: Record<string, unknown>) => {
             0,
           ],
         },
-        assignmentsSubmitted: { $size: '$studentSubmissions' },
-        totalAssignments: { $size: '$courseAssignments' },
         lastActivityDate: '$progress.lastAccessedAt',
       },
     },
@@ -217,8 +127,6 @@ const buildGradebookPipeline = (query: Record<string, unknown>) => {
         quizzesAttempted: 1,
         totalQuizzes: 1,
         overallQuizPercentage: 1,
-        assignmentsSubmitted: 1,
-        totalAssignments: 1,
         completionPercentage: '$progress.completionPercentage',
         lastActivityDate: 1,
         enrolledAt: 1,
@@ -301,7 +209,6 @@ const getGradebookSummary = async () => {
     lastMonthQuizAvg,
     currentCompletionAvg,
     previousCompletionAvg,
-    pendingAssignments,
     atRiskStudents,
   ] = await Promise.all([
     // All-time avg quiz score
@@ -341,8 +248,6 @@ const getGradebookSummary = async () => {
       { $match: { status: ENROLLMENT_STATUS.ACTIVE, createdAt: { $lt: startOfThisMonth } } },
       { $group: { _id: null, avg: { $avg: '$progress.completionPercentage' } } },
     ]),
-    // Pending assignment submissions (waiting for grading)
-    AssignmentSubmission.countDocuments({ status: SUBMISSION_STATUS.SUBMITTED }),
     // At-risk: active, low completion, inactive or never accessed
     Enrollment.countDocuments({
       status: ENROLLMENT_STATUS.ACTIVE,
@@ -391,13 +296,11 @@ const getGradebookSummary = async () => {
       growth: Math.abs(completionDelta),
       growthType: completionGrowthType as 'increase' | 'decrease' | 'no_change',
     },
-    pendingAssignments,
     atRiskStudents,
   };
 };
 
 export const GradebookService = {
-  submitAssignment,
   getMyGrades,
   getAllStudentGradebook,
   exportStudentGradebook,

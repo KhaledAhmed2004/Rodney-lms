@@ -59,12 +59,6 @@ router.patch(
 );
 
 // Replies
-router.get(
-  '/posts/:id/replies',
-  auth(USER_ROLES.STUDENT, USER_ROLES.SUPER_ADMIN),
-  CommunityController.getPostReplies,
-);
-
 router.post(
   '/posts/:id/replies',
   auth(USER_ROLES.STUDENT, USER_ROLES.SUPER_ADMIN),

@@ -95,24 +95,42 @@ const getMyPoints = async (
 
 // ==================== STUDENT BADGES ====================
 const getMyBadges = async (studentId: string) => {
-  const [earnedBadges, totalBadges] = await Promise.all([
-    StudentBadge.find({ student: studentId })
-      .populate('badge', 'name icon')
-      .sort({ earnedAt: -1 })
-      .lean(),
-    Badge.countDocuments({ isActive: true }),
+  const [allBadges, studentBadges] = await Promise.all([
+    Badge.find({ isActive: true }).select('name description icon').lean(),
+    StudentBadge.find({ student: studentId }).select('badge earnedAt').lean(),
   ]);
 
-  const validBadges = earnedBadges.filter(({ badge }) => badge);
+  const earnedMap = new Map(
+    studentBadges.map(sb => [sb.badge.toString(), sb.earnedAt]),
+  );
+
+  const badges = allBadges.map(badge => {
+    const earnedAt = earnedMap.get(badge._id.toString()) || null;
+    return {
+      name: badge.name,
+      icon: badge.icon,
+      description: badge.description,
+      earned: !!earnedAt,
+      earnedAt,
+    };
+  });
+
+  // Earned first (by earnedAt desc), then unearned
+  badges.sort((a, b) => {
+    if (a.earned && !b.earned) return -1;
+    if (!a.earned && b.earned) return 1;
+    if (a.earned && b.earned) {
+      return new Date(b.earnedAt!).getTime() - new Date(a.earnedAt!).getTime();
+    }
+    return 0;
+  });
+
+  const earnedCount = badges.filter(b => b.earned).length;
 
   return {
-    totalBadges,
-    earnedBadges: validBadges.length,
-    badges: validBadges.map(({ badge, earnedAt }) => ({
-      name: (badge as any).name,
-      icon: (badge as any).icon,
-      earnedAt,
-    })),
+    totalBadges: allBadges.length,
+    earnedBadges: earnedCount,
+    badges,
   };
 };
 

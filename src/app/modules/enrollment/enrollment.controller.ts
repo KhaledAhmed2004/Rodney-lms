@@ -95,9 +95,9 @@ const updateStatus = catchAsync(async (req: Request, res: Response) => {
 
 const completeLesson = catchAsync(async (req: Request, res: Response) => {
   const userId = (req.user as JwtPayload).id;
-  const { enrollmentId, lessonId } = req.params;
+  const { courseId, lessonId } = req.params;
   const result = await EnrollmentService.completeLesson(
-    enrollmentId,
+    courseId,
     lessonId,
     userId,
   );

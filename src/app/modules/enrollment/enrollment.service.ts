@@ -208,17 +208,17 @@ const updateStatus = async (
 };
 
 const completeLesson = async (
-  enrollmentId: string,
+  courseId: string,
   lessonId: string,
   studentId: string,
 ): Promise<IEnrollment | null> => {
-  const enrollment = await Enrollment.findById(enrollmentId);
+  const enrollment = await Enrollment.findOne({
+    student: studentId,
+    course: courseId,
+    status: { $in: ['ACTIVE'] },
+  });
   if (!enrollment) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Enrollment not found');
-  }
-
-  if (enrollment.student.toString() !== studentId) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Not authorized');
+    throw new ApiError(StatusCodes.FORBIDDEN, 'You are not enrolled in this course');
   }
 
   // Check if lesson already completed
@@ -252,15 +252,17 @@ const completeLesson = async (
     (updateData.$set as Record<string, unknown>)['completedAt'] = new Date();
   }
 
-  const result = await Enrollment.findByIdAndUpdate(enrollmentId, updateData, {
-    new: true,
-  });
+  const result = await Enrollment.findByIdAndUpdate(
+    enrollment._id,
+    updateData,
+    { new: true },
+  );
 
   // Gamification: lesson complete + auto course complete
   try {
     await GamificationHelper.awardPoints(studentId, POINTS_REASON.LESSON_COMPLETE, lessonId, 'Lesson');
     if (result?.status === 'COMPLETED') {
-      await GamificationHelper.awardPoints(studentId, POINTS_REASON.COURSE_COMPLETE, enrollment.course.toString(), 'Course');
+      await GamificationHelper.awardPoints(studentId, POINTS_REASON.COURSE_COMPLETE, courseId, 'Course');
     }
     await GamificationHelper.checkAndAwardBadges(studentId);
   } catch { /* points failure should not block lesson completion */ }
