@@ -5,11 +5,13 @@
 > **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
 > **Related screens**: [Course](./04-course.md), [Progress](./06-progress.md), [Community](./08-community.md)
 
-## UX Flow
+---
 
-### Course Detail Load
+## 5.1 Course Detail Load
+
+### UX Flow
 1. Student course card e tap kore (Browse screen theke) ba deep link e ashe
-2. Page load e call → `GET /courses/:slug/student-detail` (→ 5.1)
+2. Page load e call → `GET /courses/:slug/student-detail`
 3. Screen render hoy:
    - Course header: thumbnail, title, rating, enrollment count
    - Enrollment status (enrolled / not enrolled)
@@ -27,37 +29,9 @@
    └── Functions (VIDEO)
 ▶ Module 3: Advanced Topics              (4 lessons)
 ```
-> Data ekta API call e ashe (5.1) — accordion frontend e toggle kore, extra API call nai.
+> Data ekta API call e ashe — accordion frontend e toggle kore, extra API call nai.
 
-### Lesson Tap (Enrolled)
-1. Student expanded module theke lesson e tap kore
-2. Call → `GET /courses/:courseId/lessons/:lessonId` (→ 5.2)
-3. Lesson type onujayi content render hoy:
-   - **VIDEO**: Video player + attachments
-   - **READING**: Reading content + attachments
-   - **QUIZ**: Quiz info dekhay → Start Quiz flow e jay
-
-### Mark Lesson Complete
-1. Student lesson content dekhse / video shesh koreche
-2. "Mark Complete" button e tap kore → `POST /enrollments/:courseId/lessons/:lessonId/complete` (→ 5.3)
-3. Response e `completionPercentage` ashe — frontend progress bar update kore + locally lesson e ✅ add kore
-
-### Quiz Flow
-1. QUIZ type lesson e tap korle quiz info dekhay
-2. Student "Start Quiz" tap kore → `GET /quizzes/:id/student-view` (→ 5.4) — quiz info + questions load (shuffled if enabled)
-3. Student "Begin" tap kore → `POST /quizzes/:id/attempts` (→ 5.5) — attempt start, timer begin
-4. Student answers select kore → "Submit" tap kore → `PATCH /quizzes/attempts/:attemptId/submit` (→ 5.6)
-5. Result screen dekhay — score, pass/fail, answer review (if `showResults: true`)
-6. Porbe "View Result" e → `GET /quizzes/attempts/:attemptId` (→ 5.7)
-
-### Back to Browse
-1. Student back button e tap kore → Browse screen e fire jay (→ [Screen 4](./04-course.md))
-
----
-
-<!-- ═══════════ Course Content Endpoints ═══════════ -->
-
-### 5.1 Get Student Course Detail
+### API
 
 ```
 GET /courses/:identifier/student-detail
@@ -126,13 +100,24 @@ Auth: Bearer {{accessToken}} (STUDENT)
 
 ---
 
-### 5.2 Get Lesson by ID
+## 5.2 Lesson Content
+
+### UX Flow
+1. Student expanded module theke lesson e tap kore
+2. Lesson type onujayi content render hoy:
+   - **VIDEO**: Video player + attachments
+   - **READING**: Reading content + attachments
+   - **QUIZ**: Quiz info dekhay → Start Quiz flow e jay (→ 5.4)
+3. VIDEO / READING lesson e "Mark Complete" button dekhay (→ 5.3)
+
+### API
 
 ```
 GET /courses/:courseId/lessons/:lessonId
-Auth: Bearer {{accessToken}}
+Auth: Bearer {{accessToken}} (STUDENT)
 ```
 
+> `:courseId` — Course er ObjectId. `:lessonId` — Lesson er ObjectId.
 > Student lesson tap korle ei endpoint call hoy — full lesson content load kore.
 
 **Response (VIDEO type):**
@@ -206,12 +191,24 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.3 Mark Lesson Complete
+## 5.3 Mark Lesson Complete
+
+### UX Flow
+1. Student VIDEO / READING lesson content dekhse / video shesh koreche
+2. "Mark Complete" button e tap kore
+3. Response e `completionPercentage` ashe — frontend progress bar update kore + locally lesson e ✅ add kore
+4. `completionPercentage === 100` hole course complete — celebration dekhay
+
+> QUIZ type lesson e "Mark Complete" button thake na — quiz pass korle auto-complete hoy (→ 5.6).
+
+### API
 
 ```
 POST /enrollments/:courseId/lessons/:lessonId/complete
-Auth: Bearer {{accessToken}}
+Auth: Bearer {{accessToken}} (STUDENT)
 ```
+
+> `:courseId` — Course er ObjectId. `:lessonId` — Lesson er ObjectId. Server automatically student er enrollment find kore courseId diye.
 
 **Response:**
 ```json
@@ -224,17 +221,25 @@ Auth: Bearer {{accessToken}}
 }
 ```
 
-> Frontend locally `completedLessons` e lessonId add kore + progress bar update kore. `completionPercentage === 100` hole course complete — celebration dekhay.
-
 ---
 
-### 5.4 Get Quiz (Student View)
+## 5.4 Quiz — Student View
+
+### UX Flow
+1. QUIZ type lesson e tap korle lesson page e quiz info dekhay (title, description, totalMarks, settings)
+2. Student "Start Quiz" tap kore
+3. Quiz questions load hoy — shuffled if `shuffleQuestions: true`
+
+> **Single attempt only** — ekbar quiz submit korle ar attempt kora jay na. Already attempted quiz e "Start Quiz" tap korle 400 error.
+
+### API
 
 ```
 GET /quizzes/:id/student-view
-Auth: Bearer {{accessToken}}
+Auth: Bearer {{accessToken}} (STUDENT)
 ```
 
+> `:id` — Quiz er ObjectId. QUIZ type lesson er response e `quiz` field theke pay.
 > `isCorrect` stripped — student correct answer dekhte pare na. `shuffleQuestions` / `shuffleOptions` on thakle server-side shuffle kore pathay.
 
 **Response:**
@@ -249,7 +254,6 @@ Auth: Bearer {{accessToken}}
     "totalMarks": 7,
     "settings": {
       "timeLimit": 30,
-      "maxAttempts": 3,
       "passingScore": 70,
       "shuffleQuestions": true,
       "shuffleOptions": true,
@@ -287,24 +291,30 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.5 Start Quiz Attempt
+## 5.5 Quiz — Start Attempt
+
+### UX Flow
+1. Student "Begin" button e tap kore
+2. Timer start hoy (if `timeLimit` set)
+3. Questions dekhay — student answers select kore
+
+### API
 
 ```
 POST /quizzes/:id/attempts
-Auth: Bearer {{accessToken}}
+Auth: Bearer {{accessToken}} (STUDENT)
 ```
 
-> In-progress attempt thakle notun create hoy na — existing ta return kore. `maxAttempts` exceed korle 400 error.
+> `:id` — Quiz er ObjectId.
+> Ekbar-i attempt kora jay. In-progress attempt thakle existing return kore (continue). Already completed hole 400 error: "Quiz already attempted".
 
 **Response (201):**
 ```json
 {
   "success": true,
-  "message": "Quiz attempt started",
+  "message": "Quiz attempt started successfully",
   "data": {
     "_id": "664e...",
-    "quiz": "664q...",
-    "attemptNumber": 1,
     "startedAt": "2026-03-14T11:00:00Z",
     "maxScore": 7,
     "status": "IN_PROGRESS"
@@ -314,13 +324,23 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.6 Submit Quiz Answers
+## 5.6 Quiz — Submit Answers
+
+### UX Flow
+1. Student shob answers select kore "Submit" tap kore
+2. Result screen dekhay:
+   - **Pass** → score, pass badge ✅, answer review (if `showResults: true`) → QUIZ lesson auto-complete → curriculum e ✅ + `completionPercentage` update
+   - **Fail** → score, fail badge ❌ → lesson complete hoy na
+
+### API
 
 ```
 PATCH /quizzes/attempts/:attemptId/submit
 Content-Type: application/json
-Auth: Bearer {{accessToken}}
+Auth: Bearer {{accessToken}} (STUDENT)
 ```
+
+> `:attemptId` — QuizAttempt er ObjectId. Start attempt (5.5) er response theke `_id` hisebe pay.
 
 **Request Body:**
 ```json
@@ -346,7 +366,6 @@ Auth: Bearer {{accessToken}}
     "percentage": 100,
     "passed": true,
     "timeSpent": 1200,
-    "attemptNumber": 1,
     "completedAt": "2026-03-14T11:20:00Z",
     "answers": [
       {
@@ -366,26 +385,25 @@ Auth: Bearer {{accessToken}}
 }
 ```
 
-**Response (failed — 1 wrong):**
+**Response (failed — both wrong):**
 ```json
 {
   "success": true,
   "message": "Quiz submitted successfully",
   "data": {
     "_id": "664e...",
-    "score": 5,
+    "score": 0,
     "maxScore": 7,
-    "percentage": 71,
-    "passed": true,
-    "timeSpent": 900,
-    "attemptNumber": 1,
-    "completedAt": "2026-03-14T11:15:00Z",
+    "percentage": 0,
+    "passed": false,
+    "timeSpent": 300,
+    "completedAt": "2026-03-14T11:05:00Z",
     "answers": [
       {
         "questionId": "uuid-q1",
-        "selectedOptionId": "A",
-        "isCorrect": true,
-        "marksAwarded": 5
+        "selectedOptionId": "B",
+        "isCorrect": false,
+        "marksAwarded": 0
       },
       {
         "questionId": "uuid-q2",
@@ -398,19 +416,26 @@ Auth: Bearer {{accessToken}}
 }
 ```
 
-> **Result screen**: `passed` diye pass/fail badge dekhay, `answers[]` diye per-question breakdown dekhay (✅/❌ + marks).
 > **`showResults: false`** hole frontend answers section hide kore — shudhu score + pass/fail dekhay.
 > **Time limit**: Server-side enforce — `timeLimit` er beshi somoy lagale 400 error: "Time limit exceeded".
+> **Auto-complete**: Quiz pass korle QUIZ type lesson **automatically complete** mark hoy — `completionPercentage` update hoy, frontend locally ✅ add kore. Fail korle lesson complete hoy na.
 
 ---
 
-### 5.7 View Quiz Result
+## 5.7 Quiz — View Result
+
+### UX Flow
+1. Result screen e "View Details" tap kore — ba Progress screen er quiz history theke past attempt tap kore
+2. Full result dekhay: quiz title, score, pass/fail, per-question breakdown
+
+### API
 
 ```
 GET /quizzes/attempts/:attemptId
-Auth: Bearer {{accessToken}}
+Auth: Bearer {{accessToken}} (STUDENT)
 ```
 
+> `:attemptId` — QuizAttempt er ObjectId.
 > Past attempt review — Progress screen er quiz history theke-o ei endpoint call hoy. Student shudhu nijer attempt dekhte pare (ownership check).
 
 **Response:**
@@ -422,17 +447,42 @@ Auth: Bearer {{accessToken}}
     "_id": "664e...",
     "quiz": {
       "_id": "664q...",
-      "title": "Module 1 Quiz"
+      "title": "Module 1 Quiz",
+      "totalMarks": 7,
+      "settings": {
+        "passingScore": 70,
+        "showResults": true
+      }
+    },
+    "student": {
+      "_id": "664a...",
+      "name": "John Doe",
+      "profilePicture": "https://cdn.example.com/avatar.jpg"
     },
     "score": 7,
     "maxScore": 7,
     "percentage": 100,
     "passed": true,
     "timeSpent": 1200,
-    "attemptNumber": 1,
-    "completedAt": "2026-03-14T11:20:00Z"
+    "completedAt": "2026-03-14T11:20:00Z",
+    "answers": [
+      {
+        "questionId": "uuid-q1",
+        "selectedOptionId": "A",
+        "isCorrect": true,
+        "marksAwarded": 5
+      },
+      {
+        "questionId": "uuid-q2",
+        "selectedOptionId": "F",
+        "isCorrect": true,
+        "marksAwarded": 2
+      }
+    ]
   }
 }
 ```
+
+> `quiz.settings.showResults` — frontend eita check kore answers section show/hide decide kore. `false` hole shudhu score + pass/fail dekhay, answers hide.
 
 ---

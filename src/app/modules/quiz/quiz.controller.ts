@@ -87,7 +87,7 @@ const startAttempt = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.CREATED,
-    message: 'Quiz attempt started',
+    message: 'Quiz attempt started successfully',
     data: result,
   });
 });

@@ -40,7 +40,6 @@ const QuestionSchema = new Schema(
 const SettingsSchema = new Schema(
   {
     timeLimit: { type: Number, default: 0 },
-    maxAttempts: { type: Number, default: 0 },
     passingScore: { type: Number, default: 60 },
     shuffleQuestions: { type: Boolean, default: false },
     shuffleOptions: { type: Boolean, default: false },
@@ -107,7 +106,6 @@ const quizAttemptSchema = new Schema<IQuizAttempt, QuizAttemptModel>(
     startedAt: { type: Date, default: Date.now },
     completedAt: { type: Date },
     timeSpent: { type: Number, default: 0 },
-    attemptNumber: { type: Number, default: 1 },
     status: {
       type: String,
       enum: Object.values(ATTEMPT_STATUS),

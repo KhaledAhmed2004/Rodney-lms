@@ -29,7 +29,6 @@ export type IQuestion = {
 
 export type IQuizSettings = {
   timeLimit: number;
-  maxAttempts: number;
   passingScore: number;
   shuffleQuestions: boolean;
   shuffleOptions: boolean;
@@ -70,7 +69,6 @@ export type IQuizAttempt = {
   startedAt: Date;
   completedAt?: Date;
   timeSpent: number;
-  attemptNumber: number;
   status: ATTEMPT_STATUS;
   createdAt?: Date;
   updatedAt?: Date;

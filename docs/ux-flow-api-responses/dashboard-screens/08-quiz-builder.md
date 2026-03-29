@@ -21,7 +21,6 @@
    - Description likhe (optional)
 3. **Step 2 — Settings configure kore:**
    - `timeLimit` — quiz er jonno koto minute time (0 = no limit)
-   - `maxAttempts` — student koibar dite parbe (0 = unlimited)
    - `passingScore` — pass mark percentage (e.g. 70)
    - `shuffleQuestions` — question order random korbe kina
    - `shuffleOptions` — MCQ option order random korbe kina
@@ -85,7 +84,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
       "course": { "_id": "664a...", "title": "Introduction to Web Development" },
       "description": "Test your knowledge of web development basics",
       "totalMarks": 7,
-      "settings": { "timeLimit": 30, "maxAttempts": 3, "passingScore": 70 },
+      "settings": { "timeLimit": 30, "passingScore": 70 },
       "createdAt": "2026-03-14T10:00:00Z"
     },
     {
@@ -94,7 +93,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
       "course": { "_id": "664b...", "title": "Advanced JavaScript Patterns" },
       "description": "Core JavaScript concepts — variables, functions, and scope",
       "totalMarks": 25,
-      "settings": { "timeLimit": 45, "maxAttempts": 2, "passingScore": 60 },
+      "settings": { "timeLimit": 45, "passingScore": 60 },
       "createdAt": "2026-03-12T08:30:00Z"
     },
     {
@@ -103,7 +102,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
       "course": { "_id": "664c...", "title": "React & Next.js Masterclass" },
       "description": "Components, props, state, and lifecycle",
       "totalMarks": 30,
-      "settings": { "timeLimit": 0, "maxAttempts": 0, "passingScore": 50 },
+      "settings": { "timeLimit": 0, "passingScore": 50 },
       "createdAt": "2026-03-10T14:15:00Z"
     }
   ]
@@ -112,7 +111,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 > `questions` array list response e **excluded** — list page e questions dorkar nai, payload choto thake. Detail dekhte `GET /quizzes/:id` (→ 8.3) use koro.
 > `course` populated — raw ObjectId er bodole `{ _id, title }` return hoy.
-> `settings.timeLimit: 0` = no time limit. `settings.maxAttempts: 0` = unlimited attempts.
+> `settings.timeLimit: 0` = no time limit. Student ekbar-i quiz attempt korte parbe — retry nai.
 
 ---
 
@@ -132,7 +131,6 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
   "description": "Test your knowledge of web development basics",
   "settings": {
     "timeLimit": 30,
-    "maxAttempts": 3,
     "passingScore": 70,
     "shuffleQuestions": true,
     "shuffleOptions": true,
@@ -182,7 +180,6 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
     "totalMarks": 7,
     "settings": {
       "timeLimit": 30,
-      "maxAttempts": 3,
       "passingScore": 70,
       "shuffleQuestions": true,
       "shuffleOptions": true,
@@ -245,7 +242,6 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
     "totalMarks": 7,
     "settings": {
       "timeLimit": 30,
-      "maxAttempts": 3,
       "passingScore": 70,
       "shuffleQuestions": true,
       "shuffleOptions": true,
@@ -376,7 +372,6 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
     "totalMarks": 11,
     "settings": {
       "timeLimit": 45,
-      "maxAttempts": 3,
       "passingScore": 60,
       "shuffleQuestions": true,
       "shuffleOptions": true,

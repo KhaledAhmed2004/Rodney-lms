@@ -5,6 +5,8 @@ import ApiError from '../../../errors/ApiError';
 import QueryBuilder from '../../builder/QueryBuilder';
 import { IQuiz, IQuizAttempt } from './quiz.interface';
 import { Quiz, QuizAttempt } from './quiz.model';
+import { Lesson } from '../course/course.model';
+import { Enrollment } from '../enrollment/enrollment.model';
 import { GamificationHelper } from '../../helpers/gamificationHelper';
 import { POINTS_REASON } from '../gamification/gamification.interface';
 
@@ -176,7 +178,6 @@ const getStudentView = async (
     questions: questions as any,
     settings: {
       timeLimit: quiz.settings.timeLimit,
-      maxAttempts: quiz.settings.maxAttempts,
       passingScore: quiz.settings.passingScore,
       shuffleQuestions: quiz.settings.shuffleQuestions,
       shuffleOptions: quiz.settings.shuffleOptions,
@@ -194,36 +195,25 @@ const startAttempt = async (
   if (!quiz) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Quiz not found');
   }
-  // Check max attempts
-  if (quiz.settings.maxAttempts > 0) {
-    const attemptCount = await QuizAttempt.countDocuments({
-      quiz: quizId,
-      student: studentId,
-    });
-    if (attemptCount >= quiz.settings.maxAttempts) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Maximum attempts reached');
-    }
-  }
 
-  // Check for in-progress attempt
-  const inProgress = await QuizAttempt.findOne({
+  // Check if already attempted
+  const existing = await QuizAttempt.findOne({
     quiz: quizId,
     student: studentId,
-    status: 'IN_PROGRESS',
   });
-  if (inProgress) {
-    return inProgress;
+  if (existing) {
+    // In-progress — return existing to continue
+    if (existing.status === 'IN_PROGRESS') {
+      return existing;
+    }
+    // Already completed — no retry
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Quiz already attempted');
   }
-
-  const attemptNumber =
-    (await QuizAttempt.countDocuments({ quiz: quizId, student: studentId })) +
-    1;
 
   const attempt = await QuizAttempt.create({
     quiz: quizId,
     student: studentId,
     maxScore: quiz.totalMarks,
-    attemptNumber,
   });
 
   return attempt;
@@ -331,6 +321,47 @@ const submitAttempt = async (
       await GamificationHelper.awardPoints(studentId, reason, attempt.quiz.toString(), 'Quiz');
       await GamificationHelper.checkAndAwardBadges(studentId);
     } catch { /* points failure should not block quiz submission */ }
+
+    // Auto-complete QUIZ lesson on pass
+    try {
+      const lesson = await Lesson.findOne({ quiz: attempt.quiz }).select('courseId');
+      if (lesson) {
+        const enrollment = await Enrollment.findOne({
+          student: studentId,
+          course: lesson.courseId,
+          status: 'ACTIVE',
+        });
+        if (enrollment) {
+          const alreadyCompleted = enrollment.progress.completedLessons.some(
+            l => l.toString() === lesson._id.toString(),
+          );
+          if (!alreadyCompleted) {
+            const totalLessons = await Lesson.countDocuments({ courseId: lesson.courseId });
+            const newCount = enrollment.progress.completedLessons.length + 1;
+            const completionPct = totalLessons > 0 ? Math.round((newCount / totalLessons) * 100) : 0;
+
+            const enrollUpdate: Record<string, unknown> = {
+              $addToSet: { 'progress.completedLessons': lesson._id },
+              $set: {
+                'progress.lastAccessedLesson': lesson._id,
+                'progress.lastAccessedAt': new Date(),
+                'progress.completionPercentage': completionPct,
+              },
+            };
+            if (completionPct >= 100) {
+              (enrollUpdate.$set as Record<string, unknown>)['status'] = 'COMPLETED';
+              (enrollUpdate.$set as Record<string, unknown>)['completedAt'] = new Date();
+            }
+            await Enrollment.findByIdAndUpdate(enrollment._id, enrollUpdate);
+
+            // Course complete points
+            if (completionPct >= 100) {
+              await GamificationHelper.awardPoints(studentId, POINTS_REASON.COURSE_COMPLETE, lesson.courseId.toString(), 'Course');
+            }
+          }
+        }
+      }
+    } catch { /* auto-complete failure should not block quiz submission */ }
   }
 
   return result;

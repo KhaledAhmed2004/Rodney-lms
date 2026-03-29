@@ -8,7 +8,6 @@ const optionSchema = z.object({
 
 const settingsSchema = z.object({
   timeLimit: z.number().min(0).optional(),
-  maxAttempts: z.number().min(0).optional(),
   passingScore: z.number().min(0).max(100).optional(),
   shuffleQuestions: z.boolean().optional(),
   shuffleOptions: z.boolean().optional(),
