@@ -6,12 +6,13 @@ const updateBadge = z.object({
   }),
   body: z.object({
     description: z.string().min(1).max(500).optional(),
+    icon: z.string().min(1).optional(),
     criteria: z
       .object({
-        threshold: z.number().min(1),
+        threshold: z.coerce.number().min(1),
       })
       .optional(),
-    isActive: z.boolean().optional(),
+    isActive: z.coerce.boolean().optional(),
   }),
 });
 

@@ -425,14 +425,20 @@ const getLessonsByModule = async (
 };
 
 const getLessonById = async (courseId: string, lessonId: string) => {
-  const lesson = await Lesson.findOne({ _id: lessonId, courseId }).populate(
-    'prerequisiteLesson',
-    'title'
-  );
+  const lesson = await Lesson.findOne({ _id: lessonId, courseId })
+    .select('-order -isVisible -__v -createdAt -updatedAt')
+    .populate('prerequisiteLesson', 'title');
   if (!lesson) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Lesson not found');
   }
-  return lesson;
+
+  // Strip processingStatus from video (admin concern)
+  const lessonObj = lesson.toObject();
+  if (lessonObj.video) {
+    delete (lessonObj.video as Record<string, unknown>).processingStatus;
+  }
+
+  return lessonObj;
 };
 
 const updateLesson = async (

@@ -61,6 +61,16 @@ const getAllBadges = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getBadgeById = catchAsync(async (req: Request, res: Response) => {
+  const result = await GamificationService.getBadgeById(req.params.id);
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Badge retrieved successfully',
+    data: result,
+  });
+});
+
 const updateBadge = catchAsync(async (req: Request, res: Response) => {
   const result = await GamificationService.updateBadge(req.params.id, req.body);
   sendResponse(res, {
@@ -87,6 +97,7 @@ export const GamificationController = {
   getMyBadges,
   getMySummary,
   getAllBadges,
+  getBadgeById,
   updateBadge,
   getAdminStats,
 };

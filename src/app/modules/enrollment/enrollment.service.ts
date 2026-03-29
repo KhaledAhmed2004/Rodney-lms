@@ -211,7 +211,7 @@ const completeLesson = async (
   courseId: string,
   lessonId: string,
   studentId: string,
-): Promise<IEnrollment | null> => {
+) => {
   const enrollment = await Enrollment.findOne({
     student: studentId,
     course: courseId,
@@ -267,7 +267,7 @@ const completeLesson = async (
     await GamificationHelper.checkAndAwardBadges(studentId);
   } catch { /* points failure should not block lesson completion */ }
 
-  return result;
+  return { completionPercentage };
 };
 
 const getEnrolledStudents = async (

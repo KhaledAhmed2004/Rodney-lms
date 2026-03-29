@@ -110,11 +110,12 @@ Leaderboard e totalPoints diye rank hoy
 ### Badge Management Section
 1. Paginated table — all 17 seeded badges
 2. Table columns: Name, Icon, Criteria Type, Threshold, Active Status
-3. Admin can click a badge to edit:
+3. Admin badge e click korle → `GET /gamification/badges/:id` (→ 12.1a) call hoy → edit form e current values load hoy (description, threshold, isActive)
+4. Admin can edit:
    - Description edit
    - Criteria threshold change (e.g., change "Rising Star" from 100 to 150 points)
    - Active/Inactive toggle (inactive badges won't be evaluated)
-4. No create or delete — badges are seeded, admin edits only
+5. No create or delete — badges are seeded, admin edits only
 
 ### Edge Cases
 - **No points awarded yet**: All stats 0, leaderboard empty, badges all unearneable
@@ -151,7 +152,8 @@ Auth: Bearer {{accessToken}} (STUDENT, SUPER_ADMIN)
     {
       "_id": "664e1b2c3d4e5f6a7b8c9d01",
       "name": "Rising Star",
-      "icon": "star-rising",
+      "description": "Earn 100 points to prove you are on the rise",
+      "icon": "https://cdn.example.com/badges/rising-star.png",
       "criteria": {
         "type": "POINTS_THRESHOLD",
         "threshold": 100
@@ -161,7 +163,8 @@ Auth: Bearer {{accessToken}} (STUDENT, SUPER_ADMIN)
     {
       "_id": "664e1b2c3d4e5f6a7b8c9d02",
       "name": "First Steps",
-      "icon": "footprints",
+      "description": "Complete your first course",
+      "icon": "https://cdn.example.com/badges/first-steps.png",
       "criteria": {
         "type": "COURSES_COMPLETED",
         "threshold": 1
@@ -172,14 +175,14 @@ Auth: Bearer {{accessToken}} (STUDENT, SUPER_ADMIN)
 }
 ```
 
-> List view e `description`, `createdAt`, `updatedAt`, `__v` excluded (`.select('-description -createdAt -updatedAt -__v')`). Searchable by `name`.
+> List view e `createdAt`, `updatedAt`, `__v` excluded. `description` included. Searchable by `name`.
 
 ---
 
-### 12.1b Update Badge
+### 12.1a Get Badge By ID
 
 ```
-PATCH /gamification/badges/:id
+GET /gamification/badges/:id
 Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
@@ -188,22 +191,64 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 |-------|------|-------------|
 | `id` | string | Badge MongoDB ObjectId |
 
-**Request Body** (all optional):
+**Response (200):**
 ```json
 {
-  "description": "Awarded when you earn 150 total points",
-  "criteria": {
-    "threshold": 150
-  },
-  "isActive": false
+  "success": true,
+  "message": "Badge retrieved successfully",
+  "data": {
+    "_id": "664e1b2c3d4e5f6a7b8c9d01",
+    "name": "Rising Star",
+    "description": "Earn 100 points to prove you are on the rise",
+    "icon": "https://cdn.example.com/badges/rising-star.png",
+    "criteria": {
+      "type": "POINTS_THRESHOLD",
+      "threshold": 100
+    },
+    "isActive": true
+  }
 }
 ```
+
+> Admin badge e click korle ei endpoint call hoy — edit form e current `description`, `criteria.threshold`, `isActive` values load kore dekhay. List endpoint e description excluded thake (lean list view), but edit er age full details dorkar.
+
+**Error (404):**
+```json
+{
+  "success": false,
+  "message": "Badge not found"
+}
+```
+
+---
+
+### 12.1b Update Badge
+
+```
+PATCH /gamification/badges/:id
+Content-Type: multipart/form-data
+Auth: Bearer {{accessToken}} (SUPER_ADMIN)
+```
+
+**Path Parameters:**
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | string | Badge MongoDB ObjectId |
+
+**Form Data** (all optional):
+- `description`: "Awarded when you earn 150 total points"
+- `icon`: (file — badge image upload)
+- `criteria[threshold]`: 150
+- `isActive`: false
+
+> Form-data tai `criteria.threshold` bracket notation e pathate hobe: `criteria[threshold]`. Number/boolean fields e `z.coerce` use hoy.
 
 **Validation:**
 | Field | Type | Constraint |
 |-------|------|------------|
 | `description` | string | min 1, max 500 |
-| `criteria.threshold` | number | min 1 |
+| `icon` | file | Image upload (jpg, png, webp) |
+| `criteria[threshold]` | number | min 1 |
 | `isActive` | boolean | — |
 
 **Response (200):**
@@ -214,18 +259,18 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
   "data": {
     "_id": "664e1b2c3d4e5f6a7b8c9d01",
     "name": "Rising Star",
-    "icon": "star-rising",
+    "description": "Awarded when you earn 150 total points",
+    "icon": "https://cdn.example.com/badges/rising-star.png",
     "criteria": {
       "type": "POINTS_THRESHOLD",
       "threshold": 150
     },
-    "isActive": false,
-    "description": "Awarded when you earn 150 total points"
+    "isActive": false
   }
 }
 ```
 
-> Shudhu `description`, `criteria.threshold`, `isActive` changeable. `name`, `icon`, `criteria.type` immutable (seeded values).
+> `description`, `icon`, `criteria.threshold`, `isActive` changeable. `name`, `criteria.type` immutable (seeded values). Icon upload korle old file auto-delete hoy.
 
 ---
 
@@ -277,6 +322,7 @@ Auth: Bearer {{accessToken}} (STUDENT, SUPER_ADMIN)
 |-----------|----------|-----|
 | Leaderboard table | `GET /gamification/leaderboard` | SUPER_ADMIN |
 | Badge management table | `GET /gamification/badges` | SUPER_ADMIN |
+| Badge detail (edit form load) | `GET /gamification/badges/:id` | SUPER_ADMIN |
 | Badge edit | `PATCH /gamification/badges/:id` | SUPER_ADMIN |
 
 ---
@@ -321,6 +367,24 @@ Auth: Bearer {{accessToken}} (STUDENT, SUPER_ADMIN)
 | `src/app/modules/enrollment/enrollment.service.ts` | 3 integration points (first enroll, lesson complete, course complete) |
 | `src/app/modules/quiz/quiz.service.ts` | Quiz pass/perfect points |
 | `src/app/modules/community/community.service.ts` | Post creation points |
+
+### Get Badge By ID Endpoint (2026-03-29)
+
+**Added:** `GET /gamification/badges/:id` — admin badge edit form e current values load korar jonno.
+
+**Problem:** List endpoint (`GET /badges`) e `description` excluded chilo (lean list view). But edit korte gele admin current description dekhte parto na — kono single badge fetch endpoint chilo na.
+
+**Fix:**
+- `getBadgeById` service method added — returns full badge (minus `createdAt`, `updatedAt`, `__v`)
+- Controller + route added (`GET /badges/:id`, SUPER_ADMIN only)
+- Doc updated — 12.1a section, UX flow, API dependency map
+
+**Files Modified:**
+| File | Change |
+|------|--------|
+| `gamification.service.ts` | `getBadgeById()` method added |
+| `gamification.controller.ts` | `getBadgeById` handler added |
+| `gamification.route.ts` | `GET /badges/:id` route added (before PATCH) |
 
 ### Files Analyzed
 

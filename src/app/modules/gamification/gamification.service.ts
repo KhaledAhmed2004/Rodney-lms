@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import { Types } from 'mongoose';
 import ApiError from '../../../errors/ApiError';
+import { deleteFile } from '../../middlewares/fileHandler';
 import QueryBuilder from '../../builder/QueryBuilder';
 import { IBadge } from './gamification.interface';
 import { PointsLedger, Badge, StudentBadge } from './gamification.model';
@@ -155,9 +156,17 @@ const getMySummary = async (studentId: string) => {
 };
 
 // ==================== BADGE CRUD (Admin) ====================
+const getBadgeById = async (id: string) => {
+  const badge = await Badge.findById(id).select('-createdAt -updatedAt -__v');
+  if (!badge) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Badge not found');
+  }
+  return badge;
+};
+
 const getAllBadges = async (query: Record<string, unknown>) => {
   const badgeQuery = new QueryBuilder(
-    Badge.find().select('-description -createdAt -updatedAt -__v'),
+    Badge.find().select('-createdAt -updatedAt -__v'),
     query,
   )
     .search(['name'])
@@ -172,7 +181,7 @@ const getAllBadges = async (query: Record<string, unknown>) => {
 
 const updateBadge = async (
   id: string,
-  payload: Pick<Partial<IBadge>, 'description' | 'isActive'> & {
+  payload: Pick<Partial<IBadge>, 'description' | 'icon' | 'isActive'> & {
     criteria?: { threshold: number };
   },
 ): Promise<IBadge | null> => {
@@ -186,6 +195,10 @@ const updateBadge = async (
   if (payload.isActive !== undefined) updateData.isActive = payload.isActive;
   if (payload.criteria?.threshold !== undefined) {
     updateData['criteria.threshold'] = payload.criteria.threshold;
+  }
+  if (payload.icon) {
+    if (existing.icon) deleteFile(existing.icon).catch(() => {});
+    updateData.icon = payload.icon;
   }
 
   if (Object.keys(updateData).length === 0) {
@@ -250,6 +263,7 @@ export const GamificationService = {
   getMyBadges,
   getMySummary,
   getAllBadges,
+  getBadgeById,
   updateBadge,
   getAdminStats,
 };

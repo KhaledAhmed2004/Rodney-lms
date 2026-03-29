@@ -1,6 +1,7 @@
 import express from 'express';
 import { USER_ROLES } from '../../../enums/user';
 import auth from '../../middlewares/auth';
+import { fileHandler } from '../../middlewares/fileHandler';
 import validateRequest from '../../middlewares/validateRequest';
 import { GamificationController } from './gamification.controller';
 import { GamificationValidation } from './gamification.validation';
@@ -39,10 +40,18 @@ router.get(
   GamificationController.getAllBadges,
 );
 
+// Single badge (detail view for edit)
+router.get(
+  '/badges/:id',
+  auth(USER_ROLES.SUPER_ADMIN),
+  GamificationController.getBadgeById,
+);
+
 // Admin routes
 router.patch(
   '/badges/:id',
   auth(USER_ROLES.SUPER_ADMIN),
+  fileHandler([{ name: 'icon', maxCount: 1 }]),
   validateRequest(GamificationValidation.updateBadge),
   GamificationController.updateBadge,
 );
