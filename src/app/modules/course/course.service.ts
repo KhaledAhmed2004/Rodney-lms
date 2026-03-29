@@ -275,7 +275,10 @@ const reorderModules = async (
   const course = await findCourseOrThrow(courseId);
 
   const moduleMap = new Map(
-    course.modules.map((m) => [m.moduleId, m])
+    course.modules.map((m: any) => [
+      m.moduleId,
+      typeof m.toObject === 'function' ? m.toObject() : { ...m },
+    ])
   );
 
   // Validate all moduleIds exist
@@ -425,8 +428,8 @@ const getLessonsByModule = async (
 };
 
 const getLessonById = async (courseId: string, lessonId: string) => {
-  const lesson = await Lesson.findOne({ _id: lessonId, courseId })
-    .select('-order -isVisible -__v -createdAt -updatedAt')
+  const lesson = await Lesson.findOne({ _id: lessonId, courseId, isVisible: true })
+    .select('-order -isVisible -moduleId -courseId -__v -createdAt -updatedAt')
     .populate('prerequisiteLesson', 'title');
   if (!lesson) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Lesson not found');
@@ -708,8 +711,8 @@ const browseCourses = async (
   studentId: string,
   query: Record<string, unknown>
 ) => {
-  const page = Number(query.page) || 1;
-  const limit = Number(query.limit) || 10;
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.min(Math.max(1, Number(query.limit) || 10), 100);
   const skip = (page - 1) * limit;
 
   const matchConditions: Record<string, unknown> = {
@@ -764,6 +767,19 @@ const browseCourses = async (
         },
       },
     },
+  ];
+
+  // Enrollment filter: active | completed | none | all (default)
+  const enrollmentFilter = String(query.enrollment || 'all').toLowerCase();
+  if (enrollmentFilter === 'active') {
+    pipeline.push({ $match: { 'enrollment.status': 'ACTIVE' } });
+  } else if (enrollmentFilter === 'completed') {
+    pipeline.push({ $match: { 'enrollment.status': 'COMPLETED' } });
+  } else if (enrollmentFilter === 'none') {
+    pipeline.push({ $match: { enrollment: null } });
+  }
+
+  pipeline.push(
     {
       $project: {
         title: 1,
@@ -786,7 +802,7 @@ const browseCourses = async (
         total: [{ $count: 'count' }],
       },
     },
-  ];
+  );
 
   const result = await Course.aggregate(pipeline);
   const data = result[0]?.data ?? [];

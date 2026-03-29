@@ -221,6 +221,16 @@ const completeLesson = async (
     throw new ApiError(StatusCodes.FORBIDDEN, 'You are not enrolled in this course');
   }
 
+  // Validate lesson exists, belongs to this course, and is visible
+  const lesson = await Lesson.findOne({
+    _id: lessonId,
+    courseId,
+    isVisible: true,
+  });
+  if (!lesson) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Lesson not found');
+  }
+
   // Check if lesson already completed
   const alreadyCompleted = enrollment.progress.completedLessons.some(
     l => l.toString() === lessonId,
@@ -229,9 +239,10 @@ const completeLesson = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Lesson already completed');
   }
 
-  // Get total lessons for the course to calculate percentage
+  // Get total visible lessons for the course to calculate percentage
   const totalLessons = await Lesson.countDocuments({
     courseId: enrollment.course,
+    isVisible: true,
   });
   const newCompletedCount = enrollment.progress.completedLessons.length + 1;
   const completionPercentage =

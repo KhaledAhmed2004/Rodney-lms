@@ -107,7 +107,7 @@ Auth: Bearer {{accessToken}} (STUDENT)
 2. Lesson type onujayi content render hoy:
    - **VIDEO**: Video player + attachments
    - **READING**: Reading content + attachments
-   - **QUIZ**: Quiz info dekhay → Start Quiz flow e jay (→ 5.4)
+   - **QUIZ**: Quiz info dekhay → Start Quiz flow e jay (→ 5.4 Start Attempt)
 3. VIDEO / READING lesson e "Mark Complete" button dekhay (→ 5.3)
 
 ### API
@@ -186,8 +186,9 @@ Auth: Bearer {{accessToken}} (STUDENT)
 }
 ```
 
-> `order`, `isVisible`, `processingStatus` excluded — student er dorkar nai. Hidden lesson 404 return kore.
-> QUIZ type e `quiz` field e Quiz er ObjectId thake — frontend eita diye `GET /quizzes/:id/student-view` (→ 5.4) call kore.
+> `order`, `isVisible`, `processingStatus` excluded — student er dorkar nai.
+> **Hidden lesson** (`isVisible: false`) → 404 return kore. Student access korte pare na.
+> QUIZ type e `quiz` field e Quiz er ObjectId thake — frontend eita diye attempt start (→ 5.4) + questions load (→ 5.5) kore.
 
 ---
 
@@ -209,6 +210,8 @@ Auth: Bearer {{accessToken}} (STUDENT)
 ```
 
 > `:courseId` — Course er ObjectId. `:lessonId` — Lesson er ObjectId. Server automatically student er enrollment find kore courseId diye.
+> Server validates: lesson exist kore, ei course er, ar `isVisible: true`. Invalid/hidden lesson → 404.
+> `completionPercentage` shudhu visible lessons count kore — hidden lesson percentage calculation e dhora hoy na.
 
 **Response:**
 ```json
@@ -223,14 +226,53 @@ Auth: Bearer {{accessToken}} (STUDENT)
 
 ---
 
-## 5.4 Quiz — Student View
+## 5.4 Quiz — Start Attempt
 
 ### UX Flow
-1. QUIZ type lesson e tap korle lesson page e quiz info dekhay (title, description, totalMarks, settings)
-2. Student "Start Quiz" tap kore
-3. Quiz questions load hoy — shuffled if `shuffleQuestions: true`
+1. QUIZ type lesson e tap korle quiz info page dekhay
+2. Student "Start Quiz" button e tap kore
+3. Attempt create hoy — timer start (if `timeLimit` set)
 
-> **Single attempt only** — ekbar quiz submit korle ar attempt kora jay na. Already attempted quiz e "Start Quiz" tap korle 400 error.
+> **Single attempt only** — ekbar quiz submit korle ar attempt kora jay na. Already attempted quiz e "Start Quiz" tap korle 400 error: "Quiz already attempted". In-progress hole continue kore.
+
+### API
+
+```
+POST /quizzes/:id/attempts
+Auth: Bearer {{accessToken}} (STUDENT)
+```
+
+> `:id` — Quiz er ObjectId. QUIZ type lesson er response e `quiz` field theke pay.
+> Ekbar-i attempt kora jay. In-progress attempt thakle existing return kore (continue). Already completed hole 400 error.
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Quiz attempt started successfully",
+  "data": {
+    "_id": "664e...",
+    "startedAt": "2026-03-14T11:00:00Z",
+    "maxScore": 7,
+    "status": "IN_PROGRESS"
+  }
+}
+```
+
+---
+
+## 5.5 Quiz — Questions Load
+
+### UX Flow
+1. Attempt start howar por questions load hoy
+2. Questions shuffled ashe (if `shuffleQuestions: true`), options shuffled (if `shuffleOptions: true`)
+3. **Timer start hoy** (if `timeLimit > 0`):
+   - Frontend calculate kore: `remaining = (timeLimit × 60) - (now - startedAt)` seconds
+   - Countdown dekhay: `29:45... 29:44... 29:43...`
+   - Page refresh korle-o timer thik thake (`startedAt` server e stored)
+   - Timer 0:00 hole → **frontend auto-submit** kore
+   - `timeLimit: 0` hole timer dekhabe na (unlimited time)
+4. Student answers select kore — submit korte parbe
 
 ### API
 
@@ -239,8 +281,8 @@ GET /quizzes/:id/student-view
 Auth: Bearer {{accessToken}} (STUDENT)
 ```
 
-> `:id` — Quiz er ObjectId. QUIZ type lesson er response e `quiz` field theke pay.
-> `isCorrect` stripped — student correct answer dekhte pare na. `shuffleQuestions` / `shuffleOptions` on thakle server-side shuffle kore pathay.
+> `:id` — Quiz er ObjectId.
+> `isCorrect` stripped — student correct answer dekhte pare na. Server-side shuffle apply hoy.
 
 **Response:**
 ```json
@@ -291,39 +333,6 @@ Auth: Bearer {{accessToken}} (STUDENT)
 
 ---
 
-## 5.5 Quiz — Start Attempt
-
-### UX Flow
-1. Student "Begin" button e tap kore
-2. Timer start hoy (if `timeLimit` set)
-3. Questions dekhay — student answers select kore
-
-### API
-
-```
-POST /quizzes/:id/attempts
-Auth: Bearer {{accessToken}} (STUDENT)
-```
-
-> `:id` — Quiz er ObjectId.
-> Ekbar-i attempt kora jay. In-progress attempt thakle existing return kore (continue). Already completed hole 400 error: "Quiz already attempted".
-
-**Response (201):**
-```json
-{
-  "success": true,
-  "message": "Quiz attempt started successfully",
-  "data": {
-    "_id": "664e...",
-    "startedAt": "2026-03-14T11:00:00Z",
-    "maxScore": 7,
-    "status": "IN_PROGRESS"
-  }
-}
-```
-
----
-
 ## 5.6 Quiz — Submit Answers
 
 ### UX Flow
@@ -340,7 +349,7 @@ Content-Type: application/json
 Auth: Bearer {{accessToken}} (STUDENT)
 ```
 
-> `:attemptId` — QuizAttempt er ObjectId. Start attempt (5.5) er response theke `_id` hisebe pay.
+> `:attemptId` — QuizAttempt er ObjectId. Start attempt (5.4) er response theke `_id` hisebe pay.
 
 **Request Body:**
 ```json

@@ -204,19 +204,30 @@ const startAttempt = async (
   if (existing) {
     // In-progress — return existing to continue
     if (existing.status === 'IN_PROGRESS') {
-      return existing;
+      return {
+        _id: existing._id,
+        startedAt: existing.startedAt,
+        maxScore: existing.maxScore,
+        status: existing.status,
+      } as unknown as IQuizAttempt;
     }
     // Already completed — no retry
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Quiz already attempted');
   }
 
-  const attempt = await QuizAttempt.create({
+  await QuizAttempt.create({
     quiz: quizId,
     student: studentId,
     maxScore: quiz.totalMarks,
   });
 
-  return attempt;
+  const attempt = await QuizAttempt.findOne({
+    quiz: quizId,
+    student: studentId,
+    status: 'IN_PROGRESS',
+  }).select('startedAt maxScore status');
+
+  return attempt!;
 };
 
 const submitAttempt = async (
@@ -226,7 +237,7 @@ const submitAttempt = async (
     questionId: string;
     selectedOptionId?: string;
   }>,
-): Promise<IQuizAttempt | null> => {
+) => {
   const attempt = await QuizAttempt.findById(attemptId);
   if (!attempt) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Attempt not found');
@@ -336,7 +347,7 @@ const submitAttempt = async (
             l => l.toString() === lesson._id.toString(),
           );
           if (!alreadyCompleted) {
-            const totalLessons = await Lesson.countDocuments({ courseId: lesson.courseId });
+            const totalLessons = await Lesson.countDocuments({ courseId: lesson.courseId, isVisible: true });
             const newCount = enrollment.progress.completedLessons.length + 1;
             const completionPct = totalLessons > 0 ? Math.round((newCount / totalLessons) * 100) : 0;
 
@@ -364,17 +375,27 @@ const submitAttempt = async (
     } catch { /* auto-complete failure should not block quiz submission */ }
   }
 
-  return result;
+  return {
+    _id: result!._id,
+    score: totalScore,
+    maxScore: quiz.totalMarks,
+    percentage,
+    passed,
+    timeSpent,
+    completedAt: result!.completedAt,
+    answers: gradedAnswers,
+  };
 };
 
 const getAttemptById = async (
   attemptId: string,
   userId: string,
   userRole: string,
-): Promise<IQuizAttempt> => {
+) => {
   const result = await QuizAttempt.findById(attemptId)
-    .populate('quiz', 'title totalMarks settings')
-    .populate('student', 'name email profilePicture');
+    .populate('quiz', 'title totalMarks settings.passingScore settings.showResults')
+    .populate('student', 'name profilePicture')
+    .select('quiz student score maxScore percentage passed timeSpent completedAt answers');
   if (!result) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Attempt not found');
   }
