@@ -3,6 +3,7 @@ import { logger, errorLogger } from '../../shared/logger';
 // Allowed origins for CORS
 export const allowedOrigins: string[] = [
   'http://localhost:3000',
+  'https://lmsdashboard.zeroproofdrive.org',
   'http://localhost:3001',
   'http://localhost:5174',
   'https://task-titans-admin-orcin.vercel.app',
@@ -46,7 +47,10 @@ export const isOriginAllowed = (origin?: string): boolean => {
 };
 
 // Rate-limited CORS decision logging
-export const maybeLogCors = (origin: string | undefined, allowed: boolean): void => {
+export const maybeLogCors = (
+  origin: string | undefined,
+  allowed: boolean,
+): void => {
   if (!CORS_DEBUG) return;
   const key = origin || 'no-origin';
   const now = Date.now();
@@ -54,7 +58,9 @@ export const maybeLogCors = (origin: string | undefined, allowed: boolean): void
   if (now - last < CORS_LOG_WINDOW_MS) return;
   corsLogMap.set(key, now);
   if (!origin) {
-    logger.info('CORS allow: request without Origin header (Postman/mobile/native)');
+    logger.info(
+      'CORS allow: request without Origin header (Postman/mobile/native)',
+    );
     return;
   }
   if (allowed) logger.info(`CORS allow: ${origin}`);
