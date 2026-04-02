@@ -130,8 +130,8 @@ const getAdminCourses = async (query: Record<string, unknown>) => {
 const getCourseByIdentifier = async (identifier: string) => {
   const isObjectId = Types.ObjectId.isValid(identifier);
   const course = isObjectId
-    ? await Course.findOne({ _id: identifier, status: COURSE_STATUS.PUBLISHED })
-    : await Course.findOne({ slug: identifier, status: COURSE_STATUS.PUBLISHED });
+    ? await Course.findById(identifier)
+    : await Course.findOne({ slug: identifier });
 
   if (!course) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Course not found');
