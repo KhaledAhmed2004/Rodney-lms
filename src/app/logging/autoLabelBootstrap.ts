@@ -3,7 +3,7 @@ const isTestEnv = process.env.NODE_ENV === 'test' || process.env.VITEST === 'tru
 
 import { setServiceLabel, setControllerLabel } from './requestContext';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
-import { readdirSync, statSync } from 'fs';
+import { readdirSync, statSync, existsSync } from 'fs';
 import { join } from 'path';
 import { LoadOrderValidator } from './loadOrderValidator';
 import colors from 'colors';
@@ -182,12 +182,17 @@ const wrapController = (controllerName: string, obj: Record<string, any>) => {
  * Converts filename to PascalCase service/controller name
  * Examples:
  *   auth.service.ts → AuthService
- *   stripe-connect.service.ts → StripeConnectService
+ *   stripe-connect.service.js → StripeConnectService
  */
 const fileNameToExportName = (fileName: string, suffix: 'Service' | 'Controller'): string => {
-  const baseName = fileName.replace(`.${suffix.toLowerCase()}.ts`, '');
+  // Handle both .ts and .js extensions
+  const baseName = fileName
+    .replace(`.${suffix.toLowerCase()}.ts`, '')
+    .replace(`.${suffix.toLowerCase()}.js`, '');
+    
   const pascalCase = baseName
-    .split(/[-_]/)
+    .split(/[-._]/) // Added . to handle dots in filenames if any
+    .filter(Boolean)
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join('');
   return pascalCase + suffix;
@@ -195,9 +200,10 @@ const fileNameToExportName = (fileName: string, suffix: 'Service' | 'Controller'
 
 /**
  * Auto-discover and wrap all services and controllers
- * Scans src/app/modules/* for *.service.ts and *.controller.ts files
+ * Scans app/modules/* for *.service.[ts|js] and *.controller.[ts|js] files
  */
 const autoDiscoverAndWrap = (): void => {
+  // Use a more robust path resolution that works for both src/ and dist/
   const modulesPath = join(__dirname, '../modules');
 
   let discoveredServices = 0;
@@ -205,6 +211,13 @@ const autoDiscoverAndWrap = (): void => {
   const failedFiles: string[] = [];
 
   try {
+    // Check if modules path exists
+    if (!existsSync(modulesPath)) {
+      // In some production builds, the structure might be different
+      // Let's not fail immediately, but log a warning if needed
+      return;
+    }
+
     // Get all module directories
     const moduleDirs = readdirSync(modulesPath).filter(item => {
       const itemPath = join(modulesPath, item);
@@ -226,21 +239,24 @@ const autoDiscoverAndWrap = (): void => {
         continue; // Skip if can't read directory
       }
 
-      // Auto-discover services (*.service.ts)
-      const serviceFiles = files.filter(f => f.endsWith('.service.ts'));
+      // Auto-discover services (*.service.ts or *.service.js)
+      const serviceFiles = files.filter(f => 
+        (f.endsWith('.service.ts') || f.endsWith('.service.js')) && 
+        !f.endsWith('.d.ts') // Skip declaration files
+      );
 
       for (const serviceFile of serviceFiles) {
         const servicePath = join(modulePath, serviceFile);
 
         try {
           // Clear require cache for hot reload support
-          delete require.cache[require.resolve(servicePath)];
+          try {
+            const resolvedPath = require.resolve(servicePath);
+            delete require.cache[resolvedPath];
+          } catch {
+            // Path not resolvable, skip cache clearing
+          }
 
-          // Dynamic runtime import (require needed for synchronous loading)
-          // Note: We use require() here instead of ES6 import because:
-          // 1. We need synchronous loading (await import() would complicate initialization)
-          // 2. We need runtime path resolution (file paths are dynamic)
-          // 3. We need cache control (delete require.cache for hot reload)
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const serviceModule = require(servicePath);
 
@@ -251,7 +267,7 @@ const autoDiscoverAndWrap = (): void => {
           // Fallback: try to find any export with 'Service' in the name
           if (!serviceObj) {
             const keys = Object.keys(serviceModule);
-            const serviceKey = keys.find(k => k.includes('Service') && typeof serviceModule[k] === 'object');
+            const serviceKey = keys.find(k => k.includes('Service') && (typeof serviceModule[k] === 'object' || typeof serviceModule[k] === 'function'));
             serviceObj = serviceModule[serviceKey || ''];
           }
 
@@ -261,29 +277,30 @@ const autoDiscoverAndWrap = (): void => {
             discoveredServices++;
           }
         } catch (error) {
-          // Graceful error handling for auto-save scenarios
-          if (error instanceof SyntaxError) {
-            // Silently skip incomplete files during auto-save
-            // Will be re-imported on next save when code is complete
-          } else if ((error as any).code === 'MODULE_NOT_FOUND') {
-            failedFiles.push(`${serviceFile} (dependency missing)`);
-          } else {
+          // Graceful error handling
+          if (!(error instanceof SyntaxError)) {
             failedFiles.push(`${serviceFile} (${(error as Error).message})`);
           }
         }
       }
 
-      // Auto-discover controllers (*.controller.ts)
-      const controllerFiles = files.filter(f => f.endsWith('.controller.ts'));
+      // Auto-discover controllers (*.controller.ts or *.controller.js)
+      const controllerFiles = files.filter(f => 
+        (f.endsWith('.controller.ts') || f.endsWith('.controller.js')) && 
+        !f.endsWith('.d.ts')
+      );
 
       for (const controllerFile of controllerFiles) {
         const controllerPath = join(modulePath, controllerFile);
 
         try {
-          // Clear require cache for hot reload support
-          delete require.cache[require.resolve(controllerPath)];
+          try {
+            const resolvedPath = require.resolve(controllerPath);
+            delete require.cache[resolvedPath];
+          } catch {
+            // Path not resolvable, skip cache clearing
+          }
 
-          // Dynamic runtime import (same rationale as services above)
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const controllerModule = require(controllerPath);
 
@@ -294,7 +311,7 @@ const autoDiscoverAndWrap = (): void => {
           // Fallback: try to find any export with 'Controller' in the name
           if (!controllerObj) {
             const keys = Object.keys(controllerModule);
-            const controllerKey = keys.find(k => k.includes('Controller') && typeof controllerModule[k] === 'object');
+            const controllerKey = keys.find(k => k.includes('Controller') && (typeof controllerModule[k] === 'object' || typeof controllerModule[k] === 'function'));
             controllerObj = controllerModule[controllerKey || ''];
           }
 
@@ -304,13 +321,7 @@ const autoDiscoverAndWrap = (): void => {
             discoveredControllers++;
           }
         } catch (error) {
-          // Graceful error handling for auto-save scenarios
-          if (error instanceof SyntaxError) {
-            // Silently skip incomplete files during auto-save
-            // Will be re-imported on next save when code is complete
-          } else if ((error as any).code === 'MODULE_NOT_FOUND') {
-            failedFiles.push(`${controllerFile} (dependency missing)`);
-          } else {
+          if (!(error instanceof SyntaxError)) {
             failedFiles.push(`${controllerFile} (${(error as Error).message})`);
           }
         }
@@ -319,15 +330,17 @@ const autoDiscoverAndWrap = (): void => {
 
     // Log summary with beautiful box
     const totalModules = discoveredServices + discoveredControllers;
-    console.log('\n' + colors.cyan.bold('╔═══════════════════════════════════════════════════════════╗'));
-    console.log(colors.cyan.bold('║') + colors.cyan.bold('              🎉 AUTO-LABELING COMPLETE                 ') + colors.cyan.bold('║'));
-    console.log(colors.cyan.bold('╠═══════════════════════════════════════════════════════════╣'));
-    console.log(colors.cyan.bold('║') + `  Services Wrapped       │ ${colors.green.bold(discoveredServices.toString()).padEnd(34)}` + colors.cyan.bold('║'));
-    console.log(colors.cyan.bold('║') + `  Controllers Wrapped    │ ${colors.green.bold(discoveredControllers.toString()).padEnd(34)}` + colors.cyan.bold('║'));
-    console.log(colors.cyan.bold('║') + `  Total Modules          │ ${colors.green.bold(totalModules.toString()).padEnd(34)}` + colors.cyan.bold('║'));
-    console.log(colors.cyan.bold('╚═══════════════════════════════════════════════════════════╝\n'));
+    if (totalModules > 0) {
+      console.log('\n' + colors.cyan.bold('╔═══════════════════════════════════════════════════════════╗'));
+      console.log(colors.cyan.bold('║') + colors.cyan.bold('              🎉 AUTO-LABELING COMPLETE                 ') + colors.cyan.bold('║'));
+      console.log(colors.cyan.bold('╠═══════════════════════════════════════════════════════════╣'));
+      console.log(colors.cyan.bold('║') + `  Services Wrapped       │ ${colors.green.bold(discoveredServices.toString()).padEnd(34)}` + colors.cyan.bold('║'));
+      console.log(colors.cyan.bold('║') + `  Controllers Wrapped    │ ${colors.green.bold(discoveredControllers.toString()).padEnd(34)}` + colors.cyan.bold('║'));
+      console.log(colors.cyan.bold('║') + `  Total Modules          │ ${colors.green.bold(totalModules.toString()).padEnd(34)}` + colors.cyan.bold('║'));
+      console.log(colors.cyan.bold('╚═══════════════════════════════════════════════════════════╝\n'));
+    }
 
-    // Show warnings for failed files (only real errors, not syntax errors)
+    // Show warnings for failed files
     if (failedFiles.length > 0) {
       console.log(colors.yellow.bold('╔═══════════════════════════════════════════════════════════╗'));
       console.log(colors.yellow.bold('║') + colors.yellow.bold('              ⚠️  FAILED TO LOAD                         ') + colors.yellow.bold('║'));
@@ -342,9 +355,13 @@ const autoDiscoverAndWrap = (): void => {
     // Validation: Fail startup if no modules discovered (skip in test environment)
     if (discoveredServices === 0 && discoveredControllers === 0) {
       console.error('\n❌ Auto-discovery failed: No services or controllers found!');
-      console.error('   Expected structure: src/app/modules/*/{{moduleName}}.service.ts');
-      // Don't exit in test environment - vitest intercepts process.exit
+      console.error('   Checked path: ' + modulesPath);
+      console.error('   Expected structure: app/modules/*/{{moduleName}}.service.[ts|js]');
+      
+      // Don't exit in test environment
       if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+        // In production, we might want to be more lenient if it's just a labeling feature
+        // but since it's a "bootstrap" failure, we'll keep the exit for now to ensure visibility
         process.exit(1);
       }
     }

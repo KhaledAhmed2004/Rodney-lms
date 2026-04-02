@@ -121,8 +121,8 @@ const getAdminCourses = (query) => __awaiter(void 0, void 0, void 0, function* (
 const getCourseByIdentifier = (identifier) => __awaiter(void 0, void 0, void 0, function* () {
     const isObjectId = mongoose_1.Types.ObjectId.isValid(identifier);
     const course = isObjectId
-        ? yield course_model_1.Course.findOne({ _id: identifier, status: course_interface_1.COURSE_STATUS.PUBLISHED })
-        : yield course_model_1.Course.findOne({ slug: identifier, status: course_interface_1.COURSE_STATUS.PUBLISHED });
+        ? yield course_model_1.Course.findById(identifier)
+        : yield course_model_1.Course.findOne({ slug: identifier });
     if (!course) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Course not found');
     }
