@@ -6,7 +6,6 @@ import sendResponse from '../../../shared/sendResponse';
 import { UserService } from './user.service';
 import { USER_STATUS } from '../../../enums/user';
 import ExportBuilder from '../../builder/ExportBuilder';
-import ApiError from '../../../errors/ApiError';
 
 const createUser = catchAsync(async (req: Request, res: Response) => {
   const { ...userData } = req.body;

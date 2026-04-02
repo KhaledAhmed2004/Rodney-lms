@@ -8,9 +8,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudentHomeService = void 0;
+const http_status_codes_1 = require("http-status-codes");
 const mongoose_1 = require("mongoose");
+const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const enrollment_model_1 = require("../enrollment/enrollment.model");
 const quiz_model_1 = require("../quiz/quiz.model");
 const gamification_model_1 = require("../gamification/gamification.model");
@@ -24,8 +29,7 @@ const getHome = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
             status: { $in: ['ACTIVE', 'COMPLETED'] },
         })
             .populate('course', 'title slug thumbnail')
-            .sort({ 'progress.lastAccessedAt': -1 })
-            .limit(10),
+            .sort({ 'progress.lastAccessedAt': -1 }),
         gamification_model_1.StudentBadge.find({ student: studentId })
             .populate('badge', 'name icon')
             .sort({ earnedAt: -1 })
@@ -44,7 +48,7 @@ const getHome = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
     // Filter out enrollments where course was deleted
     const validEnrolledCourses = enrolledCourses.filter((e) => e.course);
     const validRecentBadges = recentBadges.filter((sb) => sb.badge);
-    // Calculate course progress (average completion across all courses)
+    // Calculate course progress from ALL enrolled courses, not just displayed ones
     const totalCourses = validEnrolledCourses.length;
     const courseProgress = totalCourses > 0
         ? Math.round(validEnrolledCourses.reduce((sum, e) => sum + (e.progress.completionPercentage || 0), 0) / totalCourses)
@@ -64,7 +68,7 @@ const getHome = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
             courseProgress,
             quizProgress: quizPercentage,
         },
-        enrolledCourses: validEnrolledCourses.map((e) => ({
+        enrolledCourses: validEnrolledCourses.slice(0, 10).map((e) => ({
             title: e.course.title,
             slug: e.course.slug,
             thumbnail: e.course.thumbnail,
@@ -80,7 +84,7 @@ const getHome = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
 const getProgress = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     const [user, enrollments] = yield Promise.all([
-        user_model_1.User.findById(studentId).select('streak totalPoints'),
+        user_model_1.User.findOne({ _id: studentId, status: { $ne: 'DELETE' } }).select('streak totalPoints'),
         enrollment_model_1.Enrollment.find({
             student: studentId,
             status: { $in: ['ACTIVE', 'COMPLETED'] },
@@ -88,6 +92,9 @@ const getProgress = (studentId) => __awaiter(void 0, void 0, void 0, function* (
             .populate('course', 'title slug')
             .select('course progress'),
     ]);
+    if (!user) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'User not found');
+    }
     const validEnrollments = enrollments.filter((e) => e.course);
     const totalCourses = validEnrollments.length;
     const overallPercentage = totalCourses > 0
@@ -95,10 +102,10 @@ const getProgress = (studentId) => __awaiter(void 0, void 0, void 0, function* (
         : 0;
     return {
         overallPercentage,
-        points: (user === null || user === void 0 ? void 0 : user.totalPoints) || 0,
+        points: user.totalPoints || 0,
         streak: {
-            current: ((_a = user === null || user === void 0 ? void 0 : user.streak) === null || _a === void 0 ? void 0 : _a.current) || 0,
-            longest: ((_b = user === null || user === void 0 ? void 0 : user.streak) === null || _b === void 0 ? void 0 : _b.longest) || 0,
+            current: ((_a = user.streak) === null || _a === void 0 ? void 0 : _a.current) || 0,
+            longest: ((_b = user.streak) === null || _b === void 0 ? void 0 : _b.longest) || 0,
         },
         courses: validEnrollments.map((e) => ({
             title: e.course.title,

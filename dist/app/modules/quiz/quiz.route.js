@@ -23,11 +23,6 @@ router.get('/', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), quiz_control
 router.get('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), quiz_controller_1.QuizController.getQuizById);
 router.patch('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(quiz_validation_1.QuizValidation.updateQuiz), quiz_controller_1.QuizController.updateQuiz);
 router.delete('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), quiz_controller_1.QuizController.deleteQuiz);
-// Question management
-router.post('/:id/questions', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(quiz_validation_1.QuizValidation.addQuestion), quiz_controller_1.QuizController.addQuestion);
-router.patch('/:id/questions/reorder', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(quiz_validation_1.QuizValidation.reorderQuestions), quiz_controller_1.QuizController.reorderQuestions);
-router.patch('/:id/questions/:questionId', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(quiz_validation_1.QuizValidation.updateQuestion), quiz_controller_1.QuizController.updateQuestion);
-router.delete('/:id/questions/:questionId', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), quiz_controller_1.QuizController.deleteQuestion);
 // Attempts (admin view)
 router.get('/:id/attempts', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), quiz_controller_1.QuizController.getQuizAttempts);
 exports.QuizRoutes = router;

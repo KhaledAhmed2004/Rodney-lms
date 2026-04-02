@@ -18,16 +18,6 @@ const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const ExportBuilder_1 = __importDefault(require("../../builder/ExportBuilder"));
 const analytics_service_1 = require("./analytics.service");
-const getUserEngagement = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const period = req.query.period || 'month';
-    const result = yield analytics_service_1.AnalyticsService.getUserEngagement(period);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'User engagement retrieved successfully',
-        data: result,
-    });
-}));
 const getCourseCompletion = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const period = req.query.period;
     const result = yield analytics_service_1.AnalyticsService.getCourseCompletion(period);
@@ -39,13 +29,17 @@ const getCourseCompletion = (0, catchAsync_1.default)((req, res) => __awaiter(vo
     });
 }));
 const getQuizPerformance = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { courseId } = req.params;
     const period = req.query.period;
-    const result = yield analytics_service_1.AnalyticsService.getQuizPerformance(period);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const result = yield analytics_service_1.AnalyticsService.getQuizPerformance(courseId, period, page, limit);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
         message: 'Quiz performance retrieved successfully',
-        data: result,
+        pagination: result.pagination,
+        data: result.data,
     });
 }));
 const getCourseAnalytics = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -57,12 +51,13 @@ const getCourseAnalytics = (0, catchAsync_1.default)((req, res) => __awaiter(voi
         data: result,
     });
 }));
-const getStudentAnalytics = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield analytics_service_1.AnalyticsService.getStudentAnalytics(req.params.studentId);
+const getEngagementHeatmap = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const period = req.query.period || 'quarter';
+    const result = yield analytics_service_1.AnalyticsService.getEngagementHeatmap(period);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Student analytics retrieved successfully',
+        message: 'Engagement heatmap retrieved successfully',
         data: result,
     });
 }));
@@ -78,7 +73,6 @@ const columnMap = {
         { key: 'avgScore', header: 'Avg Score', width: 12 },
         { key: 'totalAttempts', header: 'Total Attempts', width: 14 },
         { key: 'passRate', header: 'Pass Rate %', width: 12 },
-        { key: 'avgTimeSpent', header: 'Avg Time (s)', width: 14 },
     ],
     engagement: [
         { key: 'date', header: 'Date', width: 14 },
@@ -88,7 +82,8 @@ const columnMap = {
 const exportAnalytics = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const type = req.query.type;
     const period = req.query.period;
-    const data = yield analytics_service_1.AnalyticsService.getExportData(type, period);
+    const course = req.query.course;
+    const data = yield analytics_service_1.AnalyticsService.getExportData(type, period, course);
     const format = req.query.format === 'xlsx' ? 'excel' : 'csv';
     const filename = `analytics-${type}-${new Date().toISOString().slice(0, 10)}`;
     yield new ExportBuilder_1.default(data)
@@ -98,10 +93,9 @@ const exportAnalytics = (0, catchAsync_1.default)((req, res) => __awaiter(void 0
         .sendResponse(res, filename);
 }));
 exports.AnalyticsController = {
-    getUserEngagement,
     getCourseCompletion,
     getQuizPerformance,
+    getEngagementHeatmap,
     getCourseAnalytics,
-    getStudentAnalytics,
     exportAnalytics,
 };

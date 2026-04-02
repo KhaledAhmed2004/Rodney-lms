@@ -13,46 +13,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GradebookService = void 0;
-const http_status_codes_1 = require("http-status-codes");
 const mongoose_1 = require("mongoose");
 const escape_string_regexp_1 = __importDefault(require("escape-string-regexp"));
-const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
-const enrollmentHelper_1 = require("../../helpers/enrollmentHelper");
 const enrollment_model_1 = require("../enrollment/enrollment.model");
 const enrollment_interface_1 = require("../enrollment/enrollment.interface");
 const gradebook_interface_1 = require("./gradebook.interface");
 const gradebook_model_1 = require("./gradebook.model");
-const submitAssignment = (lessonId, studentId, courseId, content, attachments) => __awaiter(void 0, void 0, void 0, function* () {
-    // Verify enrollment
-    const enrollment = yield enrollmentHelper_1.EnrollmentHelper.verifyEnrollment(studentId, courseId);
-    // Check for existing submission
-    const existing = yield gradebook_model_1.AssignmentSubmission.findOne({
-        student: studentId,
-        lesson: lessonId,
-        status: { $in: ['SUBMITTED', 'GRADED'] },
-    });
-    if (existing) {
-        // Allow resubmission if returned
-        if (existing.status === 'GRADED') {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Assignment already graded');
-        }
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Assignment already submitted');
-    }
-    const attachmentData = (attachments || []).map((url) => ({
-        url,
-        name: url.split('/').pop() || 'file',
-    }));
-    const created = yield gradebook_model_1.AssignmentSubmission.create({
-        student: studentId,
-        course: courseId,
-        lesson: lessonId,
-        enrollment: enrollment._id,
-        content: content || '',
-        attachments: attachmentData,
-    });
-    return gradebook_model_1.AssignmentSubmission.findById(created._id).select('content attachments status submittedAt createdAt');
-});
 const getMyGrades = (studentId, query) => __awaiter(void 0, void 0, void 0, function* () {
     const gradeQuery = new QueryBuilder_1.default(gradebook_model_1.Grade.find({ student: studentId }).populate('course', 'title slug thumbnail'), query)
         .filter()
@@ -133,44 +100,6 @@ const buildGradebookPipeline = (query) => {
                 as: 'courseQuizzes',
             },
         },
-        // Student's assignment submissions
-        {
-            $lookup: {
-                from: 'assignmentsubmissions',
-                let: { studentId: '$student', courseId: '$course' },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: {
-                                $and: [
-                                    { $eq: ['$student', '$$studentId'] },
-                                    { $eq: ['$course', '$$courseId'] },
-                                ],
-                            },
-                        },
-                    },
-                    { $project: { _id: 1 } },
-                ],
-                as: 'studentSubmissions',
-            },
-        },
-        // Total assignment-type lessons per course
-        {
-            $lookup: {
-                from: 'lessons',
-                let: { courseId: '$course' },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: { $eq: ['$courseId', '$$courseId'] },
-                            type: 'ASSIGNMENT',
-                        },
-                    },
-                    { $project: { _id: 1 } },
-                ],
-                as: 'courseAssignments',
-            },
-        },
         // Calculate summary fields
         {
             $addFields: {
@@ -183,8 +112,6 @@ const buildGradebookPipeline = (query) => {
                         0,
                     ],
                 },
-                assignmentsSubmitted: { $size: '$studentSubmissions' },
-                totalAssignments: { $size: '$courseAssignments' },
                 lastActivityDate: '$progress.lastAccessedAt',
             },
         },
@@ -199,8 +126,6 @@ const buildGradebookPipeline = (query) => {
                 quizzesAttempted: 1,
                 totalQuizzes: 1,
                 overallQuizPercentage: 1,
-                assignmentsSubmitted: 1,
-                totalAssignments: 1,
                 completionPercentage: '$progress.completionPercentage',
                 lastActivityDate: 1,
                 enrolledAt: 1,
@@ -263,7 +188,7 @@ const getGradebookSummary = () => __awaiter(void 0, void 0, void 0, function* ()
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
     endOfLastMonth.setHours(23, 59, 59, 999);
     const inactiveCutoff = new Date(now.getTime() - AT_RISK_INACTIVE_DAYS * 24 * 60 * 60 * 1000);
-    const [allTimeQuizAvg, thisMonthQuizAvg, lastMonthQuizAvg, currentCompletionAvg, previousCompletionAvg, pendingAssignments, atRiskStudents,] = yield Promise.all([
+    const [allTimeQuizAvg, thisMonthQuizAvg, lastMonthQuizAvg, currentCompletionAvg, previousCompletionAvg, atRiskStudents,] = yield Promise.all([
         // All-time avg quiz score
         gradebook_model_1.Grade.aggregate([
             { $match: { assessmentType: gradebook_interface_1.ASSESSMENT_TYPE.QUIZ, status: gradebook_interface_1.GRADE_STATUS.GRADED } },
@@ -301,8 +226,6 @@ const getGradebookSummary = () => __awaiter(void 0, void 0, void 0, function* ()
             { $match: { status: enrollment_interface_1.ENROLLMENT_STATUS.ACTIVE, createdAt: { $lt: startOfThisMonth } } },
             { $group: { _id: null, avg: { $avg: '$progress.completionPercentage' } } },
         ]),
-        // Pending assignment submissions (waiting for grading)
-        gradebook_model_1.AssignmentSubmission.countDocuments({ status: gradebook_interface_1.SUBMISSION_STATUS.SUBMITTED }),
         // At-risk: active, low completion, inactive or never accessed
         enrollment_model_1.Enrollment.countDocuments({
             status: enrollment_interface_1.ENROLLMENT_STATUS.ACTIVE,
@@ -345,12 +268,10 @@ const getGradebookSummary = () => __awaiter(void 0, void 0, void 0, function* ()
             growth: Math.abs(completionDelta),
             growthType: completionGrowthType,
         },
-        pendingAssignments,
         atRiskStudents,
     };
 });
 exports.GradebookService = {
-    submitAssignment,
     getMyGrades,
     getAllStudentGradebook,
     exportStudentGradebook,

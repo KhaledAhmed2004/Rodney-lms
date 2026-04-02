@@ -48,7 +48,7 @@ import {
 } from './types';
 import { traceOperation, addSpanAttributes, recordSpanEvent } from '../builderTracing';
 import { getBuilderConfig } from '../builderConfig';
-import logger from '../../../shared/logger';
+import { logger } from '../../../shared/logger';
 
 // ==================== CONSTANTS ====================
 

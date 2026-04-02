@@ -42,6 +42,7 @@ const config_1 = __importDefault(require("./config"));
 const seedAdmin_1 = require("./DB/seedAdmin");
 const seedBadges_1 = require("./DB/seedBadges");
 const seedFeedback_1 = require("./DB/seedFeedback");
+const seedLeaderboard_1 = require("./DB/seedLeaderboard");
 const socketHelper_1 = require("./helpers/socketHelper");
 const logger_1 = require("./shared/logger");
 const CacheHelper_1 = require("./app/shared/CacheHelper");
@@ -115,6 +116,10 @@ function main() {
             const feedbackSpinner = (0, spinnerHelper_1.createSpinner)({ text: 'Verifying demo feedback...', color: 'cyan' });
             yield (0, seedFeedback_1.seedFeedback)();
             feedbackSpinner.succeed('Demo feedback ready');
+            // Seed leaderboard demo data (development only, skips if data exists)
+            const leaderboardSpinner = (0, spinnerHelper_1.createSpinner)({ text: 'Verifying leaderboard demo data...', color: 'cyan' });
+            yield (0, seedLeaderboard_1.seedLeaderboard)();
+            leaderboardSpinner.succeed('Leaderboard demo data ready');
             // Initialize CacheHelper (in-memory)
             const cacheSpinner = (0, spinnerHelper_1.createSpinner)({ text: 'Initializing cache system...', color: 'cyan' });
             const cache = CacheHelper_1.CacheHelper.getInstance();

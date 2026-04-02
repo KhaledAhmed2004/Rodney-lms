@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AnalyticsService = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
+const course_model_1 = require("../course/course.model");
 const enrollment_model_1 = require("../enrollment/enrollment.model");
 const quiz_model_1 = require("../quiz/quiz.model");
 const activity_model_1 = require("../activity/activity.model");
@@ -30,6 +31,7 @@ const getUserEngagement = (...args_1) => __awaiter(void 0, [...args_1], void 0, 
         },
         {
             $project: {
+                _id: 0,
                 date: '$_id',
                 activeUsers: { $size: '$uniqueUsers' },
             },
@@ -71,6 +73,7 @@ const getCourseCompletion = (period) => __awaiter(void 0, void 0, void 0, functi
         { $unwind: '$course' },
         {
             $project: {
+                _id: 0,
                 courseId: '$_id',
                 title: '$course.title',
                 totalEnrollments: 1,
@@ -92,12 +95,27 @@ const getCourseCompletion = (period) => __awaiter(void 0, void 0, void 0, functi
     ];
     return enrollment_model_1.Enrollment.aggregate(pipeline);
 });
-const getQuizPerformance = (period) => __awaiter(void 0, void 0, void 0, function* () {
-    const matchConditions = { status: 'COMPLETED' };
+const getQuizPerformance = (courseId_1, period_1, ...args_1) => __awaiter(void 0, [courseId_1, period_1, ...args_1], void 0, function* (courseId, period, page = 1, limit = 10) {
+    var _a, _b, _c, _d, _e;
+    // Validate course exists
+    const courseExists = yield course_model_1.Course.exists({ _id: courseId });
+    if (!courseExists) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Course not found');
+    }
+    // Find quiz IDs for this course
+    const quizIds = yield quiz_model_1.Quiz.find({ course: courseId }).distinct('_id');
+    if (quizIds.length === 0) {
+        return { data: [], pagination: { page, limit, total: 0, totalPage: 0 } };
+    }
+    const matchConditions = {
+        status: 'COMPLETED',
+        quiz: { $in: quizIds },
+    };
     if (period) {
         matchConditions.createdAt = { $gte: getStartDate(period) };
     }
-    const quizStats = yield quiz_model_1.QuizAttempt.aggregate([
+    const skip = (page - 1) * limit;
+    const pipeline = [
         { $match: matchConditions },
         {
             $group: {
@@ -107,7 +125,6 @@ const getQuizPerformance = (period) => __awaiter(void 0, void 0, void 0, functio
                 passCount: {
                     $sum: { $cond: [{ $eq: ['$passed', true] }, 1, 0] },
                 },
-                avgTimeSpent: { $avg: '$timeSpent' },
             },
         },
         {
@@ -122,7 +139,7 @@ const getQuizPerformance = (period) => __awaiter(void 0, void 0, void 0, functio
         { $unwind: '$quiz' },
         {
             $project: {
-                quizId: '$_id',
+                _id: 0,
                 title: '$quiz.title',
                 avgScore: { $round: ['$avgScore', 1] },
                 totalAttempts: 1,
@@ -132,12 +149,28 @@ const getQuizPerformance = (period) => __awaiter(void 0, void 0, void 0, functio
                         1,
                     ],
                 },
-                avgTimeSpent: { $round: ['$avgTimeSpent', 0] },
             },
         },
         { $sort: { avgScore: -1 } },
-    ]);
-    return quizStats;
+        {
+            $facet: {
+                data: [{ $skip: skip }, { $limit: limit }],
+                total: [{ $count: 'count' }],
+            },
+        },
+    ];
+    const result = yield quiz_model_1.QuizAttempt.aggregate(pipeline);
+    const data = (_b = (_a = result[0]) === null || _a === void 0 ? void 0 : _a.data) !== null && _b !== void 0 ? _b : [];
+    const total = (_e = (_d = (_c = result[0]) === null || _c === void 0 ? void 0 : _c.total[0]) === null || _d === void 0 ? void 0 : _d.count) !== null && _e !== void 0 ? _e : 0;
+    return {
+        data,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPage: Math.ceil(total / limit),
+        },
+    };
 });
 const getCourseAnalytics = (courseId) => __awaiter(void 0, void 0, void 0, function* () {
     const [enrollmentStats, progressDistribution] = yield Promise.all([
@@ -167,47 +200,86 @@ const getCourseAnalytics = (courseId) => __awaiter(void 0, void 0, void 0, funct
         progressDistribution,
     };
 });
-const getStudentAnalytics = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
-    const [enrollments, quizPerformance, activitySummary] = yield Promise.all([
-        enrollment_model_1.Enrollment.find({ student: studentId })
-            .populate('course', 'title slug')
-            .select('status progress completedAt'),
-        quiz_model_1.QuizAttempt.aggregate([
-            { $match: { student: studentId, status: 'COMPLETED' } },
-            {
-                $group: {
-                    _id: null,
-                    avgScore: { $avg: '$percentage' },
-                    totalQuizzes: { $sum: 1 },
-                    passCount: { $sum: { $cond: [{ $eq: ['$passed', true] }, 1, 0] } },
-                },
+const getEngagementHeatmap = (...args_1) => __awaiter(void 0, [...args_1], void 0, function* (period = 'quarter') {
+    const startDate = getStartDate(period);
+    // End of today in UTC — consistent with MongoDB $dateToString (UTC) and toISOString (UTC)
+    const today = new Date();
+    today.setUTCHours(23, 59, 59, 999);
+    // Get active days from DB
+    const dailyData = yield activity_model_1.DailyActivity.aggregate([
+        { $match: { date: { $gte: startDate }, isActive: true } },
+        {
+            $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+                uniqueUsers: { $addToSet: '$student' },
             },
-        ]),
-        activity_model_1.DailyActivity.aggregate([
-            { $match: { student: studentId } },
-            {
-                $group: {
-                    _id: null,
-                    totalDaysActive: { $sum: 1 },
-                    totalLessons: { $sum: '$lessonsCompleted' },
-                    totalQuizzes: { $sum: '$quizzesTaken' },
-                    totalTimeSpent: { $sum: '$timeSpent' },
-                },
+        },
+        {
+            $project: {
+                _id: 0,
+                date: '$_id',
+                activeUsers: { $size: '$uniqueUsers' },
             },
-        ]),
+        },
     ]);
-    return {
-        enrollments,
-        quizPerformance: quizPerformance[0] || null,
-        activitySummary: activitySummary[0] || null,
+    // Build lookup map: date string → activeUsers
+    const activityMap = new Map();
+    for (const d of dailyData) {
+        activityMap.set(d.date, d.activeUsers);
+    }
+    // Generate ALL days in the period (gap-fill zeros)
+    const allDays = [];
+    const cursor = new Date(startDate);
+    while (cursor <= today) {
+        const dateStr = cursor.toISOString().slice(0, 10);
+        allDays.push({
+            date: dateStr,
+            activeUsers: activityMap.get(dateStr) || 0,
+        });
+        cursor.setDate(cursor.getDate() + 1);
+    }
+    // Calculate intensity (0-4) based on quartiles
+    const counts = allDays
+        .map(d => d.activeUsers)
+        .filter(c => c > 0)
+        .sort((a, b) => a - b);
+    const getPercentile = (arr, p) => {
+        if (arr.length === 0)
+            return 0;
+        return arr[Math.max(0, Math.ceil(arr.length * p) - 1)];
     };
+    const p25 = getPercentile(counts, 0.25);
+    const p50 = getPercentile(counts, 0.5);
+    const p75 = getPercentile(counts, 0.75);
+    return allDays.map(d => {
+        let intensity = 0;
+        if (d.activeUsers > 0) {
+            if (d.activeUsers <= p25)
+                intensity = 1;
+            else if (d.activeUsers <= p50)
+                intensity = 2;
+            else if (d.activeUsers <= p75)
+                intensity = 3;
+            else
+                intensity = 4;
+        }
+        return {
+            date: d.date,
+            activeUsers: d.activeUsers,
+            intensity,
+        };
+    });
 });
-const getExportData = (type, period) => __awaiter(void 0, void 0, void 0, function* () {
+const getExportData = (type, period, course) => __awaiter(void 0, void 0, void 0, function* () {
     switch (type) {
         case 'courses':
             return getCourseCompletion(period);
-        case 'quizzes':
-            return getQuizPerformance(period);
+        case 'quizzes': {
+            if (!course)
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Course ID is required for quiz export');
+            const result = yield getQuizPerformance(course, period, 1, 1000);
+            return result.data;
+        }
         case 'engagement':
             return getUserEngagement(period);
         default:
@@ -235,10 +307,9 @@ function getStartDate(period) {
     return now;
 }
 exports.AnalyticsService = {
-    getUserEngagement,
     getCourseCompletion,
     getQuizPerformance,
     getCourseAnalytics,
-    getStudentAnalytics,
+    getEngagementHeatmap,
     getExportData,
 };

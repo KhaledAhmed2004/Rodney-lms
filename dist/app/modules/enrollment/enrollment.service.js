@@ -16,6 +16,8 @@ exports.EnrollmentService = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
+const gamificationHelper_1 = require("../../helpers/gamificationHelper");
+const gamification_interface_1 = require("../gamification/gamification.interface");
 const enrollment_model_1 = require("./enrollment.model");
 const course_model_1 = require("../course/course.model");
 const course_model_2 = require("../course/course.model");
@@ -45,6 +47,15 @@ const enrollInCourse = (studentId, courseId) => __awaiter(void 0, void 0, void 0
         yield course_model_1.Course.findByIdAndUpdate(courseId, {
             $inc: { enrollmentCount: 1 },
         });
+        // Gamification: first enrollment bonus
+        try {
+            const enrollmentCount = yield enrollment_model_1.Enrollment.countDocuments({ student: studentId });
+            if (enrollmentCount === 1) {
+                yield gamificationHelper_1.GamificationHelper.awardPoints(studentId, gamification_interface_1.POINTS_REASON.FIRST_ENROLLMENT, courseId, 'Course');
+            }
+            yield gamificationHelper_1.GamificationHelper.checkAndAwardBadges(studentId);
+        }
+        catch ( /* points failure should not block enrollment */_a) { /* points failure should not block enrollment */ }
         return result;
     }
     catch (error) {
@@ -139,24 +150,43 @@ const updateStatus = (id, status) => __awaiter(void 0, void 0, void 0, function*
     const result = yield enrollment_model_1.Enrollment.findByIdAndUpdate(id, updateData, {
         new: true,
     });
+    // Gamification: manual course completion
+    if (status === 'COMPLETED' && result) {
+        try {
+            yield gamificationHelper_1.GamificationHelper.awardPoints(enrollment.student.toString(), gamification_interface_1.POINTS_REASON.COURSE_COMPLETE, enrollment.course.toString(), 'Course');
+            yield gamificationHelper_1.GamificationHelper.checkAndAwardBadges(enrollment.student.toString());
+        }
+        catch ( /* points failure should not block status update */_a) { /* points failure should not block status update */ }
+    }
     return result;
 });
-const completeLesson = (enrollmentId, lessonId, studentId) => __awaiter(void 0, void 0, void 0, function* () {
-    const enrollment = yield enrollment_model_1.Enrollment.findById(enrollmentId);
+const completeLesson = (courseId, lessonId, studentId) => __awaiter(void 0, void 0, void 0, function* () {
+    const enrollment = yield enrollment_model_1.Enrollment.findOne({
+        student: studentId,
+        course: courseId,
+        status: { $in: ['ACTIVE'] },
+    });
     if (!enrollment) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Enrollment not found');
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'You are not enrolled in this course');
     }
-    if (enrollment.student.toString() !== studentId) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized');
+    // Validate lesson exists, belongs to this course, and is visible
+    const lesson = yield course_model_2.Lesson.findOne({
+        _id: lessonId,
+        courseId,
+        isVisible: true,
+    });
+    if (!lesson) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Lesson not found');
     }
     // Check if lesson already completed
     const alreadyCompleted = enrollment.progress.completedLessons.some(l => l.toString() === lessonId);
     if (alreadyCompleted) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Lesson already completed');
     }
-    // Get total lessons for the course to calculate percentage
+    // Get total visible lessons for the course to calculate percentage
     const totalLessons = yield course_model_2.Lesson.countDocuments({
         courseId: enrollment.course,
+        isVisible: true,
     });
     const newCompletedCount = enrollment.progress.completedLessons.length + 1;
     const completionPercentage = totalLessons > 0 ? Math.round((newCompletedCount / totalLessons) * 100) : 0;
@@ -173,10 +203,17 @@ const completeLesson = (enrollmentId, lessonId, studentId) => __awaiter(void 0, 
         updateData.$set['status'] = 'COMPLETED';
         updateData.$set['completedAt'] = new Date();
     }
-    const result = yield enrollment_model_1.Enrollment.findByIdAndUpdate(enrollmentId, updateData, {
-        new: true,
-    });
-    return result;
+    const result = yield enrollment_model_1.Enrollment.findByIdAndUpdate(enrollment._id, updateData, { new: true });
+    // Gamification: lesson complete + auto course complete
+    try {
+        yield gamificationHelper_1.GamificationHelper.awardPoints(studentId, gamification_interface_1.POINTS_REASON.LESSON_COMPLETE, lessonId, 'Lesson');
+        if ((result === null || result === void 0 ? void 0 : result.status) === 'COMPLETED') {
+            yield gamificationHelper_1.GamificationHelper.awardPoints(studentId, gamification_interface_1.POINTS_REASON.COURSE_COMPLETE, courseId, 'Course');
+        }
+        yield gamificationHelper_1.GamificationHelper.checkAndAwardBadges(studentId);
+    }
+    catch ( /* points failure should not block lesson completion */_a) { /* points failure should not block lesson completion */ }
+    return { completionPercentage };
 });
 const getEnrolledStudents = (courseId, query) => __awaiter(void 0, void 0, void 0, function* () {
     const enrollmentQuery = new QueryBuilder_1.default(enrollment_model_1.Enrollment.find({ course: courseId }).populate('student', 'name email profilePicture'), query)

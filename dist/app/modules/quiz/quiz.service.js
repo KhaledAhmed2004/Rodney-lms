@@ -18,12 +18,16 @@ const http_status_codes_1 = require("http-status-codes");
 const mongoose_1 = require("mongoose");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
-const quiz_interface_1 = require("./quiz.interface");
 const quiz_model_1 = require("./quiz.model");
+const course_model_1 = require("../course/course.model");
+const enrollment_model_1 = require("../enrollment/enrollment.model");
+const gamificationHelper_1 = require("../../helpers/gamificationHelper");
+const gamification_interface_1 = require("../gamification/gamification.interface");
 // ==================== ADMIN SERVICES ====================
 const createQuiz = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     const quizData = {
         title: payload.title,
+        course: payload.course,
         description: payload.description,
         settings: payload.settings,
     };
@@ -34,11 +38,12 @@ const createQuiz = (payload) => __awaiter(void 0, void 0, void 0, function* () {
         });
         quizData.totalMarks = quizData.questions.reduce((sum, q) => sum + (q.marks || 1), 0);
     }
-    const result = yield quiz_model_1.Quiz.create(quizData);
+    const created = yield quiz_model_1.Quiz.create(quizData);
+    const result = yield quiz_model_1.Quiz.findById(created._id).select('-__v');
     return result;
 });
 const getAllQuizzes = (query) => __awaiter(void 0, void 0, void 0, function* () {
-    const quizQuery = new QueryBuilder_1.default(quiz_model_1.Quiz.find(), query)
+    const quizQuery = new QueryBuilder_1.default(quiz_model_1.Quiz.find().populate('course', 'title').select('-questions'), query)
         .search(['title'])
         .filter()
         .sort()
@@ -55,11 +60,28 @@ const getQuizById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     return result;
 });
 const updateQuiz = (id, payload) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c;
     const existing = yield quiz_model_1.Quiz.findById(id);
     if (!existing) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Quiz not found');
     }
-    const result = yield quiz_model_1.Quiz.findByIdAndUpdate(id, payload, { new: true });
+    const updateData = {};
+    if (payload.title !== undefined)
+        updateData.title = payload.title;
+    if (payload.description !== undefined)
+        updateData.description = payload.description;
+    if (payload.settings !== undefined) {
+        updateData.settings = Object.assign(Object.assign({}, (_c = (_b = (_a = existing.settings).toObject) === null || _b === void 0 ? void 0 : _b.call(_a)) !== null && _c !== void 0 ? _c : existing.settings), payload.settings);
+    }
+    // Questions array replace — auto-generate questionId + order, recalculate totalMarks
+    if (payload.questions && Array.isArray(payload.questions)) {
+        updateData.questions = payload.questions.map((q, index) => {
+            var _a;
+            return (Object.assign(Object.assign({}, q), { questionId: q.questionId || crypto_1.default.randomUUID(), order: (_a = q.order) !== null && _a !== void 0 ? _a : index }));
+        });
+        updateData.totalMarks = updateData.questions.reduce((sum, q) => sum + (q.marks || 1), 0);
+    }
+    const result = yield quiz_model_1.Quiz.findByIdAndUpdate(id, updateData, { new: true });
     return result;
 });
 const deleteQuiz = (id) => __awaiter(void 0, void 0, void 0, function* () {
@@ -69,75 +91,6 @@ const deleteQuiz = (id) => __awaiter(void 0, void 0, void 0, function* () {
     }
     yield quiz_model_1.QuizAttempt.deleteMany({ quiz: id });
     yield quiz_model_1.Quiz.findByIdAndDelete(id);
-});
-const addQuestion = (quizId, questionData) => __awaiter(void 0, void 0, void 0, function* () {
-    const quiz = yield quiz_model_1.Quiz.findById(quizId);
-    if (!quiz) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Quiz not found');
-    }
-    if (!questionData.questionId) {
-        questionData.questionId = crypto_1.default.randomUUID();
-    }
-    const marks = questionData.marks || 1;
-    const result = yield quiz_model_1.Quiz.findByIdAndUpdate(quizId, {
-        $push: { questions: questionData },
-        $inc: { totalMarks: marks },
-    }, { new: true });
-    return result;
-});
-const updateQuestion = (quizId, questionId, payload) => __awaiter(void 0, void 0, void 0, function* () {
-    const quiz = yield quiz_model_1.Quiz.findById(quizId);
-    if (!quiz) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Quiz not found');
-    }
-    const questionIndex = quiz.questions.findIndex(q => q.questionId === questionId);
-    if (questionIndex === -1) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Question not found');
-    }
-    const updateFields = {};
-    for (const [key, value] of Object.entries(payload)) {
-        updateFields[`questions.${questionIndex}.${key}`] = value;
-    }
-    const result = yield quiz_model_1.Quiz.findByIdAndUpdate(quizId, { $set: updateFields }, { new: true });
-    // Recalculate total marks
-    if (result) {
-        const totalMarks = result.questions.reduce((sum, q) => sum + q.marks, 0);
-        yield quiz_model_1.Quiz.findByIdAndUpdate(quizId, { totalMarks });
-    }
-    return result;
-});
-const deleteQuestion = (quizId, questionId) => __awaiter(void 0, void 0, void 0, function* () {
-    const quiz = yield quiz_model_1.Quiz.findById(quizId);
-    if (!quiz) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Quiz not found');
-    }
-    const question = quiz.questions.find(q => q.questionId === questionId);
-    if (!question) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Question not found');
-    }
-    const result = yield quiz_model_1.Quiz.findByIdAndUpdate(quizId, {
-        $pull: { questions: { questionId } },
-        $inc: { totalMarks: -question.marks },
-    }, { new: true });
-    return result;
-});
-const reorderQuestions = (quizId, questionIds) => __awaiter(void 0, void 0, void 0, function* () {
-    const quiz = yield quiz_model_1.Quiz.findById(quizId);
-    if (!quiz) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Quiz not found');
-    }
-    const reorderedQuestions = questionIds.map((qId, index) => {
-        const question = quiz.questions.find(q => q.questionId === qId);
-        if (!question) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, `Question ${qId} not found`);
-        }
-        const questionObj = typeof question.toObject === 'function'
-            ? question.toObject()
-            : Object.assign({}, question);
-        return Object.assign(Object.assign({}, questionObj), { order: index });
-    });
-    const result = yield quiz_model_1.Quiz.findByIdAndUpdate(quizId, { $set: { questions: reorderedQuestions } }, { new: true });
-    return result;
 });
 const getQuizAttempts = (quizId, query) => __awaiter(void 0, void 0, void 0, function* () {
     const attemptQuery = new QueryBuilder_1.default(quiz_model_1.QuizAttempt.find({ quiz: quizId }).populate('student', 'name email profilePicture'), query)
@@ -149,13 +102,22 @@ const getQuizAttempts = (quizId, query) => __awaiter(void 0, void 0, void 0, fun
     return { pagination, data };
 });
 // ==================== STUDENT SERVICES ====================
+// Fisher-Yates shuffle
+const shuffleArray = (array) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+};
 const getStudentView = (quizId, studentId) => __awaiter(void 0, void 0, void 0, function* () {
     const quiz = yield quiz_model_1.Quiz.findById(quizId);
     if (!quiz) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Quiz not found');
     }
-    // Strip correct answers
-    const sanitizedQuestions = quiz.questions.map(q => ({
+    // Strip correct answers + explanation
+    let questions = quiz.questions.map(q => ({
         questionId: q.questionId,
         type: q.type,
         text: q.text,
@@ -166,14 +128,20 @@ const getStudentView = (quizId, studentId) => __awaiter(void 0, void 0, void 0, 
         marks: q.marks,
         order: q.order,
     }));
+    // Server-side shuffle (anti-cheating)
+    if (quiz.settings.shuffleQuestions) {
+        questions = shuffleArray(questions);
+    }
+    if (quiz.settings.shuffleOptions) {
+        questions = questions.map(q => (Object.assign(Object.assign({}, q), { options: shuffleArray(q.options) })));
+    }
     return {
         _id: quiz._id,
         title: quiz.title,
         description: quiz.description,
-        questions: sanitizedQuestions,
+        questions: questions,
         settings: {
             timeLimit: quiz.settings.timeLimit,
-            maxAttempts: quiz.settings.maxAttempts,
             passingScore: quiz.settings.passingScore,
             shuffleQuestions: quiz.settings.shuffleQuestions,
             shuffleOptions: quiz.settings.shuffleOptions,
@@ -187,33 +155,34 @@ const startAttempt = (quizId, studentId) => __awaiter(void 0, void 0, void 0, fu
     if (!quiz) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Quiz not found');
     }
-    // Check max attempts
-    if (quiz.settings.maxAttempts > 0) {
-        const attemptCount = yield quiz_model_1.QuizAttempt.countDocuments({
-            quiz: quizId,
-            student: studentId,
-        });
-        if (attemptCount >= quiz.settings.maxAttempts) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Maximum attempts reached');
-        }
-    }
-    // Check for in-progress attempt
-    const inProgress = yield quiz_model_1.QuizAttempt.findOne({
+    // Check if already attempted
+    const existing = yield quiz_model_1.QuizAttempt.findOne({
         quiz: quizId,
         student: studentId,
-        status: 'IN_PROGRESS',
     });
-    if (inProgress) {
-        return inProgress;
+    if (existing) {
+        // In-progress — return existing to continue
+        if (existing.status === 'IN_PROGRESS') {
+            return {
+                _id: existing._id,
+                startedAt: existing.startedAt,
+                maxScore: existing.maxScore,
+                status: existing.status,
+            };
+        }
+        // Already completed — no retry
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Quiz already attempted');
     }
-    const attemptNumber = (yield quiz_model_1.QuizAttempt.countDocuments({ quiz: quizId, student: studentId })) +
-        1;
-    const attempt = yield quiz_model_1.QuizAttempt.create({
+    yield quiz_model_1.QuizAttempt.create({
         quiz: quizId,
         student: studentId,
         maxScore: quiz.totalMarks,
-        attemptNumber,
     });
+    const attempt = yield quiz_model_1.QuizAttempt.findOne({
+        quiz: quizId,
+        student: studentId,
+        status: 'IN_PROGRESS',
+    }).select('startedAt maxScore status');
     return attempt;
 });
 const submitAttempt = (attemptId, studentId, answers) => __awaiter(void 0, void 0, void 0, function* () {
@@ -231,6 +200,14 @@ const submitAttempt = (attemptId, studentId, answers) => __awaiter(void 0, void 
     if (!quiz) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Quiz not found');
     }
+    // Enforce time limit (30 sec grace period for network delay)
+    if (quiz.settings.timeLimit > 0) {
+        const elapsedSeconds = Math.floor((Date.now() - attempt.startedAt.getTime()) / 1000);
+        const limitSeconds = quiz.settings.timeLimit * 60 + 30;
+        if (elapsedSeconds > limitSeconds) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Time limit exceeded. Quiz submission rejected.');
+        }
+    }
     // Grade answers
     let totalScore = 0;
     const gradedAnswers = answers.map(answer => {
@@ -239,31 +216,21 @@ const submitAttempt = (attemptId, studentId, answers) => __awaiter(void 0, void 
             return {
                 questionId: answer.questionId,
                 selectedOptionId: answer.selectedOptionId,
-                textAnswer: answer.textAnswer,
                 isCorrect: false,
                 marksAwarded: 0,
             };
         }
         let isCorrect = false;
         let marksAwarded = 0;
-        if (question.type === quiz_interface_1.QUESTION_TYPE.MCQ ||
-            question.type === quiz_interface_1.QUESTION_TYPE.TRUE_FALSE) {
-            const correctOption = question.options.find(o => o.isCorrect);
-            if (correctOption && answer.selectedOptionId === correctOption.optionId) {
-                isCorrect = true;
-                marksAwarded = question.marks;
-            }
-        }
-        else if (question.type === quiz_interface_1.QUESTION_TYPE.SHORT_ANSWER) {
-            // Short answer requires manual grading — mark as pending (0 marks for now)
-            isCorrect = false;
-            marksAwarded = 0;
+        const correctOption = question.options.find(o => o.isCorrect);
+        if (correctOption && answer.selectedOptionId === correctOption.optionId) {
+            isCorrect = true;
+            marksAwarded = question.marks;
         }
         totalScore += marksAwarded;
         return {
             questionId: answer.questionId,
             selectedOptionId: answer.selectedOptionId,
-            textAnswer: answer.textAnswer,
             isCorrect,
             marksAwarded,
         };
@@ -282,21 +249,81 @@ const submitAttempt = (attemptId, studentId, answers) => __awaiter(void 0, void 
             status: 'COMPLETED',
         },
     }, { new: true });
-    return result;
+    // Gamification: award points for quiz pass/perfect
+    if (passed) {
+        try {
+            const reason = percentage === 100 ? gamification_interface_1.POINTS_REASON.QUIZ_PERFECT : gamification_interface_1.POINTS_REASON.QUIZ_PASS;
+            yield gamificationHelper_1.GamificationHelper.awardPoints(studentId, reason, attempt.quiz.toString(), 'Quiz');
+            yield gamificationHelper_1.GamificationHelper.checkAndAwardBadges(studentId);
+        }
+        catch ( /* points failure should not block quiz submission */_a) { /* points failure should not block quiz submission */ }
+        // Auto-complete QUIZ lesson on pass
+        try {
+            const lesson = yield course_model_1.Lesson.findOne({ quiz: attempt.quiz }).select('courseId');
+            if (lesson) {
+                const enrollment = yield enrollment_model_1.Enrollment.findOne({
+                    student: studentId,
+                    course: lesson.courseId,
+                    status: 'ACTIVE',
+                });
+                if (enrollment) {
+                    const alreadyCompleted = enrollment.progress.completedLessons.some(l => l.toString() === lesson._id.toString());
+                    if (!alreadyCompleted) {
+                        const totalLessons = yield course_model_1.Lesson.countDocuments({ courseId: lesson.courseId, isVisible: true });
+                        const newCount = enrollment.progress.completedLessons.length + 1;
+                        const completionPct = totalLessons > 0 ? Math.round((newCount / totalLessons) * 100) : 0;
+                        const enrollUpdate = {
+                            $addToSet: { 'progress.completedLessons': lesson._id },
+                            $set: {
+                                'progress.lastAccessedLesson': lesson._id,
+                                'progress.lastAccessedAt': new Date(),
+                                'progress.completionPercentage': completionPct,
+                            },
+                        };
+                        if (completionPct >= 100) {
+                            enrollUpdate.$set['status'] = 'COMPLETED';
+                            enrollUpdate.$set['completedAt'] = new Date();
+                        }
+                        yield enrollment_model_1.Enrollment.findByIdAndUpdate(enrollment._id, enrollUpdate);
+                        // Course complete points
+                        if (completionPct >= 100) {
+                            yield gamificationHelper_1.GamificationHelper.awardPoints(studentId, gamification_interface_1.POINTS_REASON.COURSE_COMPLETE, lesson.courseId.toString(), 'Course');
+                        }
+                    }
+                }
+            }
+        }
+        catch ( /* auto-complete failure should not block quiz submission */_b) { /* auto-complete failure should not block quiz submission */ }
+    }
+    return {
+        _id: result._id,
+        score: totalScore,
+        maxScore: quiz.totalMarks,
+        percentage,
+        passed,
+        timeSpent,
+        completedAt: result.completedAt,
+        answers: gradedAnswers,
+    };
 });
-const getAttemptById = (attemptId) => __awaiter(void 0, void 0, void 0, function* () {
+const getAttemptById = (attemptId, userId, userRole) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield quiz_model_1.QuizAttempt.findById(attemptId)
-        .populate('quiz', 'title totalMarks settings')
-        .populate('student', 'name email profilePicture');
+        .populate('quiz', 'title totalMarks settings.passingScore settings.showResults')
+        .populate('student', 'name profilePicture')
+        .select('quiz student score maxScore percentage passed timeSpent completedAt answers');
     if (!result) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Attempt not found');
+    }
+    // Students can only view their own attempts
+    if (userRole !== 'SUPER_ADMIN' && result.student._id.toString() !== userId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized');
     }
     return result;
 });
 const getMyAttempts = (studentId, query) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d, _e;
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(Math.max(1, Number(query.limit) || 10), 100);
     const skip = (page - 1) * limit;
     const pipeline = [
         { $match: { student: new mongoose_1.Types.ObjectId(studentId), status: 'COMPLETED' } },
@@ -360,10 +387,6 @@ exports.QuizService = {
     getQuizById,
     updateQuiz,
     deleteQuiz,
-    addQuestion,
-    updateQuestion,
-    deleteQuestion,
-    reorderQuestions,
     getQuizAttempts,
     getStudentView,
     startAttempt,

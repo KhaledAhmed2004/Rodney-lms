@@ -21,5 +21,5 @@ router.get('/course/:courseId/students', (0, auth_1.default)(user_1.USER_ROLES.S
 router.get('/:id', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), enrollment_controller_1.EnrollmentController.getEnrollmentById);
 router.patch('/:id/status', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(enrollment_validation_1.EnrollmentValidation.updateStatus), enrollment_controller_1.EnrollmentController.updateStatus);
 // Lesson completion
-router.post('/:enrollmentId/lessons/:lessonId/complete', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), (0, validateRequest_1.default)(enrollment_validation_1.EnrollmentValidation.completeLesson), enrollment_controller_1.EnrollmentController.completeLesson);
+router.post('/:courseId/lessons/:lessonId/complete', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), (0, validateRequest_1.default)(enrollment_validation_1.EnrollmentValidation.completeLesson), enrollment_controller_1.EnrollmentController.completeLesson);
 exports.EnrollmentRoutes = router;

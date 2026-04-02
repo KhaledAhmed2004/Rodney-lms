@@ -13,11 +13,13 @@ const auth_controller_1 = require("./auth.controller");
 const auth_validation_1 = require("./auth.validation");
 const router = express_1.default.Router();
 // User Login
-router.post('/login', (0, rateLimit_1.rateLimitMiddleware)({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    routeName: 'auth-login',
-}), (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createLoginZodSchema), auth_controller_1.AuthController.loginUser);
+router.post('/login', 
+// rateLimitMiddleware({
+//   windowMs: 15 * 60 * 1000,
+//   max: 10,
+//   routeName: 'auth-login',
+// }),
+(0, validateRequest_1.default)(auth_validation_1.AuthValidation.createLoginZodSchema), auth_controller_1.AuthController.loginUser);
 // User Logout
 router.post('/logout', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.STUDENT), auth_controller_1.AuthController.logoutUser);
 // Forget Password Request

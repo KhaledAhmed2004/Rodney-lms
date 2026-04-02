@@ -1,8 +1,6 @@
 import express from 'express';
 import { AuthRoutes } from '../app/modules/auth/auth.route';
 import { UserRoutes } from '../app/modules/user/user.route';
-import { ChatRoutes } from '../app/modules/chat/chat.route';
-import { MessageRoutes } from '../app/modules/message/message.route';
 import { NotificationRoutes } from '../app/modules/notification/notification.route';
 import { CourseRoutes } from '../app/modules/course/course.route';
 import { EnrollmentRoutes } from '../app/modules/enrollment/enrollment.route';
@@ -27,14 +25,6 @@ const apiRoutes = [
   {
     path: '/auth',
     route: AuthRoutes,
-  },
-  {
-    path: '/chats',
-    route: ChatRoutes,
-  },
-  {
-    path: '/messages',
-    route: MessageRoutes,
   },
   {
     path: '/notifications',

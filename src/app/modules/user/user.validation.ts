@@ -20,8 +20,8 @@ const createUserZodSchema = z.object({
         .optional(),
       role: z.enum([USER_ROLES.STUDENT]).optional(),
       password: z
-        .string({ required_error: 'Password is required' })
-        .regex(passwordRegex, 'Password must include upper, lower, number, special and be 8+ chars'),
+        .string({ required_error: 'Password is required' }),
+        // .regex(passwordRegex, 'Password must include upper, lower, number, special and be 8+ chars'),
       profilePicture: z.string().optional(),
     })
     .strict(),

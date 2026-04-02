@@ -15,6 +15,7 @@ const gamification_model_1 = require("../modules/gamification/gamification.model
 const user_model_1 = require("../modules/user/user.model");
 const enrollment_model_1 = require("../modules/enrollment/enrollment.model");
 const quiz_model_1 = require("../modules/quiz/quiz.model");
+const activity_model_1 = require("../modules/activity/activity.model");
 const POINTS_MAP = {
     [gamification_interface_1.POINTS_REASON.LESSON_COMPLETE]: 10,
     [gamification_interface_1.POINTS_REASON.QUIZ_PASS]: 25,
@@ -28,6 +29,16 @@ const awardPoints = (studentId, reason, referenceId, referenceType, customPoints
     const points = customPoints || POINTS_MAP[reason] || 0;
     if (points === 0)
         return;
+    // Duplicate prevention — skip if already awarded for same reason + reference
+    if (referenceId) {
+        const existing = yield gamification_model_1.PointsLedger.findOne({
+            student: studentId,
+            reason,
+            referenceId,
+        });
+        if (existing)
+            return;
+    }
     const descriptions = {
         [gamification_interface_1.POINTS_REASON.LESSON_COMPLETE]: 'Completed a lesson',
         [gamification_interface_1.POINTS_REASON.QUIZ_PASS]: 'Passed a quiz',
@@ -46,6 +57,10 @@ const awardPoints = (studentId, reason, referenceId, referenceType, customPoints
         description: descriptions[reason] || reason,
     });
     yield user_model_1.User.findByIdAndUpdate(studentId, { $inc: { totalPoints: points } });
+    // Update daily activity pointsEarned
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    yield activity_model_1.DailyActivity.findOneAndUpdate({ student: studentId, date: today }, { $inc: { pointsEarned: points }, $set: { isActive: true } }, { upsert: true });
 });
 const checkAndAwardBadges = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;

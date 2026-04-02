@@ -6,8 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const auth_route_1 = require("../app/modules/auth/auth.route");
 const user_route_1 = require("../app/modules/user/user.route");
-const chat_route_1 = require("../app/modules/chat/chat.route");
-const message_route_1 = require("../app/modules/message/message.route");
 const notification_route_1 = require("../app/modules/notification/notification.route");
 const course_route_1 = require("../app/modules/course/course.route");
 const enrollment_route_1 = require("../app/modules/enrollment/enrollment.route");
@@ -30,14 +28,6 @@ const apiRoutes = [
     {
         path: '/auth',
         route: auth_route_1.AuthRoutes,
-    },
-    {
-        path: '/chats',
-        route: chat_route_1.ChatRoutes,
-    },
-    {
-        path: '/messages',
-        route: message_route_1.MessageRoutes,
     },
     {
         path: '/notifications',

@@ -57,6 +57,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.pdfHandler = pdfHandler;
 const PDFBuilder_1 = __importDefault(require("../../PDFBuilder"));
+const templates = __importStar(require("../../../../shared/pdfTemplates"));
 // ==================== HANDLER ====================
 /**
  * PDF job handler
@@ -65,33 +66,68 @@ const PDFBuilder_1 = __importDefault(require("../../PDFBuilder"));
  */
 function pdfHandler(payload, job) {
     return __awaiter(this, void 0, void 0, function* () {
-        const builder = new PDFBuilder_1.default();
-        // Set format and orientation
+        let builder;
+        // Use template or start with fresh builder
+        if (payload.template) {
+            switch (payload.template.toLowerCase()) {
+                case 'invoice':
+                    builder = templates.invoiceTemplate(payload.data);
+                    break;
+                case 'receipt':
+                    builder = templates.receiptTemplate(payload.data);
+                    break;
+                case 'report':
+                    builder = templates.reportTemplate(payload.data);
+                    break;
+                case 'quotation':
+                    builder = templates.quotationTemplate(payload.data);
+                    break;
+                case 'order-confirmation':
+                    builder = templates.orderConfirmationTemplate(payload.data);
+                    break;
+                case 'payslip':
+                    builder = templates.payslipTemplate(payload.data);
+                    break;
+                case 'certificate':
+                    builder = templates.certificateTemplate(payload.data);
+                    break;
+                default:
+                    // Fallback to simple document or generic builder
+                    builder = new PDFBuilder_1.default();
+                    if (payload.html) {
+                        builder.addHTML(payload.html);
+                    }
+            }
+        }
+        else if (payload.html) {
+            builder = new PDFBuilder_1.default();
+            builder.addHTML(payload.html);
+        }
+        else {
+            throw new Error('PDF job requires either template or html content');
+        }
+        // Override format and orientation if provided
         if (payload.format) {
-            builder.setFormat(payload.format);
+            builder.setPageSize(payload.format);
         }
         if (payload.orientation) {
             builder.setOrientation(payload.orientation);
         }
         // Set margins if provided
         if (payload.margins) {
-            builder.setMargins(payload.margins);
-        }
-        // Use template or custom HTML
-        if (payload.template) {
-            builder.useTemplate(payload.template, payload.data);
-        }
-        else if (payload.html) {
-            builder.setHtml(payload.html);
-            if (payload.data) {
-                builder.setVariables(payload.data);
-            }
-        }
-        else {
-            throw new Error('PDF job requires either template or html content');
+            const margins = {};
+            if (payload.margins.top)
+                margins.top = Number(payload.margins.top);
+            if (payload.margins.right)
+                margins.right = Number(payload.margins.right);
+            if (payload.margins.bottom)
+                margins.bottom = Number(payload.margins.bottom);
+            if (payload.margins.left)
+                margins.left = Number(payload.margins.left);
+            builder.setMargins(margins);
         }
         // Generate PDF
-        const buffer = yield builder.build();
+        const buffer = yield builder.toBuffer();
         const result = {
             generated: true,
             size: buffer.length,

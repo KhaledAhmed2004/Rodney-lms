@@ -63,42 +63,6 @@ const deleteQuiz = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
         message: 'Quiz deleted successfully',
     });
 }));
-const addQuestion = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield quiz_service_1.QuizService.addQuestion(req.params.id, req.body);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.CREATED,
-        message: 'Question added successfully',
-        data: result,
-    });
-}));
-const updateQuestion = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield quiz_service_1.QuizService.updateQuestion(req.params.id, req.params.questionId, req.body);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Question updated successfully',
-        data: result,
-    });
-}));
-const deleteQuestion = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield quiz_service_1.QuizService.deleteQuestion(req.params.id, req.params.questionId);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Question deleted successfully',
-        data: result,
-    });
-}));
-const reorderQuestions = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield quiz_service_1.QuizService.reorderQuestions(req.params.id, req.body.questionIds);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Questions reordered successfully',
-        data: result,
-    });
-}));
 const getQuizAttempts = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield quiz_service_1.QuizService.getQuizAttempts(req.params.id, req.query);
     (0, sendResponse_1.default)(res, {
@@ -126,7 +90,7 @@ const startAttempt = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.CREATED,
-        message: 'Quiz attempt started',
+        message: 'Quiz attempt started successfully',
         data: result,
     });
 }));
@@ -141,7 +105,9 @@ const submitAttempt = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, 
     });
 }));
 const getAttemptById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield quiz_service_1.QuizService.getAttemptById(req.params.attemptId);
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    const result = yield quiz_service_1.QuizService.getAttemptById(req.params.attemptId, userId, userRole);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -166,10 +132,6 @@ exports.QuizController = {
     getQuizById,
     updateQuiz,
     deleteQuiz,
-    addQuestion,
-    updateQuestion,
-    deleteQuestion,
-    reorderQuestions,
     getQuizAttempts,
     getStudentView,
     startAttempt,

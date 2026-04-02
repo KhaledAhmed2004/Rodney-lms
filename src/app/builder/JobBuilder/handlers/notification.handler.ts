@@ -21,7 +21,7 @@
  */
 
 import { NotificationBuilder } from '../../NotificationBuilder';
-import { IJob, INotificationResult } from '../types';
+import { IJob } from '../types';
 
 // ==================== INTERFACES ====================
 
@@ -76,7 +76,7 @@ export interface INotificationJobResult {
  */
 export async function notificationHandler(
   payload: INotificationJobPayload,
-  job: IJob
+  job: IJob,
 ): Promise<INotificationJobResult> {
   const builder = new NotificationBuilder();
 

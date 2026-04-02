@@ -11,10 +11,9 @@ const validateRequest_1 = __importDefault(require("../../middlewares/validateReq
 const analytics_controller_1 = require("./analytics.controller");
 const analytics_validation_1 = require("./analytics.validation");
 const router = express_1.default.Router();
-router.get('/user-engagement', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(analytics_validation_1.AnalyticsValidation.periodQuerySchema), analytics_controller_1.AnalyticsController.getUserEngagement);
 router.get('/course-completion', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(analytics_validation_1.AnalyticsValidation.periodQuerySchema), analytics_controller_1.AnalyticsController.getCourseCompletion);
-router.get('/quiz-performance', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(analytics_validation_1.AnalyticsValidation.periodQuerySchema), analytics_controller_1.AnalyticsController.getQuizPerformance);
+router.get('/engagement-heatmap', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(analytics_validation_1.AnalyticsValidation.periodQuerySchema), analytics_controller_1.AnalyticsController.getEngagementHeatmap);
 router.get('/export', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(analytics_validation_1.AnalyticsValidation.exportQuerySchema), analytics_controller_1.AnalyticsController.exportAnalytics);
 router.get('/courses/:courseId', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(analytics_validation_1.AnalyticsValidation.courseIdParamSchema), analytics_controller_1.AnalyticsController.getCourseAnalytics);
-router.get('/students/:studentId', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(analytics_validation_1.AnalyticsValidation.studentIdParamSchema), analytics_controller_1.AnalyticsController.getStudentAnalytics);
+router.get('/courses/:courseId/quizzes', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(analytics_validation_1.AnalyticsValidation.courseQuizQuerySchema), analytics_controller_1.AnalyticsController.getQuizPerformance);
 exports.AnalyticsRoutes = router;

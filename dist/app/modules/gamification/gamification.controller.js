@@ -68,6 +68,15 @@ const getAllBadges = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
         data: result.data,
     });
 }));
+const getBadgeById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield gamification_service_1.GamificationService.getBadgeById(req.params.id);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Badge retrieved successfully',
+        data: result,
+    });
+}));
 const updateBadge = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield gamification_service_1.GamificationService.updateBadge(req.params.id, req.body);
     (0, sendResponse_1.default)(res, {
@@ -92,6 +101,7 @@ exports.GamificationController = {
     getMyBadges,
     getMySummary,
     getAllBadges,
+    getBadgeById,
     updateBadge,
     getAdminStats,
 };

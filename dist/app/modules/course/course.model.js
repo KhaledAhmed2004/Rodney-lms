@@ -112,7 +112,10 @@ const lessonSchema = new mongoose_1.Schema({
     video: { type: VideoMetaSchema },
     contentFile: { type: LessonAttachmentSchema },
     readingContent: { type: String },
-    assignmentInstructions: { type: String },
+    quiz: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'Quiz',
+    },
     attachments: { type: [LessonAttachmentSchema], default: [] },
 }, { timestamps: true });
 // Indexes

@@ -41,7 +41,7 @@ const getAll = () => __awaiter(void 0, void 0, void 0, function* () {
     return result;
 });
 const getBySlug = (slug) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield legal_model_1.LegalPage.findOne({ slug }).select('slug title content updatedAt');
+    const result = yield legal_model_1.LegalPage.findOne({ slug }).select('-_id slug title content updatedAt');
     if (!result) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Legal page not found');
     }

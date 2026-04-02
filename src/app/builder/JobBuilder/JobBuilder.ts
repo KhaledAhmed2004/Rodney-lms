@@ -386,7 +386,7 @@ export class JobBuilder {
     if (typeof payloadOrTransformer === 'function') {
       this._chain = {
         handlerName,
-        payloadTransformer: payloadOrTransformer,
+        payloadTransformer: payloadOrTransformer as (result: any) => Record<string, any>,
       };
     } else {
       this._chain = {

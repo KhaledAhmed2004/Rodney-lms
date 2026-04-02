@@ -87,8 +87,8 @@ const updateStatus = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
 }));
 const completeLesson = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
-    const { enrollmentId, lessonId } = req.params;
-    const result = yield enrollment_service_1.EnrollmentService.completeLesson(enrollmentId, lessonId, userId);
+    const { courseId, lessonId } = req.params;
+    const result = yield enrollment_service_1.EnrollmentService.completeLesson(courseId, lessonId, userId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,

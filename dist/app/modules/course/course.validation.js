@@ -78,13 +78,13 @@ const createLessonZodSchema = zod_1.z.object({
             .string({ required_error: 'Lesson title is required' })
             .min(1)
             .max(300),
-        type: zod_1.z.enum([course_interface_1.LESSON_TYPE.VIDEO, course_interface_1.LESSON_TYPE.READING, course_interface_1.LESSON_TYPE.ASSIGNMENT], { required_error: 'Lesson type is required' }),
+        type: zod_1.z.enum([course_interface_1.LESSON_TYPE.VIDEO, course_interface_1.LESSON_TYPE.READING, course_interface_1.LESSON_TYPE.QUIZ], { required_error: 'Lesson type is required' }),
         description: zod_1.z.string().max(10000).optional(),
         learningObjectives: zod_1.z.array(zod_1.z.string().max(500)).max(20).optional(),
         isVisible: zod_1.z.coerce.boolean().optional(),
         prerequisiteLesson: zod_1.z.string().optional(),
         readingContent: zod_1.z.string().optional(),
-        assignmentInstructions: zod_1.z.string().optional(),
+        quiz: zod_1.z.string().optional(),
         contentFile: zod_1.z.string().optional(),
         attachments: zod_1.z.union([zod_1.z.string(), zod_1.z.array(zod_1.z.string())]).optional(),
     }),
@@ -97,14 +97,14 @@ const updateLessonZodSchema = zod_1.z.object({
     body: zod_1.z.object({
         title: zod_1.z.string().min(1).max(300).optional(),
         type: zod_1.z
-            .enum([course_interface_1.LESSON_TYPE.VIDEO, course_interface_1.LESSON_TYPE.READING, course_interface_1.LESSON_TYPE.ASSIGNMENT])
+            .enum([course_interface_1.LESSON_TYPE.VIDEO, course_interface_1.LESSON_TYPE.READING, course_interface_1.LESSON_TYPE.QUIZ])
             .optional(),
         description: zod_1.z.string().max(10000).optional(),
         learningObjectives: zod_1.z.array(zod_1.z.string().max(500)).max(20).optional(),
         isVisible: zod_1.z.coerce.boolean().optional(),
         prerequisiteLesson: zod_1.z.string().nullable().optional(),
         readingContent: zod_1.z.string().optional(),
-        assignmentInstructions: zod_1.z.string().optional(),
+        quiz: zod_1.z.string().optional(),
         contentFile: zod_1.z.string().optional(),
         attachments: zod_1.z.union([zod_1.z.string(), zod_1.z.array(zod_1.z.string())]).optional(),
     }),

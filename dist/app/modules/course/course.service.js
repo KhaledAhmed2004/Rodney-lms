@@ -224,7 +224,10 @@ const updateModule = (courseId, moduleId, payload) => __awaiter(void 0, void 0, 
 });
 const reorderModules = (courseId, moduleOrder) => __awaiter(void 0, void 0, void 0, function* () {
     const course = yield findCourseOrThrow(courseId);
-    const moduleMap = new Map(course.modules.map((m) => [m.moduleId, m]));
+    const moduleMap = new Map(course.modules.map((m) => [
+        m.moduleId,
+        typeof m.toObject === 'function' ? m.toObject() : Object.assign({}, m),
+    ]));
     // Validate all moduleIds exist
     for (const id of moduleOrder) {
         if (!moduleMap.has(id)) {
@@ -315,7 +318,7 @@ const createLesson = (courseId, moduleId, payload) => __awaiter(void 0, void 0, 
         video: videoMeta,
         contentFile,
         readingContent: payload.readingContent,
-        assignmentInstructions: payload.assignmentInstructions,
+        quiz: payload.quiz,
         attachments,
     };
     const lesson = yield course_model_1.Lesson.create(lessonData);
@@ -334,11 +337,18 @@ const getLessonsByModule = (courseId, moduleId, query) => __awaiter(void 0, void
     return { pagination, data };
 });
 const getLessonById = (courseId, lessonId) => __awaiter(void 0, void 0, void 0, function* () {
-    const lesson = yield course_model_1.Lesson.findOne({ _id: lessonId, courseId }).populate('prerequisiteLesson', 'title');
+    const lesson = yield course_model_1.Lesson.findOne({ _id: lessonId, courseId, isVisible: true })
+        .select('-order -isVisible -moduleId -courseId -__v -createdAt -updatedAt')
+        .populate('prerequisiteLesson', 'title');
     if (!lesson) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Lesson not found');
     }
-    return lesson;
+    // Strip processingStatus from video (admin concern)
+    const lessonObj = lesson.toObject();
+    if (lessonObj.video) {
+        delete lessonObj.video.processingStatus;
+    }
+    return lessonObj;
 });
 const updateLesson = (courseId, moduleId, lessonId, payload) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
@@ -381,8 +391,8 @@ const updateLesson = (courseId, moduleId, lessonId, payload) => __awaiter(void 0
         updateData.prerequisiteLesson = payload.prerequisiteLesson || null;
     if (payload.readingContent !== undefined)
         updateData.readingContent = payload.readingContent;
-    if (payload.assignmentInstructions !== undefined)
-        updateData.assignmentInstructions = payload.assignmentInstructions;
+    if (payload.quiz !== undefined)
+        updateData.quiz = payload.quiz;
     // Handle contentFile replacement based on lesson type
     if (payload.contentFile) {
         const effectiveType = payload.type || lesson.type;
@@ -522,7 +532,6 @@ const getStudentCourseDetail = (identifier, studentId) => __awaiter(void 0, void
     // Shape enrollment
     const enrollmentData = enrollment
         ? {
-            enrollmentId: String(enrollment._id),
             status: enrollment.status,
             completionPercentage: enrollment.progress.completionPercentage,
             completedLessons: enrollment.progress.completedLessons.map(String),
@@ -537,8 +546,8 @@ const getStudentCourseDetail = (identifier, studentId) => __awaiter(void 0, void
 });
 const browseCourses = (studentId, query) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d, _e;
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(Math.max(1, Number(query.limit) || 10), 100);
     const skip = (page - 1) * limit;
     const matchConditions = {
         status: course_interface_1.COURSE_STATUS.PUBLISHED,
@@ -570,7 +579,6 @@ const browseCourses = (studentId, query) => __awaiter(void 0, void 0, void 0, fu
                     { $limit: 1 },
                     {
                         $project: {
-                            enrollmentId: '$_id',
                             status: 1,
                             completionPercentage: '$progress.completionPercentage',
                             _id: 0,
@@ -591,29 +599,39 @@ const browseCourses = (studentId, query) => __awaiter(void 0, void 0, void 0, fu
                 },
             },
         },
-        {
-            $project: {
-                title: 1,
-                slug: 1,
-                thumbnail: 1,
-                description: 1,
-                totalLessons: 1,
-                averageRating: 1,
-                enrollmentCount: 1,
-                enrollment: 1,
-            },
-        },
-        {
-            $facet: {
-                data: [
-                    { $sort: { createdAt: -1 } },
-                    { $skip: skip },
-                    { $limit: limit },
-                ],
-                total: [{ $count: 'count' }],
-            },
-        },
     ];
+    // Enrollment filter: active | completed | none | all (default)
+    const enrollmentFilter = String(query.enrollment || 'all').toLowerCase();
+    if (enrollmentFilter === 'active') {
+        pipeline.push({ $match: { 'enrollment.status': 'ACTIVE' } });
+    }
+    else if (enrollmentFilter === 'completed') {
+        pipeline.push({ $match: { 'enrollment.status': 'COMPLETED' } });
+    }
+    else if (enrollmentFilter === 'none') {
+        pipeline.push({ $match: { enrollment: null } });
+    }
+    pipeline.push({
+        $project: {
+            title: 1,
+            slug: 1,
+            thumbnail: 1,
+            description: 1,
+            totalLessons: 1,
+            averageRating: 1,
+            enrollmentCount: 1,
+            enrollment: 1,
+        },
+    }, {
+        $facet: {
+            data: [
+                { $sort: { createdAt: -1 } },
+                { $skip: skip },
+                { $limit: limit },
+            ],
+            total: [{ $count: 'count' }],
+        },
+    });
     const result = yield course_model_1.Course.aggregate(pipeline);
     const data = (_b = (_a = result[0]) === null || _a === void 0 ? void 0 : _a.data) !== null && _b !== void 0 ? _b : [];
     const total = (_e = (_d = (_c = result[0]) === null || _c === void 0 ? void 0 : _c.total[0]) === null || _d === void 0 ? void 0 : _d.count) !== null && _e !== void 0 ? _e : 0;

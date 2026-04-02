@@ -33,7 +33,7 @@ const updateStatus = zod_1.z.object({
 });
 const completeLesson = zod_1.z.object({
     params: zod_1.z.object({
-        enrollmentId: zod_1.z.string({ required_error: 'Enrollment ID is required' }),
+        courseId: zod_1.z.string({ required_error: 'Course ID is required' }),
         lessonId: zod_1.z.string({ required_error: 'Lesson ID is required' }),
     }),
 });

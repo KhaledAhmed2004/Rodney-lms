@@ -8,12 +8,13 @@ const updateBadge = zod_1.z.object({
     }),
     body: zod_1.z.object({
         description: zod_1.z.string().min(1).max(500).optional(),
+        icon: zod_1.z.string().min(1).optional(),
         criteria: zod_1.z
             .object({
-            threshold: zod_1.z.number().min(1),
+            threshold: zod_1.z.coerce.number().min(1),
         })
             .optional(),
-        isActive: zod_1.z.boolean().optional(),
+        isActive: zod_1.z.coerce.boolean().optional(),
     }),
 });
 exports.GamificationValidation = {

@@ -16,6 +16,7 @@ exports.GamificationService = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const mongoose_1 = require("mongoose");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
+const fileHandler_1 = require("../../middlewares/fileHandler");
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
 const gamification_model_1 = require("./gamification.model");
 // ==================== LEADERBOARD ====================
@@ -94,22 +95,37 @@ const getMyPoints = (studentId, query) => __awaiter(void 0, void 0, void 0, func
 });
 // ==================== STUDENT BADGES ====================
 const getMyBadges = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
-    const [earnedBadges, totalBadges] = yield Promise.all([
-        gamification_model_1.StudentBadge.find({ student: studentId })
-            .populate('badge', 'name icon')
-            .sort({ earnedAt: -1 })
-            .lean(),
-        gamification_model_1.Badge.countDocuments({ isActive: true }),
+    const [allBadges, studentBadges] = yield Promise.all([
+        gamification_model_1.Badge.find({ isActive: true }).select('name description icon').lean(),
+        gamification_model_1.StudentBadge.find({ student: studentId }).select('badge earnedAt').lean(),
     ]);
-    const validBadges = earnedBadges.filter(({ badge }) => badge);
-    return {
-        totalBadges,
-        earnedBadges: validBadges.length,
-        badges: validBadges.map(({ badge, earnedAt }) => ({
+    const earnedMap = new Map(studentBadges.map(sb => [sb.badge.toString(), sb.earnedAt]));
+    const badges = allBadges.map(badge => {
+        const earnedAt = earnedMap.get(badge._id.toString()) || null;
+        return {
             name: badge.name,
             icon: badge.icon,
+            description: badge.description,
+            earned: !!earnedAt,
             earnedAt,
-        })),
+        };
+    });
+    // Earned first (by earnedAt desc), then unearned
+    badges.sort((a, b) => {
+        if (a.earned && !b.earned)
+            return -1;
+        if (!a.earned && b.earned)
+            return 1;
+        if (a.earned && b.earned) {
+            return new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime();
+        }
+        return 0;
+    });
+    const earnedCount = badges.filter(b => b.earned).length;
+    return {
+        totalBadges: allBadges.length,
+        earnedBadges: earnedCount,
+        badges,
     };
 });
 const getMySummary = (studentId) => __awaiter(void 0, void 0, void 0, function* () {
@@ -130,8 +146,15 @@ const getMySummary = (studentId) => __awaiter(void 0, void 0, void 0, function* 
     };
 });
 // ==================== BADGE CRUD (Admin) ====================
+const getBadgeById = (id) => __awaiter(void 0, void 0, void 0, function* () {
+    const badge = yield gamification_model_1.Badge.findById(id).select('-createdAt -updatedAt -__v');
+    if (!badge) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Badge not found');
+    }
+    return badge;
+});
 const getAllBadges = (query) => __awaiter(void 0, void 0, void 0, function* () {
-    const badgeQuery = new QueryBuilder_1.default(gamification_model_1.Badge.find().select('-description -createdAt -updatedAt -__v'), query)
+    const badgeQuery = new QueryBuilder_1.default(gamification_model_1.Badge.find().select('-createdAt -updatedAt -__v'), query)
         .search(['name'])
         .filter()
         .sort()
@@ -153,6 +176,11 @@ const updateBadge = (id, payload) => __awaiter(void 0, void 0, void 0, function*
         updateData.isActive = payload.isActive;
     if (((_a = payload.criteria) === null || _a === void 0 ? void 0 : _a.threshold) !== undefined) {
         updateData['criteria.threshold'] = payload.criteria.threshold;
+    }
+    if (payload.icon) {
+        if (existing.icon)
+            (0, fileHandler_1.deleteFile)(existing.icon).catch(() => { });
+        updateData.icon = payload.icon;
     }
     if (Object.keys(updateData).length === 0) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'No valid fields to update');
@@ -212,6 +240,7 @@ exports.GamificationService = {
     getMyBadges,
     getMySummary,
     getAllBadges,
+    getBadgeById,
     updateBadge,
     getAdminStats,
 };

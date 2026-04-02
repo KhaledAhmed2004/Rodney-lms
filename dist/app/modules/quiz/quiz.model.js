@@ -28,7 +28,6 @@ const QuestionSchema = new mongoose_1.Schema({
     },
     text: { type: String, required: true },
     options: { type: [OptionSchema], default: [] },
-    correctAnswer: { type: String },
     marks: { type: Number, required: true, default: 1 },
     explanation: { type: String },
     order: { type: Number, required: true, default: 0 },
@@ -36,7 +35,6 @@ const QuestionSchema = new mongoose_1.Schema({
 // ==================== SETTINGS SUB-SCHEMA ====================
 const SettingsSchema = new mongoose_1.Schema({
     timeLimit: { type: Number, default: 0 },
-    maxAttempts: { type: Number, default: 0 },
     passingScore: { type: Number, default: 60 },
     shuffleQuestions: { type: Boolean, default: false },
     shuffleOptions: { type: Boolean, default: false },
@@ -49,6 +47,7 @@ const quizSchema = new mongoose_1.Schema({
     course: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'Course',
+        required: true,
     },
     questions: { type: [QuestionSchema], default: [] },
     settings: {
@@ -67,7 +66,6 @@ exports.Quiz = (0, mongoose_1.model)('Quiz', quizSchema);
 const StudentAnswerSchema = new mongoose_1.Schema({
     questionId: { type: String, required: true },
     selectedOptionId: { type: String },
-    textAnswer: { type: String },
     isCorrect: { type: Boolean, default: false },
     marksAwarded: { type: Number, default: 0 },
 }, { _id: false });
@@ -91,7 +89,6 @@ const quizAttemptSchema = new mongoose_1.Schema({
     startedAt: { type: Date, default: Date.now },
     completedAt: { type: Date },
     timeSpent: { type: Number, default: 0 },
-    attemptNumber: { type: Number, default: 1 },
     status: {
         type: String,
         enum: Object.values(quiz_interface_1.ATTEMPT_STATUS),

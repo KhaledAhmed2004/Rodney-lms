@@ -18,16 +18,6 @@ const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const ExportBuilder_1 = __importDefault(require("../../builder/ExportBuilder"));
 const gradebook_service_1 = require("./gradebook.service");
-const submitAssignment = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const userId = req.user.id;
-    const result = yield gradebook_service_1.GradebookService.submitAssignment(req.params.lessonId, userId, req.body.courseId, req.body.content, req.body.attachments);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.CREATED,
-        message: 'Assignment submitted successfully',
-        data: result,
-    });
-}));
 const getMyGrades = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
     const result = yield gradebook_service_1.GradebookService.getMyGrades(userId, req.query);
@@ -71,15 +61,12 @@ const exportStudentGradebook = (0, catchAsync_1.default)((req, res) => __awaiter
         { key: 'quizzesAttempted', header: 'Quizzes Attempted', width: 18 },
         { key: 'totalQuizzes', header: 'Total Quizzes', width: 15 },
         { key: 'overallQuizPercentage', header: 'Quiz Avg %', width: 12 },
-        { key: 'assignmentsSubmitted', header: 'Assignments Submitted', width: 22 },
-        { key: 'totalAssignments', header: 'Total Assignments', width: 18 },
         { key: 'completionPercentage', header: 'Completion %', width: 15 },
         { key: 'lastActivityDate', header: 'Last Activity', width: 18 },
     ])
         .sendResponse(res, filename);
 }));
 exports.GradebookController = {
-    submitAssignment,
     getMyGrades,
     getAllStudentGradebook,
     getGradebookSummary,

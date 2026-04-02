@@ -21,11 +21,12 @@
 
 import PDFBuilder from '../../PDFBuilder';
 import { IJob } from '../types';
+import * as templates from '../../../../shared/pdfTemplates';
 
 // ==================== INTERFACES ====================
 
 export interface IPdfJobPayload {
-  /** Template name or HTML content */
+  /** Template name (e.g., 'invoice', 'receipt', 'report') */
   template?: string;
   /** Custom HTML content (if not using template) */
   html?: string;
@@ -36,15 +37,15 @@ export interface IPdfJobPayload {
   /** Save path (relative to public/uploads) */
   saveTo?: string;
   /** Page format */
-  format?: 'A4' | 'Letter' | 'Legal';
+  format?: any; // Using any for compatibility with PaperFormat
   /** Page orientation */
   orientation?: 'portrait' | 'landscape';
   /** Page margins */
   margins?: {
-    top?: string;
-    right?: string;
-    bottom?: string;
-    left?: string;
+    top?: string | number;
+    right?: string | number;
+    bottom?: string | number;
+    left?: string | number;
   };
   /** Return base64 instead of buffer */
   returnBase64?: boolean;
@@ -70,11 +71,49 @@ export async function pdfHandler(
   payload: IPdfJobPayload,
   job: IJob
 ): Promise<IPdfJobResult> {
-  const builder = new PDFBuilder();
+  let builder: PDFBuilder;
 
-  // Set format and orientation
+  // Use template or start with fresh builder
+  if (payload.template) {
+    switch (payload.template.toLowerCase()) {
+      case 'invoice':
+        builder = templates.invoiceTemplate(payload.data as any);
+        break;
+      case 'receipt':
+        builder = templates.receiptTemplate(payload.data as any);
+        break;
+      case 'report':
+        builder = templates.reportTemplate(payload.data as any);
+        break;
+      case 'quotation':
+        builder = templates.quotationTemplate(payload.data as any);
+        break;
+      case 'order-confirmation':
+        builder = templates.orderConfirmationTemplate(payload.data as any);
+        break;
+      case 'payslip':
+        builder = templates.payslipTemplate(payload.data as any);
+        break;
+      case 'certificate':
+        builder = templates.certificateTemplate(payload.data as any);
+        break;
+      default:
+        // Fallback to simple document or generic builder
+        builder = new PDFBuilder();
+        if (payload.html) {
+          builder.addHTML(payload.html);
+        }
+    }
+  } else if (payload.html) {
+    builder = new PDFBuilder();
+    builder.addHTML(payload.html);
+  } else {
+    throw new Error('PDF job requires either template or html content');
+  }
+
+  // Override format and orientation if provided
   if (payload.format) {
-    builder.setFormat(payload.format);
+    builder.setPageSize(payload.format);
   }
   if (payload.orientation) {
     builder.setOrientation(payload.orientation);
@@ -82,23 +121,16 @@ export async function pdfHandler(
 
   // Set margins if provided
   if (payload.margins) {
-    builder.setMargins(payload.margins);
-  }
-
-  // Use template or custom HTML
-  if (payload.template) {
-    builder.useTemplate(payload.template, payload.data);
-  } else if (payload.html) {
-    builder.setHtml(payload.html);
-    if (payload.data) {
-      builder.setVariables(payload.data);
-    }
-  } else {
-    throw new Error('PDF job requires either template or html content');
+    const margins: any = {};
+    if (payload.margins.top) margins.top = Number(payload.margins.top);
+    if (payload.margins.right) margins.right = Number(payload.margins.right);
+    if (payload.margins.bottom) margins.bottom = Number(payload.margins.bottom);
+    if (payload.margins.left) margins.left = Number(payload.margins.left);
+    builder.setMargins(margins);
   }
 
   // Generate PDF
-  const buffer = await builder.build();
+  const buffer = await builder.toBuffer();
 
   const result: IPdfJobResult = {
     generated: true,

@@ -87,38 +87,8 @@ export type {
   NotificationType,
 } from './NotificationBuilder';
 
-// Testing Builder
-export { TestBuilder } from './TestBuilder';
 
-// TestBuilder - Factory exports (for direct use if needed)
-export {
-  UserFactory,
-  ChatFactory,
-  MessageFactory,
-  PaymentFactory,
-  NotificationFactory as TestNotificationFactory,
-  BaseFactory,
-} from './TestBuilder';
 
-// TestBuilder - Helper exports
-export { AuthHelper, RequestHelper, SocketHelper } from './TestBuilder';
-
-// TestBuilder - Type exports
-export type {
-  FactoryOptions,
-  TraitDefinition,
-  StateDefinition,
-} from './TestBuilder/factories/base.factory';
-
-export type {
-  UserDocument,
-  UserWithToken,
-} from './TestBuilder/factories/user.factory';
-
-export type {
-  SocketEvent,
-  SocketOptions,
-} from './TestBuilder/helpers/socketHelper';
 
 // Job Builder
 export {

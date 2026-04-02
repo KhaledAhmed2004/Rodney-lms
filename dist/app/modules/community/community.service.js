@@ -18,7 +18,11 @@ const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
 const fileHandler_1 = require("../../middlewares/fileHandler");
 const course_model_1 = require("../course/course.model");
+const user_model_1 = require("../user/user.model");
+const user_1 = require("../../../enums/user");
 const community_model_1 = require("./community.model");
+const gamificationHelper_1 = require("../../helpers/gamificationHelper");
+const gamification_interface_1 = require("../gamification/gamification.interface");
 const validateCourseId = (courseId) => __awaiter(void 0, void 0, void 0, function* () {
     const course = yield course_model_1.Course.findById(courseId).select('_id');
     if (!course) {
@@ -39,6 +43,12 @@ const createPost = (authorId, payload) => __awaiter(void 0, void 0, void 0, func
     const result = (yield community_model_1.Post.findById(post._id)
         .select('_id title content course image createdAt')
         .populate('course', 'title')).toObject();
+    // Gamification: award points for community post
+    try {
+        yield gamificationHelper_1.GamificationHelper.awardPoints(authorId, gamification_interface_1.POINTS_REASON.COMMUNITY_POST, post._id.toString(), 'Post');
+        yield gamificationHelper_1.GamificationHelper.checkAndAwardBadges(authorId);
+    }
+    catch ( /* points failure should not block post creation */_b) { /* points failure should not block post creation */ }
     return Object.assign(Object.assign({}, result), { course: ((_a = result.course) === null || _a === void 0 ? void 0 : _a.title) || null });
 });
 const getAllPosts = (query, userId) => __awaiter(void 0, void 0, void 0, function* () {
@@ -46,13 +56,14 @@ const getAllPosts = (query, userId) => __awaiter(void 0, void 0, void 0, functio
     if (query.courseId) {
         baseFilter.course = query.courseId;
     }
+    // Pre-filter: exclude posts by deleted users for accurate pagination
+    const deletedUserIds = yield user_model_1.User.find({ status: user_1.USER_STATUS.DELETE }).distinct('_id');
+    if (deletedUserIds.length > 0) {
+        baseFilter.author = { $nin: deletedUserIds };
+    }
     const postQuery = new QueryBuilder_1.default(community_model_1.Post.find(baseFilter)
         .select('author title course content image likesCount repliesCount createdAt')
-        .populate({
-        path: 'author',
-        select: 'name profilePicture role',
-        match: { status: { $ne: 'DELETE' } },
-    })
+        .populate('author', 'name profilePicture role')
         .populate('course', 'title'), query)
         .search(['title', 'content'])
         .sort()
@@ -79,11 +90,8 @@ const getAllPosts = (query, userId) => __awaiter(void 0, void 0, void 0, functio
             return (Object.assign(Object.assign({}, p.toObject()), { course: ((_a = p.course) === null || _a === void 0 ? void 0 : _a.title) || null }));
         });
     }
-    // Filter out posts from deleted/removed users
-    postsWithLikeStatus = postsWithLikeStatus.filter((p) => p.author !== null);
     return { pagination, data: postsWithLikeStatus };
 });
-const REPLY_LIMIT = 200;
 const getPostById = (id, userId) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const post = yield community_model_1.Post.findById(id)
@@ -105,7 +113,6 @@ const getPostById = (id, userId) => __awaiter(void 0, void 0, void 0, function* 
         match: { status: { $ne: 'DELETE' } },
     })
         .sort({ createdAt: 1 })
-        .limit(REPLY_LIMIT)
         .lean();
     // Build nested reply structure (1-level)
     const topLevelReplies = [];
@@ -130,7 +137,7 @@ const getPostById = (id, userId) => __awaiter(void 0, void 0, void 0, function* 
         isLiked = !!like;
     }
     const postObj = post.toObject();
-    return Object.assign(Object.assign({}, postObj), { course: ((_a = postObj.course) === null || _a === void 0 ? void 0 : _a.title) || null, isLiked, replies: topLevelReplies, hasMoreReplies: post.repliesCount > REPLY_LIMIT });
+    return Object.assign(Object.assign({}, postObj), { course: ((_a = postObj.course) === null || _a === void 0 ? void 0 : _a.title) || null, isLiked, replies: topLevelReplies });
 });
 const deletePost = (id, userId, userRole) => __awaiter(void 0, void 0, void 0, function* () {
     const post = yield community_model_1.Post.findById(id);
@@ -156,14 +163,19 @@ const toggleLike = (postId, userId) => __awaiter(void 0, void 0, void 0, functio
         post: postId,
         user: userId,
     });
+    // Recalculate count from source of truth (self-healing, no drift)
+    const syncLikesCount = () => __awaiter(void 0, void 0, void 0, function* () {
+        const count = yield community_model_1.PostLike.countDocuments({ post: postId });
+        yield community_model_1.Post.findByIdAndUpdate(postId, { likesCount: count });
+    });
     if (removed) {
-        yield community_model_1.Post.findByIdAndUpdate(postId, { $inc: { likesCount: -1 } });
+        yield syncLikesCount();
         return { liked: false };
     }
     // Like — catch duplicate key (race condition: concurrent double-click)
     try {
         yield community_model_1.PostLike.create({ post: postId, user: userId });
-        yield community_model_1.Post.findByIdAndUpdate(postId, { $inc: { likesCount: 1 } });
+        yield syncLikesCount();
         return { liked: true };
     }
     catch (err) {
@@ -196,7 +208,8 @@ const createReply = (postId, authorId, content, parentReplyId) => __awaiter(void
         content,
         parentReply: parentReplyId || null,
     });
-    yield community_model_1.Post.findByIdAndUpdate(postId, { $inc: { repliesCount: 1 } });
+    const repliesCount = yield community_model_1.PostReply.countDocuments({ post: postId });
+    yield community_model_1.Post.findByIdAndUpdate(postId, { repliesCount });
     return (yield community_model_1.PostReply.findById(reply._id).select('_id content parentReply createdAt'));
 });
 const deleteReply = (replyId, userId, userRole) => __awaiter(void 0, void 0, void 0, function* () {
@@ -214,7 +227,8 @@ const deleteReply = (replyId, userId, userRole) => __awaiter(void 0, void 0, voi
         deleteCount += childResult.deletedCount;
     }
     yield community_model_1.PostReply.findByIdAndDelete(replyId);
-    yield community_model_1.Post.findByIdAndUpdate({ _id: reply.post, repliesCount: { $gte: deleteCount } }, { $inc: { repliesCount: -deleteCount } });
+    const repliesCount = yield community_model_1.PostReply.countDocuments({ post: reply.post });
+    yield community_model_1.Post.findByIdAndUpdate(reply.post, { repliesCount });
 });
 const getMyPosts = (userId, query) => __awaiter(void 0, void 0, void 0, function* () {
     const baseFilter = {
@@ -288,7 +302,7 @@ const updatePost = (postId, userId, payload) => __awaiter(void 0, void 0, void 0
     const updated = yield community_model_1.Post.findByIdAndUpdate(postId, updateQuery, {
         new: true,
     })
-        .select('_id title content course image')
+        .select('_id title content course image updatedAt')
         .populate('course', 'title');
     const result = updated.toObject();
     return Object.assign(Object.assign({}, result), { course: ((_a = result.course) === null || _a === void 0 ? void 0 : _a.title) || null });
@@ -301,7 +315,7 @@ const updateReply = (replyId, userId, content) => __awaiter(void 0, void 0, void
     if (reply.author.toString() !== userId) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to edit this reply');
     }
-    const updated = yield community_model_1.PostReply.findByIdAndUpdate(replyId, { content }, { new: true }).select('_id content');
+    const updated = yield community_model_1.PostReply.findByIdAndUpdate(replyId, { content }, { new: true }).select('_id content updatedAt');
     return updated;
 });
 exports.CommunityService = {

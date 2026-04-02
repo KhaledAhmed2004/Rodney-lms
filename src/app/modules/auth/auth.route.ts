@@ -10,11 +10,11 @@ const router = express.Router();
 // User Login
 router.post(
   '/login',
-  rateLimitMiddleware({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    routeName: 'auth-login',
-  }),
+  // rateLimitMiddleware({
+  //   windowMs: 15 * 60 * 1000,
+  //   max: 10,
+  //   routeName: 'auth-login',
+  // }),
   validateRequest(AuthValidation.createLoginZodSchema),
   AuthController.loginUser
 );

@@ -51,7 +51,7 @@ const JobBuilder_1 = require("./JobBuilder");
 const JobQueue_1 = __importDefault(require("./JobQueue"));
 const builderTracing_1 = require("../builderTracing");
 const builderConfig_1 = require("../builderConfig");
-const logger_1 = __importDefault(require("../../../shared/logger"));
+const logger_1 = require("../../../shared/logger");
 // ==================== CONSTANTS ====================
 const DEFAULT_OPTIONS = {
     concurrency: 5,
@@ -79,7 +79,7 @@ class JobWorkerClass extends events_1.EventEmitter {
      */
     start(options = {}) {
         if (this.running) {
-            logger_1.default.warn('JobWorker is already running');
+            logger_1.logger.warn('JobWorker is already running');
             return;
         }
         // Merge options with defaults and config
@@ -90,7 +90,7 @@ class JobWorkerClass extends events_1.EventEmitter {
         this.startedAt = new Date();
         this.processedCount = 0;
         this.failedCount = 0;
-        logger_1.default.info('JobWorker started', {
+        logger_1.logger.info('JobWorker started', {
             concurrency: this.options.concurrency,
             pollInterval: this.options.pollInterval,
             jobTypes: this.options.jobTypes.length > 0 ? this.options.jobTypes : 'all',
@@ -111,7 +111,7 @@ class JobWorkerClass extends events_1.EventEmitter {
             if (!this.running) {
                 return;
             }
-            logger_1.default.info('JobWorker stopping...', {
+            logger_1.logger.info('JobWorker stopping...', {
                 activeJobs: this.activeJobs.size,
             });
             this.running = false;
@@ -126,12 +126,12 @@ class JobWorkerClass extends events_1.EventEmitter {
                 yield new Promise(resolve => setTimeout(resolve, 100));
             }
             if (this.activeJobs.size > 0) {
-                logger_1.default.warn('JobWorker stopped with active jobs', {
+                logger_1.logger.warn('JobWorker stopped with active jobs', {
                     activeJobs: this.activeJobs.size,
                 });
             }
             this.emitEvent('worker:stop');
-            logger_1.default.info('JobWorker stopped', {
+            logger_1.logger.info('JobWorker stopped', {
                 processed: this.processedCount,
                 failed: this.failedCount,
                 uptime: this.startedAt ? Date.now() - this.startedAt.getTime() : 0,
@@ -180,7 +180,7 @@ class JobWorkerClass extends events_1.EventEmitter {
                         if (job) {
                             // Process job asynchronously (don't await)
                             this.processJob(job).catch(error => {
-                                logger_1.default.error('Error processing job', {
+                                logger_1.logger.error('Error processing job', {
                                     jobId: job._id.toString(),
                                     error: error.message,
                                 });
@@ -194,7 +194,7 @@ class JobWorkerClass extends events_1.EventEmitter {
                 }
             }
             catch (error) {
-                logger_1.default.error('Error in poll cycle', {
+                logger_1.logger.error('Error in poll cycle', {
                     error: error instanceof Error ? error.message : String(error),
                 });
             }
@@ -255,7 +255,7 @@ class JobWorkerClass extends events_1.EventEmitter {
                         duration,
                         result: JSON.stringify(result).slice(0, 100),
                     });
-                    logger_1.default.info('Job completed', {
+                    logger_1.logger.info('Job completed', {
                         jobId,
                         name: job.name,
                         duration,
@@ -283,7 +283,7 @@ class JobWorkerClass extends events_1.EventEmitter {
                             nextRetry: new Date(Date.now() + retryDelay).toISOString(),
                             error: errorMessage,
                         });
-                        logger_1.default.warn('Job failed, will retry', {
+                        logger_1.logger.warn('Job failed, will retry', {
                             jobId,
                             name: job.name,
                             attempt: job.attempts,
@@ -300,7 +300,7 @@ class JobWorkerClass extends events_1.EventEmitter {
                             duration,
                             error: errorMessage,
                         });
-                        logger_1.default.error('Job failed permanently', {
+                        logger_1.logger.error('Job failed permanently', {
                             jobId,
                             name: job.name,
                             attempts: job.attempts,
@@ -389,13 +389,13 @@ class JobWorkerClass extends events_1.EventEmitter {
                     .payload(payload)
                     .meta({ parentJobId: job._id.toString() })
                     .dispatch();
-                logger_1.default.info('Chained job dispatched', {
+                logger_1.logger.info('Chained job dispatched', {
                     parentJobId: job._id.toString(),
                     chainedHandler: chain.handlerName,
                 });
             }
             catch (error) {
-                logger_1.default.error('Failed to dispatch chained job', {
+                logger_1.logger.error('Failed to dispatch chained job', {
                     parentJobId: job._id.toString(),
                     chainedHandler: chain.handlerName,
                     error: error instanceof Error ? error.message : String(error),

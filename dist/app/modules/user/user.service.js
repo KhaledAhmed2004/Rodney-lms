@@ -53,8 +53,8 @@ const getUserProfileFromDB = (user) => __awaiter(void 0, void 0, void 0, functio
     const { id } = user;
     // Student-specific fields to exclude for non-student roles
     const studentOnlyFields = '-achievements -totalPoints -streak -onboardingCompleted -deviceTokens';
-    const studentProfileFields = 'name email profilePicture phone gender dateOfBirth location role status verified totalPoints streak onboardingCompleted';
-    const query = user_model_1.User.findById(id);
+    const studentProfileFields = 'name email profilePicture phone gender dateOfBirth location role totalPoints streak onboardingCompleted';
+    const query = user_model_1.User.findOne({ _id: id, status: { $ne: user_1.USER_STATUS.DELETE } });
     if (user.role === user_1.USER_ROLES.STUDENT) {
         query.select(studentProfileFields);
     }
@@ -64,9 +64,6 @@ const getUserProfileFromDB = (user) => __awaiter(void 0, void 0, void 0, functio
     const result = yield query;
     if (!result) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
-    }
-    if (result.status === user_1.USER_STATUS.DELETE) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your account has been deleted');
     }
     return result;
 });
