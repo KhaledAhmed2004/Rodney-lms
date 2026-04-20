@@ -5,6 +5,8 @@
  * You can modify these values to match your brand.
  */
 
+import path from 'path';
+import config from '../../../../config';
 import { IEmailTheme } from '../EmailBuilder';
 
 export const defaultTheme: IEmailTheme = {
@@ -56,28 +58,28 @@ export const defaultTheme: IEmailTheme = {
 
   // Logo configuration - update with your logo
   logo: {
-    url: 'https://i.postimg.cc/6pgNvKhD/logo.png',
+    url: path.join(process.cwd(), config.app.logo),
     width: '150',
     height: 'auto',
-    alt: 'Company Logo',
+    alt: config.app.name,
   },
 
   // Social media links - add your links
   social: {
-    facebook: 'https://facebook.com/yourcompany',
-    twitter: 'https://twitter.com/yourcompany',
-    instagram: 'https://instagram.com/yourcompany',
-    linkedin: 'https://linkedin.com/company/yourcompany',
+    facebook: 'https://facebook.com/riseandimpact',
+    twitter: 'https://twitter.com/riseandimpact',
+    instagram: 'https://instagram.com/riseandimpact',
+    linkedin: 'https://linkedin.com/company/riseandimpact',
     // youtube: 'https://youtube.com/yourcompany',
   },
 
   // Company information for footer
   company: {
-    name: 'Your Company Name',
-    address: '123 Business Street, City, Country',
+    name: config.app.name,
+    address: 'Your Address Here',
     phone: '+1 234 567 890',
-    email: 'support@yourcompany.com',
-    website: 'https://yourcompany.com',
+    email: 'support@riseandimpact.com',
+    website: 'https://riseandimpact.com',
   },
 };
 

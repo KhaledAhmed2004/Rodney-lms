@@ -10,6 +10,8 @@
  * - otp: OTP code for verification (optional)
  */
 
+import path from 'path';
+import config from '../../../../config';
 import { INotificationTemplate } from '../NotificationBuilder';
 
 export const welcome: INotificationTemplate = {
@@ -18,6 +20,7 @@ export const welcome: INotificationTemplate = {
   push: {
     title: '🎉 Welcome to {{appName}}!',
     body: 'Hi {{name}}, thanks for joining us!',
+    icon: path.join(process.cwd(), config.app.logo),
     data: {
       type: 'WELCOME',
       action: 'COMPLETE_PROFILE',

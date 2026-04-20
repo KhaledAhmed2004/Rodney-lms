@@ -15,6 +15,7 @@ export default {
     name: process.env.APP_NAME || 'Educoin Backend',
     tagline: process.env.APP_TAGLINE || 'Enterprise API',
     version: process.env.APP_VERSION || '1.0.0',
+    logo: process.env.APP_LOGO || 'public/logo.png',
   },
 
   // Banner configuration

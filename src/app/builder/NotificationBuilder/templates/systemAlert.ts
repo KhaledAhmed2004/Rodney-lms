@@ -11,6 +11,8 @@
  * - actionText: Action button text (optional)
  */
 
+import path from 'path';
+import config from '../../../../config';
 import { INotificationTemplate } from '../NotificationBuilder';
 
 export const systemAlert: INotificationTemplate = {
@@ -19,6 +21,7 @@ export const systemAlert: INotificationTemplate = {
   push: {
     title: '{{title}}',
     body: '{{message}}',
+    icon: path.join(process.cwd(), config.app.logo),
     data: {
       type: 'SYSTEM_ALERT',
       severity: '{{severity}}',

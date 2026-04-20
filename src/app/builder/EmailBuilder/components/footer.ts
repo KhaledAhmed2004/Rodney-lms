@@ -31,13 +31,13 @@ export const footer = (props: FooterProps, theme: IEmailTheme): string => {
     customText,
   } = props;
 
-  // Social icons (using text as fallback since images may not load in emails)
-  const socialIcons: { name: string; key: keyof NonNullable<IEmailTheme['social']> }[] = [
-    { name: 'FB', key: 'facebook' },
-    { name: 'TW', key: 'twitter' },
-    { name: 'IG', key: 'instagram' },
-    { name: 'IN', key: 'linkedin' },
-    { name: 'YT', key: 'youtube' },
+  // Social icons with brand colors
+  const socialIcons: { name: string; key: keyof NonNullable<IEmailTheme['social']>; color: string }[] = [
+    { name: 'facebook', key: 'facebook', color: '#3b5998' },
+    { name: 'twitter', key: 'twitter', color: '#1da1f2' },
+    { name: 'instagram', key: 'instagram', color: '#e1306c' },
+    { name: 'linkedin', key: 'linkedin', color: '#0077b5' },
+    { name: 'youtube', key: 'youtube', color: '#ff0000' },
   ];
 
   const socialHtml = showSocial && theme.social ? `
@@ -47,18 +47,26 @@ export const footer = (props: FooterProps, theme: IEmailTheme): string => {
         .map(icon => `
           <a href="${theme.social?.[icon.key]}" target="_blank" style="
             display: inline-block;
-            width: 32px;
-            height: 32px;
-            line-height: 32px;
-            margin: 0 4px;
-            background-color: ${theme.colors.primary};
-            color: #FFFFFF;
-            border-radius: 50%;
-            text-align: center;
+            margin: 0 6px;
             text-decoration: none;
-            font-size: 12px;
-            font-weight: bold;
-          ">${icon.name}</a>
+          ">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="display: inline-block;">
+              <tr>
+                <td align="center" style="
+                  background-color: ${icon.color};
+                  color: #FFFFFF;
+                  border-radius: 4px;
+                  padding: 4px 8px;
+                  font-size: 11px;
+                  font-weight: bold;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                ">
+                  ${icon.name}
+                </td>
+              </tr>
+            </table>
+          </a>
         `).join('')}
     </div>
   ` : '';

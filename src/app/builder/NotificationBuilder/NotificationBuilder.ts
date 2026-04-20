@@ -22,6 +22,8 @@
  * @see doc/notification-builder-complete-guide-bn.md for full documentation
  */
 
+import path from 'path';
+import config from '../../../config';
 import { Types } from 'mongoose';
 import { User } from '../../modules/user/user.model';
 import * as templates from './templates';
@@ -691,9 +693,9 @@ export class NotificationBuilder {
 
     // Defaults
     let push = {
-      title: this.content.title || 'Notification',
+      title: this.content.title || config.app.name,
       body: this.content.text || '',
-      icon: this.content.icon,
+      icon: this.content.icon || path.join(process.cwd(), config.app.logo),
       image: this.content.image,
       data: this.content.data as Record<string, string> | undefined,
     };
@@ -705,7 +707,7 @@ export class NotificationBuilder {
 
     let email = {
       template: 'notification',
-      subject: this.content.title || 'Notification',
+      subject: this.content.title || config.app.name,
       theme: 'default',
     };
 
