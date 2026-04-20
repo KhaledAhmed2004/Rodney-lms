@@ -41,7 +41,10 @@
       "Bash(npx eslint:*)",
       "Read(//d/web/ projects/office-sta/rodney/src/app/modules/**)",
       "Bash(find C:Userskhaled.claudeprojectsd--web-projects-office-sta-rodneymemory -type f -name *.md)",
-      "Read(//d/web/ projects/office-sta/rodney/src/routes/**)"
+      "Read(//d/web/ projects/office-sta/rodney/src/routes/**)",
+      "Read(//c/Users/khaled/Downloads/**)",
+      "Bash(python3 -c ' *)",
+      "Bash(pip install *)"
     ],
     "additionalDirectories": [
       "d:\\web projects\\office-sta\\rodney\\.claude",

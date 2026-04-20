@@ -43,7 +43,7 @@ router.post(
   '/verify-email',
   rateLimitMiddleware({
     windowMs: 15 * 60 * 1000,
-    max: 5,
+    max: 20,
     routeName: 'auth-verify-email',
   }),
   validateRequest(AuthValidation.createVerifyEmailZodSchema),
