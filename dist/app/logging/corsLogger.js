@@ -5,6 +5,7 @@ const logger_1 = require("../../shared/logger");
 // Allowed origins for CORS
 exports.allowedOrigins = [
     'http://localhost:3000',
+    'https://lmsdashboard.zeroproofdrive.org',
     'http://localhost:3001',
     'http://localhost:5174',
     'https://task-titans-admin-orcin.vercel.app',
