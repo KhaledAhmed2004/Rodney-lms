@@ -7,21 +7,31 @@
 
 ## UX Flow
 
-### Onboarding Flow (First-time User)
+### Onboarding Flow (First-time User — No Skip)
 1. Registration + OTP verify er por auto-login hoy (→ [Auth 1.2](./01-auth.md))
 2. User er `onboardingCompleted: false` thake — client check kore onboarding screen e navigate kore
 3. Page load e course list fetch hoy → `GET /courses?page=1&limit=50` (→ 2.1)
 4. Student course cards dekhte pay — thumbnail, title, description, enrollmentCount
-5. Student interested courses select kore (checkbox/tap)
-6. "Get Started" button e tap kore → `POST /enrollments/bulk` (→ 2.2) — selected courseIds pathay
-7. Success → Home screen e navigate
-8. Client side: `onboardingCompleted` flag locally update kore (field exists on user profile but no API sets it)
+5. Student **minimum 1 course** select kore (checkbox/tap) — "Get Started" button disabled until ≥1 selected
+6. "Get Started" tap → **sequential 2 API call**:
+   - `POST /enrollments/bulk` (→ 2.2) — selected courseIds pathay
+   - Success hole `PATCH /users/onboarding/complete` (→ 2.3) — flag true set kore
+7. Both success → Home screen e navigate
+8. Client user state update: `onboardingCompleted = true`
 
-### Skip Onboarding
-1. Student "Skip" button e tap korle kono course select chara Home screen e navigate kore
-2. Porbe Browse Courses screen theke individually enroll korte parbe
+### Returning User (Already Onboarded)
+1. Login response e `onboardingCompleted: true` ashe
+2. Client directly Home screen e navigate — onboarding screen skip
+3. Device reinstall / different phone login koreleo same behavior (server source of truth)
 
-> **Note**: `onboardingCompleted` field User model e ache (`GET /users/profile` e return hoy) but kono endpoint ekhono set kore na. Frontend locally track kore or future e endpoint add korte hobe.
+### Edge Case: Mid-onboarding App Close
+1. Course select korlo but "Get Started" tap korar age app close hoye gelo
+2. Flag still `false` → next open e abar onboarding screen dekhabe
+3. **Correct behavior** — intent incomplete, so re-show justified
+
+> **Why sequential (not parallel)**: Enrollment fail kore but onboarding flag already set hole user stuck hobe — re-onboarding kore enroll korte parbe na. Sequential e enrollment fail hole flag false thake, retry possible.
+>
+> **Why no skip**: UI e skip option nai — onboarding = course enrollment. Minimum 1 course select mandatory.
 
 ---
 
@@ -87,7 +97,44 @@ Auth: Bearer {{accessToken}}
 
 ---
 
+### 2.3 Complete Onboarding
+
+```
+PATCH /users/onboarding/complete
+Auth: Bearer {{accessToken}}
+```
+
+> Call after successful `POST /enrollments/bulk`. Idempotent — already `true` thakle o 200 return korbe (no error). Double-tap ba retry safe.
+>
+> **Role**: STUDENT only. Non-student role call korle 403.
+
+**Request Body:** `{}` (empty — explicit intent, no payload needed)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Onboarding completed",
+  "data": {
+    "onboardingCompleted": true
+  }
+}
+```
+
+---
+
 ## Audit & Review Log
+
+### Changes (2026-04-21)
+
+| # | What | Before | After |
+|---|------|--------|-------|
+| 1 | UX Flow | Skip option documented + "client locally updates flag" | Skip removed (UI e skip nai), flag server-side set via new endpoint |
+| 2 | Endpoint 2.3 | Missing — `onboardingCompleted` field had no setter | Added `PATCH /users/onboarding/complete` — STUDENT only, idempotent |
+| 3 | Sequencing note | Not documented | Added: sequential call order (bulk enroll → complete onboarding) with rationale |
+| 4 | Edge case | Not covered | Added mid-onboarding app close scenario |
+
+> **Implementation pending**: Doc updated first (per user request). Code changes (`user.service.ts`, `user.controller.ts`, `user.route.ts`, `user.validation.ts`, postman) to follow.
 
 ### Changes (2026-03-16)
 

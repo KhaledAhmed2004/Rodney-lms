@@ -3,7 +3,7 @@
 > **Section**: Dashboard APIs (Admin-Facing)
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
 > **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
-> **Related screens**: [User Management](./03-user-management.md)
+> **Related screens**: [User Management](./03-user-management.md), [Send Notification](./15-send-notification.md)
 
 ---
 
@@ -11,13 +11,13 @@
 
 ### Notification Bell (Header)
 1. Dashboard header e bell icon thake — always visible
-2. Page load e `GET /notifications/admin` (→ 9.1) call hoy
+2. Page load e `GET /notifications` (→ 9.1) call hoy
 3. Bell icon e `unreadCount` badge dekhay (e.g., `3`)
 4. `unreadCount === 0` hole badge hide hoy
 
 ### Real-Time Updates (Socket.IO)
 1. Admin login korle Socket.IO connect hoy (JWT authenticated)
-2. Server-side event fire korle (new student register, course complete, etc.) → admin notification create hoy
+2. Server-side event fire korle (new student register, course complete, etc.) → admin notification create hoy (`receiver: adminId`)
 3. Client `NOTIFICATION_RECEIVED` event listen kore → instantly bell badge update + notification list e new item add
 4. Page refresh chara real-time notification ashe
 
@@ -34,15 +34,15 @@
 5. **Pagination**: Scroll korle next page load hoy (`?page=2&limit=20`)
 
 ### Mark as Read
-1. **Single**: Notification click kore → `PATCH /notifications/admin/:id/read` (→ 9.3)
+1. **Single**: Notification click kore → `PATCH /notifications/:id/read` (→ 9.3)
    - Dot/bold remove hoy, `unreadCount` update hoy
-2. **All**: "Mark all as read" button click → `PATCH /notifications/admin/read-all` (→ 9.2)
+2. **All**: "Mark all as read" button click → `PATCH /notifications/read-all` (→ 9.2)
    - Shob notification read hoy, badge `0` hoy/hide hoy
 
 ### Notification Types (Admin)
 | Type | Trigger | Example Title |
 |------|---------|---------------|
-| `ADMIN` | System-wide admin notification | "New Student Registered" |
+| `ADMIN` | System-wide admin-facing notification | "New Student Registered" |
 | `ENROLLMENT` | Student enrolls in course | "New Enrollment: Intro to Web Dev" |
 | `COURSE_COMPLETED` | Student completes course | "Course Completed by Rahim Uddin" |
 | `QUIZ_GRADED` | Quiz graded/submitted | "Quiz Submitted: Module 1 Quiz" |
@@ -57,14 +57,18 @@
 
 ---
 
-<!-- ═══════════ Admin Notification Endpoints ═══════════ -->
+<!-- ═══════════ Unified Notification Endpoints ═══════════ -->
 
-### 9.1 Get Admin Notifications
+> **Design note (2026-04-21)**: Ei screen e `/notifications/admin` (alada admin endpoint) nai. Unified `/notifications` endpoint use kora hoy — `receiver: req.user.id` diye filter hoy, so role (STUDENT vs SUPER_ADMIN) doesn't matter for storage. Admin er notifications alada namespace e noy — admin er receiver-bound notifications ei endpoint diye ashe। Broadcast tools (`/admin/send`, `/admin/sent`) alada namespace e — shegulo admin action tool, not notification fetch.
+
+### 9.1 Get My Notifications
 
 ```
-GET /notifications/admin?page=1&limit=20&searchTerm=registered&sort=-createdAt
-Auth: Bearer {{accessToken}} (SUPER_ADMIN)
+GET /notifications?page=1&limit=20&searchTerm=registered&sort=-createdAt
+Auth: Bearer {{accessToken}} (STUDENT or SUPER_ADMIN)
 ```
+
+> Authenticated user er nijer notifications return kore (`receiver: req.user.id`). Admin hole admin-bound notifications ashe, student hole student-bound.
 
 **Query Parameters:**
 | Param | Type | Default | Description |
@@ -74,18 +78,20 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 | `sort` | string | `-createdAt` | Sort field |
 | `searchTerm` | string | — | Search in `title` and `text` |
 | `isRead` | boolean | — | Filter by read status (`true`/`false`) |
+| `type` | string | — | Filter by type (e.g., `ADMIN`, `ENROLLMENT`) |
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "message": "Admin notifications retrieved successfully",
+  "message": "Notifications retrieved successfully",
   "data": {
     "data": [
       {
         "_id": "6650n1b2c3d4e5f6a7b8c001",
         "title": "New Student Registered",
         "text": "Rahim Uddin just registered on the platform",
+        "receiver": "6640a1b2c3d4e5f6a7b8c001",
         "type": "ADMIN",
         "isRead": false,
         "createdAt": "2026-03-28T10:15:00Z"
@@ -94,17 +100,10 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
         "_id": "6650n1b2c3d4e5f6a7b8c002",
         "title": "Course Completed",
         "text": "Fatima Akter completed Advanced JavaScript",
-        "type": "ADMIN",
+        "receiver": "6640a1b2c3d4e5f6a7b8c001",
+        "type": "COURSE_COMPLETED",
         "isRead": false,
         "createdAt": "2026-03-28T09:30:00Z"
-      },
-      {
-        "_id": "6650n1b2c3d4e5f6a7b8c003",
-        "title": "New Enrollment",
-        "text": "Kamal Hossain enrolled in UI/UX Design Fundamentals",
-        "type": "ADMIN",
-        "isRead": true,
-        "createdAt": "2026-03-27T16:45:00Z"
       }
     ],
     "pagination": { "page": 1, "limit": 20, "total": 10, "totalPage": 1 },
@@ -113,24 +112,24 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 }
 ```
 
-> `unreadCount` — separate `countDocuments({ type: 'ADMIN', isRead: false })` query. Bell badge ei value dekhay. Admin notifications `type: 'ADMIN'` diye filter hoy — student notifications separate (`receiver: userId`).
+> `unreadCount` — separate `countDocuments({ receiver: user.id, isRead: false })` query. Bell badge ei value dekhay.
 
 ---
 
-### 9.2 Mark All Admin Notifications as Read
+### 9.2 Mark All Notifications as Read
 
 ```
-PATCH /notifications/admin/read-all
-Auth: Bearer {{accessToken}} (SUPER_ADMIN)
+PATCH /notifications/read-all
+Auth: Bearer {{accessToken}} (STUDENT or SUPER_ADMIN)
 ```
 
-> No request body. Shob unread admin notifications (`type: 'ADMIN', isRead: false`) ekbare read mark kore.
+> No request body. Shob unread notifications (`receiver: user.id, isRead: false`) ekbare read mark kore.
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "message": "All admin notifications marked as read",
+  "message": "All notifications marked as read",
   "data": { "updated": 2 }
 }
 ```
@@ -139,24 +138,25 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-### 9.3 Mark Single Admin Notification as Read
+### 9.3 Mark Single Notification as Read
 
 ```
-PATCH /notifications/admin/:id/read
-Auth: Bearer {{accessToken}} (SUPER_ADMIN)
+PATCH /notifications/:id/read
+Auth: Bearer {{accessToken}} (STUDENT or SUPER_ADMIN)
 ```
 
-> No request body. Single notification read mark kore. `type: 'ADMIN'` check ensure kore admin notification-i update hocche.
+> No request body. Single notification read mark kore. `receiver: user.id` check ensure kore nijer notification-i update hocche — onno user er notification manipulate kora possible na।
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "message": "Admin notification marked as read successfully",
+  "message": "Notification Read Successfully",
   "data": {
     "_id": "6650n1b2c3d4e5f6a7b8c001",
     "title": "New Student Registered",
     "text": "Rahim Uddin just registered on the platform",
+    "receiver": "6640a1b2c3d4e5f6a7b8c001",
     "type": "ADMIN",
     "isRead": true,
     "createdAt": "2026-03-28T10:15:00Z"
@@ -168,13 +168,13 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 ```json
 {
   "success": false,
-  "message": "Admin notification not found"
+  "message": "Notification not found"
 }
 ```
 
 ---
 
-> **Send Notification** feature er detailed doc → [Send Notification](./15-send-notification.md) screen e ache. Endpoint: `POST /notifications/admin/send`.
+> **Send Notification** (admin broadcast tool) er detailed doc → [Send Notification](./15-send-notification.md). Endpoints: `POST /notifications/admin/send`, `GET /notifications/admin/sent`.
 
 ---
 
@@ -208,6 +208,28 @@ Real-time notification — server theke client e push hoy jokhon new notificatio
 ---
 
 ## Audit & Review Log
+
+### Refactor (2026-04-21) — Admin Namespace Removed
+
+| # | What | Before | After |
+|---|------|--------|-------|
+| 1 | `GET /notifications/admin` | Admin-only endpoint, filtered by `type: 'ADMIN'` globally | Removed — use unified `GET /notifications` (filtered by `receiver: user.id`) |
+| 2 | `PATCH /notifications/admin/:id/read` | Admin-only, `type: 'ADMIN'` check | Removed — use `PATCH /notifications/:id/read` (receiver check) |
+| 3 | `PATCH /notifications/admin/read-all` | Admin-only, global `type: 'ADMIN'` updateMany | Removed — use `PATCH /notifications/read-all` (receiver-scoped) |
+| 4 | Filter semantic | `type: 'ADMIN'` (broken — shared across all admins) | `receiver: user.id` (per-user, industry standard) |
+
+**Why refactored**:
+- Old `/admin` endpoints er `type: 'ADMIN'` filter **cross-admin data leak** korto — 1 admin read mark korle shob admin er jonno read hoye jeto
+- Admin notifications er jonno `receiver` field e actual admin user ID store kora uchit — role-agnostic storage, industry pattern (Slack, Discord, Linear)
+- Code duplication remove — 3 admin service methods + 3 controller handlers + 3 routes removed
+- `POST /admin/send` + `GET /admin/sent` retained — eta admin **broadcast tools**, not notification fetch (different concern)
+
+**Breaking change**: Frontend dashboard notification screen URLs update lagbe:
+- `/notifications/admin` → `/notifications`
+- `/notifications/admin/:id/read` → `/notifications/:id/read`
+- `/notifications/admin/read-all` → `/notifications/read-all`
+
+**Phase 3 pending**: Admin-bound events (new user register, payment success, enrollment) theke notification create korar shomoy `receiver: adminId` set kora — separate task. Currently admin receiver-bound notification nai, so admin ei endpoint hit korle empty list pabe untill Phase 3 complete hoy.
 
 ### Initial Creation (2026-03-28)
 

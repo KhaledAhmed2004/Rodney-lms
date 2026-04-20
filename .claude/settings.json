@@ -44,7 +44,8 @@
       "Read(//d/web/ projects/office-sta/rodney/src/routes/**)",
       "Read(//c/Users/khaled/Downloads/**)",
       "Bash(python3 -c ' *)",
-      "Bash(pip install *)"
+      "Bash(pip install *)",
+      "Bash(./node_modules/.bin/tsc --noEmit)"
     ],
     "additionalDirectories": [
       "d:\\web projects\\office-sta\\rodney\\.claude",

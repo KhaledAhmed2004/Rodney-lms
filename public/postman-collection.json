@@ -3790,7 +3790,7 @@
           "name": "Notification Screen",
           "item": [
             {
-              "name": "Get Admin Notifications",
+              "name": "Get My Notifications",
               "request": {
                 "method": "GET",
                 "header": [
@@ -3800,9 +3800,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/notifications/admin?page=1&limit=20",
+                  "raw": "{{baseUrl}}/notifications?page=1&limit=20",
                   "host": ["{{baseUrl}}"],
-                  "path": ["notifications", "admin"],
+                  "path": ["notifications"],
                   "query": [
                     {
                       "key": "page",
@@ -3814,7 +3814,7 @@
                     }
                   ]
                 },
-                "description": "Get all admin notifications with pagination. Requires SUPER_ADMIN role."
+                "description": "Get authenticated user's notifications (filtered by receiver). Works for STUDENT and SUPER_ADMIN roles — same endpoint, per-user scoped. Returns unreadCount separately."
               },
               "response": []
             },
@@ -3879,7 +3879,7 @@
               "response": []
             },
             {
-              "name": "Mark All Admin Notifications as Read",
+              "name": "Mark All Notifications as Read",
               "request": {
                 "method": "PATCH",
                 "header": [
@@ -3889,16 +3889,16 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/notifications/admin/read-all",
+                  "raw": "{{baseUrl}}/notifications/read-all",
                   "host": ["{{baseUrl}}"],
-                  "path": ["notifications", "admin", "read-all"]
+                  "path": ["notifications", "read-all"]
                 },
-                "description": "Mark all admin notifications as read. Requires SUPER_ADMIN role."
+                "description": "Mark all authenticated user's unread notifications as read (receiver-scoped). Works for STUDENT and SUPER_ADMIN."
               },
               "response": []
             },
             {
-              "name": "Mark Admin Notification as Read",
+              "name": "Mark Notification as Read",
               "request": {
                 "method": "PATCH",
                 "header": [
@@ -3908,9 +3908,9 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{baseUrl}}/notifications/admin/:id/read",
+                  "raw": "{{baseUrl}}/notifications/:id/read",
                   "host": ["{{baseUrl}}"],
-                  "path": ["notifications", "admin", ":id", "read"],
+                  "path": ["notifications", ":id", "read"],
                   "variable": [
                     {
                       "key": "id",
@@ -3918,7 +3918,7 @@
                     }
                   ]
                 },
-                "description": "Mark a single admin notification as read. Requires SUPER_ADMIN role."
+                "description": "Mark a single notification as read. Receiver check ensures only the owner can mark their own notification. Works for STUDENT and SUPER_ADMIN."
               },
               "response": []
             }

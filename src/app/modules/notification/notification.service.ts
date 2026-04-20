@@ -72,61 +72,6 @@ export const markAllNotificationsAsRead = async (userId: string) => {
   };
 };
 
-// Fetch admin notifications with query, pagination, unread count
-const adminNotificationFromDB = async (query: Record<string, unknown>) => {
-  const notificationQuery = new QueryBuilder<INotification>(
-    Notification.find({ type: 'ADMIN' }),
-    query
-  )
-    .search(['title', 'text'])
-    .filter()
-    .dateFilter()
-    .sort()
-    .paginate()
-    .fields();
-
-  const { data, pagination } = await notificationQuery.getFilteredResults();
-
-  const unreadCount = await Notification.countDocuments({
-    type: 'ADMIN',
-    isRead: false,
-  });
-
-  return {
-    data,
-    pagination,
-    unreadCount,
-  };
-};
-
-// Mark a single admin notification as read
-const adminMarkNotificationAsReadIntoDB = async (notificationId: string) => {
-  const notification = await Notification.findOneAndUpdate(
-    { _id: notificationId, type: 'ADMIN' },
-    { isRead: true },
-    { new: true }
-  );
-
-  if (!notification) {
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Admin notification not found');
-  }
-
-  return notification;
-};
-
-// Mark all admin notifications as read
-const adminMarkAllNotificationsAsRead = async () => {
-  const result = await Notification.updateMany(
-    { type: 'ADMIN', isRead: false },
-    { isRead: true }
-  );
-
-  return {
-    modifiedCount: result.modifiedCount,
-    message: 'All admin notifications marked as read',
-  };
-};
-
 // Send notification via NotificationBuilder + save sent record
 const sendAdminNotification = async (
   title: string,
@@ -210,12 +155,9 @@ const getSentHistory = async (query: Record<string, unknown>) => {
 };
 
 export const NotificationService = {
-  adminNotificationFromDB,
   getNotificationFromDB,
   markNotificationAsReadIntoDB,
-  adminMarkNotificationAsReadIntoDB,
   markAllNotificationsAsRead,
-  adminMarkAllNotificationsAsRead,
   sendAdminNotification,
   getSentHistory,
 };

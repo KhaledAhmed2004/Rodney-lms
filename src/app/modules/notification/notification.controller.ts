@@ -49,48 +49,6 @@ const readAllNotifications = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const adminNotificationFromDB = catchAsync(
-  async (req: Request, res: Response) => {
-    const result = await NotificationService.adminNotificationFromDB(req.query);
-
-    sendResponse(res, {
-      statusCode: StatusCodes.OK,
-      success: true,
-      message: 'Admin notifications retrieved successfully',
-      data: result,
-    });
-  }
-);
-
-const adminMarkNotificationAsRead = catchAsync(
-  async (req: Request, res: Response) => {
-    const notification =
-      await NotificationService.adminMarkNotificationAsReadIntoDB(
-        req.params.id
-      );
-
-    sendResponse(res, {
-      statusCode: StatusCodes.OK,
-      success: true,
-      message: 'Admin notification marked as read successfully',
-      data: notification,
-    });
-  }
-);
-
-const adminMarkAllNotificationsAsRead = catchAsync(
-  async (req: Request, res: Response) => {
-    const result = await NotificationService.adminMarkAllNotificationsAsRead();
-
-    sendResponse(res, {
-      statusCode: StatusCodes.OK,
-      success: true,
-      message: result.message,
-      data: { updated: result.modifiedCount },
-    });
-  }
-);
-
 const sendNotification = catchAsync(async (req: Request, res: Response) => {
   const { title, text, audience, courseId } = req.body;
   const result = await NotificationService.sendAdminNotification(
@@ -120,12 +78,9 @@ const getSentHistory = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const NotificationController = {
-  adminNotificationFromDB,
   getNotificationFromDB,
   readAllNotifications,
   readNotification,
-  adminMarkNotificationAsRead,
-  adminMarkAllNotificationsAsRead,
   sendNotification,
   getSentHistory,
 };

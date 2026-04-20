@@ -93,7 +93,7 @@ new AggregationBuilder(User, req.query).match({ status: 'active' }).lookup(...).
 | `course/` | Course + module + lesson CRUD | GET /courses, POST /courses |
 | `chat/` | Chat room create, group/private | POST /chats, GET /chats |
 | `message/` | Message send/receive, Socket.IO real-time | POST /messages, GET /messages/:chatId |
-| `notification/` | Push/email/in-app notifications | GET /notifications, PATCH /notifications/:id |
+| `notification/` | Push/email/in-app notifications (unified — receiver-scoped per user) + admin broadcast tools | GET /notifications, PATCH /notifications/:id/read, PATCH /notifications/read-all, POST /notifications/admin/send, GET /notifications/admin/sent |
 | `gamification/` | Points, badges, leaderboard, student summary | GET /gamification/leaderboard, /gamification/badges, PATCH /gamification/badges/:id |
 | `gradebook/` | Student grades, assignment submissions, admin gradebook + summary + export | GET /gradebook/students/summary, /gradebook/students, /gradebook/students/export |
 | `feedback/` | Student course reviews, admin feedback management + summary | POST /feedback, GET /feedback/admin/all, PATCH /feedback/:id/respond |

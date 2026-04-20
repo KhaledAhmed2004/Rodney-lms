@@ -7,7 +7,7 @@ import { NotificationValidation } from './notification.validation';
 
 const router = express.Router();
 
-// ==================== USER NOTIFICATIONS ====================
+// ==================== NOTIFICATIONS (unified for all roles) ====================
 
 // Fetch notifications + unread count
 router.get(
@@ -30,14 +30,7 @@ router.patch(
   NotificationController.readNotification
 );
 
-// ==================== ADMIN NOTIFICATIONS ====================
-
-// Fetch admin notifications + unread count
-router.get(
-  '/admin',
-  auth(USER_ROLES.SUPER_ADMIN),
-  NotificationController.adminNotificationFromDB
-);
+// ==================== ADMIN BROADCAST TOOLS ====================
 
 // Sent notification history
 router.get(
@@ -52,20 +45,6 @@ router.post(
   auth(USER_ROLES.SUPER_ADMIN),
   validateRequest(NotificationValidation.sendNotification),
   NotificationController.sendNotification,
-);
-
-// Mark all admin notifications as read (fixed path BEFORE param path)
-router.patch(
-  '/admin/read-all',
-  auth(USER_ROLES.SUPER_ADMIN),
-  NotificationController.adminMarkAllNotificationsAsRead
-);
-
-// Mark a single admin notification as read
-router.patch(
-  '/admin/:id/read',
-  auth(USER_ROLES.SUPER_ADMIN),
-  NotificationController.adminMarkNotificationAsRead
 );
 
 export const NotificationRoutes = router;
