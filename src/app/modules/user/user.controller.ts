@@ -50,6 +50,18 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const completeOnboarding = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user;
+  const result = await UserService.completeOnboardingInDB(user as JwtPayload);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Onboarding completed',
+    data: result,
+  });
+});
+
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.getAllUsers(req.query);
 
@@ -172,6 +184,7 @@ export const UserController = {
   createUser,
   getUserProfile,
   updateProfile,
+  completeOnboarding,
   getAllUsers,
   blockUser,
   unblockUser,

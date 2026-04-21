@@ -33,6 +33,13 @@ router.patch(
   UserController.updateProfile
 );
 
+// Complete onboarding (student only, idempotent)
+router.patch(
+  '/onboarding/complete',
+  auth(USER_ROLES.STUDENT),
+  UserController.completeOnboarding
+);
+
 // Get all users
 router.get('/', auth(USER_ROLES.SUPER_ADMIN), UserController.getAllUsers);
 

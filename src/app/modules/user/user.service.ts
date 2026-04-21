@@ -76,6 +76,22 @@ const getUserProfileFromDB = async (
   return result;
 };
 
+const completeOnboardingInDB = async (
+  user: JwtPayload
+): Promise<Partial<IUser>> => {
+  const result = await User.findByIdAndUpdate(
+    user.id,
+    { onboardingCompleted: true },
+    { new: true }
+  ).select('onboardingCompleted');
+
+  if (!result) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "User doesn't exist!");
+  }
+
+  return result;
+};
+
 const updateProfileToDB = async (
   user: JwtPayload,
   payload: Partial<IUser>
@@ -371,6 +387,7 @@ export const UserService = {
   createUserToDB,
   getUserProfileFromDB,
   updateProfileToDB,
+  completeOnboardingInDB,
   getAllUsers,
   exportUsers,
   updateUserStatus,

@@ -405,6 +405,25 @@
                 "description": "Bulk enroll in multiple courses during onboarding. Auth: STUDENT."
               },
               "response": []
+            },
+            {
+              "name": "Complete Onboarding",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/onboarding/complete",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["users", "onboarding", "complete"]
+                },
+                "description": "Mark onboarding as completed for the authenticated student. Call after successful Bulk Enroll. No body required. Idempotent — safe to retry. Auth: STUDENT."
+              },
+              "response": []
             }
           ]
         },
