@@ -11,13 +11,19 @@
  * - actionUrl: URL for more info (optional)
  * - actionText: Action button text (optional)
  */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.systemAlert = void 0;
+const path_1 = __importDefault(require("path"));
+const config_1 = __importDefault(require("../../../../config"));
 exports.systemAlert = {
     name: 'systemAlert',
     push: {
         title: '{{title}}',
         body: '{{message}}',
+        icon: path_1.default.join(process.cwd(), config_1.default.app.logo),
         data: {
             type: 'SYSTEM_ALERT',
             severity: '{{severity}}',

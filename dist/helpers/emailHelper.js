@@ -28,10 +28,11 @@ const transporter = nodemailer_1.default.createTransport({
 const sendEmail = (values) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const info = yield transporter.sendMail({
-            from: `"Simply Good Food" ${config_1.default.email.from}`,
+            from: `"Rise & Impact Adademy" <${config_1.default.email.user}>`,
             to: values.to,
             subject: values.subject,
             html: values.html,
+            attachments: values.attachments,
         });
         logger_1.logger.info('Mail send successfully', info.accepted);
     }

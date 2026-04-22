@@ -31,7 +31,7 @@ router.post('/forget-password', (0, rateLimit_1.rateLimitMiddleware)({
 // Email Verification
 router.post('/verify-email', (0, rateLimit_1.rateLimitMiddleware)({
     windowMs: 15 * 60 * 1000,
-    max: 5,
+    max: 20,
     routeName: 'auth-verify-email',
 }), (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createVerifyEmailZodSchema), auth_controller_1.AuthController.verifyEmail);
 // Reset Password

@@ -59,6 +59,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationBuilder = void 0;
+const path_1 = __importDefault(require("path"));
+const config_1 = __importDefault(require("../../../config"));
 const mongoose_1 = require("mongoose");
 const user_model_1 = require("../../modules/user/user.model");
 const templates = __importStar(require("./templates"));
@@ -562,13 +564,19 @@ class NotificationBuilder {
                 return vars[key] !== undefined ? String(vars[key]) : match;
             });
         };
+        // Helper to stringify data object for FCM (only accepts string values)
+        const stringifyData = (data) => {
+            if (!data)
+                return undefined;
+            return Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]));
+        };
         // Defaults
         let push = {
-            title: this.content.title || 'Notification',
+            title: this.content.title || config_1.default.app.name,
             body: this.content.text || '',
-            icon: this.content.icon,
+            icon: this.content.icon || path_1.default.join(process.cwd(), config_1.default.app.logo),
             image: this.content.image,
-            data: this.content.data,
+            data: stringifyData(this.content.data),
         };
         let socket = {
             event: 'NOTIFICATION',
@@ -576,7 +584,7 @@ class NotificationBuilder {
         };
         let email = {
             template: 'notification',
-            subject: this.content.title || 'Notification',
+            subject: this.content.title || config_1.default.app.name,
             theme: 'default',
         };
         let database = {
@@ -593,11 +601,11 @@ class NotificationBuilder {
                     icon: this.template.push.icon || push.icon,
                     image: this.template.push.image || push.image,
                     data: this.template.push.data
-                        ? Object.fromEntries(Object.entries(this.template.push.data).map(([k, v]) => [
+                        ? stringifyData(Object.fromEntries(Object.entries(this.template.push.data).map(([k, v]) => [
                             k,
                             interpolate(v, this.variables),
-                        ]))
-                        : push.data,
+                        ])))
+                        : stringifyData(push.data),
                 };
             }
             if (this.template.socket) {
