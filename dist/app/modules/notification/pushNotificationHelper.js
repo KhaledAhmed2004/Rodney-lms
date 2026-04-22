@@ -22,18 +22,37 @@ const serviceAccountJson = Buffer.from(config_1.default.firebase_api_key_base64,
 // Parse it as JSON
 const serviceAccount = JSON.parse(serviceAccountJson);
 // Initialize Firebase SDK
-firebase_admin_1.default.initializeApp({
-    credential: firebase_admin_1.default.credential.cert(serviceAccount),
-});
+if (!firebase_admin_1.default.apps.length) {
+    firebase_admin_1.default.initializeApp({
+        credential: firebase_admin_1.default.credential.cert(serviceAccount),
+    });
+}
 // Multiple users
 const sendPushNotifications = (values) => __awaiter(void 0, void 0, void 0, function* () {
-    const res = yield firebase_admin_1.default.messaging().sendEachForMulticast(values);
-    logger_1.logger.info('Notifications sent successfully', res);
+    try {
+        const res = yield firebase_admin_1.default.messaging().sendEachForMulticast(values);
+        logger_1.logger.info('Notifications batch result:', {
+            successCount: res.successCount,
+            failureCount: res.failureCount,
+        });
+        return res;
+    }
+    catch (error) {
+        logger_1.logger.error('FCM Multicast Error:', error);
+        throw error;
+    }
 });
 // Single user
 const sendPushNotification = (values) => __awaiter(void 0, void 0, void 0, function* () {
-    const res = yield firebase_admin_1.default.messaging().send(values);
-    logger_1.logger.info('Notification sent successfully', res);
+    try {
+        const res = yield firebase_admin_1.default.messaging().send(values);
+        logger_1.logger.info('Notification sent successfully', res);
+        return res;
+    }
+    catch (error) {
+        logger_1.logger.error('FCM Single Error:', error);
+        throw error;
+    }
 });
 exports.pushNotificationHelper = {
     sendPushNotifications,

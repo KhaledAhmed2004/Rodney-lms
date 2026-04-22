@@ -63,6 +63,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailBuilder = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const config_1 = __importDefault(require("../../../config"));
 const default_1 = require("./themes/default");
 const dark_1 = require("./themes/dark");
@@ -369,6 +371,7 @@ class EmailBuilder {
      * Build the final HTML email
      */
     build() {
+        var _a;
         let finalHtml;
         if (this.html) {
             // Template was used
@@ -381,10 +384,34 @@ class EmailBuilder {
         else {
             throw new Error('No content to build. Use useTemplate() or add components/sections.');
         }
+        // Process local logo for embedding
+        const attachments = [...this.attachments];
+        if (((_a = this.theme.logo) === null || _a === void 0 ? void 0 : _a.url) && (this.theme.logo.url.startsWith('c:') || this.theme.logo.url.startsWith('/') || this.theme.logo.url.includes('\\'))) {
+            const logoPath = this.theme.logo.url;
+            if (fs_1.default.existsSync(logoPath)) {
+                const logoExt = path_1.default.extname(logoPath).substring(1) || 'png';
+                const logoFilename = `logo.${logoExt}`;
+                const cid = 'logo_embedded';
+                // Add logo as inline attachment
+                attachments.push({
+                    filename: logoFilename,
+                    content: fs_1.default.readFileSync(logoPath),
+                    contentType: `image/${logoExt}`,
+                    encoding: 'base64',
+                    // Note: In nodemailer, cid is used in the html, and we set it here via cid property if needed
+                    // or just reference it in HTML and nodemailer handles it if we provide cid in attachment object
+                });
+                // Replace logo URL with CID in HTML
+                finalHtml = finalHtml.replace(new RegExp(logoPath.replace(/\\/g, '\\\\'), 'g'), `cid:${cid}`);
+                // Also need to make sure the attachment object has the cid property
+                const logoAttachment = attachments[attachments.length - 1];
+                logoAttachment.cid = cid;
+            }
+        }
         return {
             html: finalHtml,
             subject: this.subject,
-            attachments: this.attachments,
+            attachments,
         };
     }
     /**
@@ -452,19 +479,7 @@ class EmailBuilder {
         <table role="presentation" class="email-container" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: ${this.theme.colors.surface}; border-radius: ${this.theme.borderRadius}; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
           <tr>
             <td class="mobile-padding" style="padding: ${this.theme.spacing.xl};">
-              ${this.theme.logo ? `
-              <div style="text-align: center; margin-bottom: ${this.theme.spacing.lg};">
-                <img src="${this.theme.logo.url}" alt="${this.theme.logo.alt}" width="${this.theme.logo.width}" height="${this.theme.logo.height}" style="max-width: 100%; height: auto;" />
-              </div>
-              ` : ''}
               ${content}
-              ${this.theme.company ? `
-              <div style="margin-top: ${this.theme.spacing.xl}; padding-top: ${this.theme.spacing.lg}; border-top: 1px solid ${this.theme.colors.border}; text-align: center; color: ${this.theme.colors.textMuted}; font-size: 12px;">
-                <p style="margin: 0;">${this.theme.company.name}</p>
-                ${this.theme.company.address ? `<p style="margin: 5px 0 0 0;">${this.theme.company.address}</p>` : ''}
-                ${this.theme.company.email ? `<p style="margin: 5px 0 0 0;">${this.theme.company.email}</p>` : ''}
-              </div>
-              ` : ''}
             </td>
           </tr>
         </table>

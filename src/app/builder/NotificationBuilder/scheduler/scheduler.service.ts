@@ -134,13 +134,13 @@ export class NotificationScheduler {
     return result.modifiedCount > 0;
   }
 
-  static async getPending(userId?: string): Promise<IScheduledNotification[]> {
+  static async getPending(userId?: string): Promise<any[]> {
     const query: any = { status: 'pending' };
     if (userId) query.recipients = userId;
     return ScheduledNotification.find(query).sort({ scheduledFor: 1 }).lean();
   }
 
-  static async getById(scheduledId: string): Promise<IScheduledNotification | null> {
+  static async getById(scheduledId: string): Promise<any | null> {
     return ScheduledNotification.findById(scheduledId).lean();
   }
 

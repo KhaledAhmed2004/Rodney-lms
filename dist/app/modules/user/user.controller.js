@@ -62,6 +62,16 @@ const updateProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, 
         data: result,
     });
 }));
+const completeOnboarding = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const user = req.user;
+    const result = yield user_service_1.UserService.completeOnboardingInDB(user);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Onboarding completed',
+        data: result,
+    });
+}));
 const getAllUsers = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield user_service_1.UserService.getAllUsers(req.query);
     (0, sendResponse_1.default)(res, {
@@ -164,6 +174,7 @@ exports.UserController = {
     createUser,
     getUserProfile,
     updateProfile,
+    completeOnboarding,
     getAllUsers,
     blockUser,
     unblockUser,

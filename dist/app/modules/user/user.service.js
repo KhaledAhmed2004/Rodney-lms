@@ -67,6 +67,13 @@ const getUserProfileFromDB = (user) => __awaiter(void 0, void 0, void 0, functio
     }
     return result;
 });
+const completeOnboardingInDB = (user) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield user_model_1.User.findByIdAndUpdate(user.id, { onboardingCompleted: true }, { new: true }).select('onboardingCompleted');
+    if (!result) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, "User doesn't exist!");
+    }
+    return result;
+});
 const updateProfileToDB = (user, payload) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = user;
     const isExistUser = yield user_model_1.User.isExistUserById(id);
@@ -306,6 +313,7 @@ exports.UserService = {
     createUserToDB,
     getUserProfileFromDB,
     updateProfileToDB,
+    completeOnboardingInDB,
     getAllUsers,
     exportUsers,
     updateUserStatus,

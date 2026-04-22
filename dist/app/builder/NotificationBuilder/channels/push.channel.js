@@ -37,16 +37,35 @@ const sendPush = (users, content) => __awaiter(void 0, void 0, void 0, function*
     }
     // Build FCM message
     const tokens = tokensWithUsers.map(t => t.token);
+    // Payload Optimization: High priority and platform-specific configs
     const message = {
         notification: {
             title: content.title,
             body: content.body,
         },
+        android: {
+            priority: 'high',
+            notification: {
+                sound: 'default',
+                channelId: 'default',
+            },
+        },
+        apns: {
+            payload: {
+                aps: {
+                    sound: 'default',
+                    badge: 1,
+                },
+            },
+        },
         tokens,
     };
     // Add optional fields
     if (content.icon) {
-        message.notification.icon = content.icon;
+        // Top-level notification doesn't support 'icon', move to android config
+        if (!message.android.notification)
+            message.android.notification = {};
+        message.android.notification.icon = content.icon;
     }
     if (content.image) {
         message.notification.image = content.image;
@@ -56,20 +75,33 @@ const sendPush = (users, content) => __awaiter(void 0, void 0, void 0, function*
     }
     try {
         // Use existing helper
-        yield pushNotificationHelper_1.pushNotificationHelper.sendPushNotifications(message);
-        // Count unique users with tokens as sent
+        const res = yield pushNotificationHelper_1.pushNotificationHelper.sendPushNotifications(message);
+        // Track detailed results
+        if (res && res.responses) {
+            res.responses.forEach((resp, idx) => {
+                if (!resp.success) {
+                    const token = tokens[idx];
+                    const user = tokensWithUsers.find(t => t.token === token);
+                    console.error(`FCM Delivery Failed for User ${user === null || user === void 0 ? void 0 : user.userId}:`, resp.error);
+                    if (user === null || user === void 0 ? void 0 : user.userId)
+                        result.failed.push(user.userId);
+                }
+            });
+        }
+        // Count successful users (not just tokens)
+        const failedUserIds = new Set(result.failed);
         const usersWithTokens = new Set(tokensWithUsers.map(t => t.userId));
-        result.sent = usersWithTokens.size;
+        result.sent = Array.from(usersWithTokens).filter(id => !failedUserIds.has(id)).length;
         // Users without tokens are also considered "sent" (nothing to send)
         const usersWithoutTokens = users.filter(u => !u.deviceTokens || u.deviceTokens.length === 0);
         result.sent += usersWithoutTokens.length;
     }
     catch (error) {
-        console.error('Push notification error:', error);
+        console.error('Push notification critical error:', error);
         // Mark users with tokens as failed
         const usersWithTokens = new Set(tokensWithUsers.map(t => t.userId));
         result.failed = Array.from(usersWithTokens);
-        // Users without tokens are still "sent"
+        // Users without tokens are still "sent" (nothing to send)
         const usersWithoutTokens = users.filter(u => !u.deviceTokens || u.deviceTokens.length === 0);
         result.sent = usersWithoutTokens.length;
     }

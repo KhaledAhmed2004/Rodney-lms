@@ -5,8 +5,13 @@
  * This is the primary theme used for most emails.
  * You can modify these values to match your brand.
  */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.defaultTheme = void 0;
+const path_1 = __importDefault(require("path"));
+const config_1 = __importDefault(require("../../../../config"));
 exports.defaultTheme = {
     name: 'default',
     colors: {
@@ -44,26 +49,26 @@ exports.defaultTheme = {
     borderRadius: '8px',
     // Logo configuration - update with your logo
     logo: {
-        url: 'https://i.postimg.cc/6pgNvKhD/logo.png',
+        url: path_1.default.join(process.cwd(), config_1.default.app.logo),
         width: '150',
         height: 'auto',
-        alt: 'Company Logo',
+        alt: config_1.default.app.name,
     },
     // Social media links - add your links
     social: {
-        facebook: 'https://facebook.com/yourcompany',
-        twitter: 'https://twitter.com/yourcompany',
-        instagram: 'https://instagram.com/yourcompany',
-        linkedin: 'https://linkedin.com/company/yourcompany',
+        facebook: 'https://facebook.com/riseandimpact',
+        twitter: 'https://twitter.com/riseandimpact',
+        instagram: 'https://instagram.com/riseandimpact',
+        linkedin: 'https://linkedin.com/company/riseandimpact',
         // youtube: 'https://youtube.com/yourcompany',
     },
     // Company information for footer
     company: {
-        name: 'Your Company Name',
-        address: '123 Business Street, City, Country',
+        name: config_1.default.app.name,
+        address: 'Your Address Here',
         phone: '+1 234 567 890',
-        email: 'support@yourcompany.com',
-        website: 'https://yourcompany.com',
+        email: 'support@riseandimpact.com',
+        website: 'https://riseandimpact.com',
     },
 };
 exports.default = exports.defaultTheme;

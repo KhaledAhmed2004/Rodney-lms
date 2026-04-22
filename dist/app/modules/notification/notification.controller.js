@@ -47,33 +47,6 @@ const readAllNotifications = (0, catchAsync_1.default)((req, res) => __awaiter(v
         data: { updated: result.modifiedCount },
     });
 }));
-const adminNotificationFromDB = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield notification_service_1.NotificationService.adminNotificationFromDB(req.query);
-    (0, sendResponse_1.default)(res, {
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        success: true,
-        message: 'Admin notifications retrieved successfully',
-        data: result,
-    });
-}));
-const adminMarkNotificationAsRead = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const notification = yield notification_service_1.NotificationService.adminMarkNotificationAsReadIntoDB(req.params.id);
-    (0, sendResponse_1.default)(res, {
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        success: true,
-        message: 'Admin notification marked as read successfully',
-        data: notification,
-    });
-}));
-const adminMarkAllNotificationsAsRead = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield notification_service_1.NotificationService.adminMarkAllNotificationsAsRead();
-    (0, sendResponse_1.default)(res, {
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        success: true,
-        message: result.message,
-        data: { updated: result.modifiedCount },
-    });
-}));
 const sendNotification = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { title, text, audience, courseId } = req.body;
     const result = yield notification_service_1.NotificationService.sendAdminNotification(title, text, audience, courseId);
@@ -95,12 +68,9 @@ const getSentHistory = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
     });
 }));
 exports.NotificationController = {
-    adminNotificationFromDB,
     getNotificationFromDB,
     readAllNotifications,
     readNotification,
-    adminMarkNotificationAsRead,
-    adminMarkAllNotificationsAsRead,
     sendNotification,
     getSentHistory,
 };

@@ -61,42 +61,6 @@ const markAllNotificationsAsRead = (userId) => __awaiter(void 0, void 0, void 0,
     };
 });
 exports.markAllNotificationsAsRead = markAllNotificationsAsRead;
-// Fetch admin notifications with query, pagination, unread count
-const adminNotificationFromDB = (query) => __awaiter(void 0, void 0, void 0, function* () {
-    const notificationQuery = new QueryBuilder_1.default(notification_model_1.Notification.find({ type: 'ADMIN' }), query)
-        .search(['title', 'text'])
-        .filter()
-        .dateFilter()
-        .sort()
-        .paginate()
-        .fields();
-    const { data, pagination } = yield notificationQuery.getFilteredResults();
-    const unreadCount = yield notification_model_1.Notification.countDocuments({
-        type: 'ADMIN',
-        isRead: false,
-    });
-    return {
-        data,
-        pagination,
-        unreadCount,
-    };
-});
-// Mark a single admin notification as read
-const adminMarkNotificationAsReadIntoDB = (notificationId) => __awaiter(void 0, void 0, void 0, function* () {
-    const notification = yield notification_model_1.Notification.findOneAndUpdate({ _id: notificationId, type: 'ADMIN' }, { isRead: true }, { new: true });
-    if (!notification) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Admin notification not found');
-    }
-    return notification;
-});
-// Mark all admin notifications as read
-const adminMarkAllNotificationsAsRead = () => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield notification_model_1.Notification.updateMany({ type: 'ADMIN', isRead: false }, { isRead: true });
-    return {
-        modifiedCount: result.modifiedCount,
-        message: 'All admin notifications marked as read',
-    };
-});
 // Send notification via NotificationBuilder + save sent record
 const sendAdminNotification = (title, text, audience, courseId) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
@@ -155,12 +119,9 @@ const getSentHistory = (query) => __awaiter(void 0, void 0, void 0, function* ()
     return { pagination, data };
 });
 exports.NotificationService = {
-    adminNotificationFromDB,
     getNotificationFromDB,
     markNotificationAsReadIntoDB,
-    adminMarkNotificationAsReadIntoDB,
     markAllNotificationsAsRead: exports.markAllNotificationsAsRead,
-    adminMarkAllNotificationsAsRead,
     sendAdminNotification,
     getSentHistory,
 };
