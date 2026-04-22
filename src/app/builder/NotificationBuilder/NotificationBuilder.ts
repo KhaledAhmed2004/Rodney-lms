@@ -691,13 +691,21 @@ export class NotificationBuilder {
       });
     };
 
+    // Helper to stringify data object for FCM (only accepts string values)
+    const stringifyData = (data?: Record<string, any>): Record<string, string> | undefined => {
+      if (!data) return undefined;
+      return Object.fromEntries(
+        Object.entries(data).map(([k, v]) => [k, String(v)])
+      );
+    };
+
     // Defaults
     let push = {
       title: this.content.title || config.app.name,
       body: this.content.text || '',
       icon: this.content.icon || path.join(process.cwd(), config.app.logo),
       image: this.content.image,
-      data: this.content.data as Record<string, string> | undefined,
+      data: stringifyData(this.content.data),
     };
 
     let socket = {
@@ -726,13 +734,15 @@ export class NotificationBuilder {
           icon: this.template.push.icon || push.icon,
           image: this.template.push.image || push.image,
           data: this.template.push.data
-            ? Object.fromEntries(
-                Object.entries(this.template.push.data).map(([k, v]) => [
-                  k,
-                  interpolate(v, this.variables),
-                ])
+            ? stringifyData(
+                Object.fromEntries(
+                  Object.entries(this.template.push.data).map(([k, v]) => [
+                    k,
+                    interpolate(v, this.variables),
+                  ])
+                )
               )
-            : push.data,
+            : stringifyData(push.data),
         };
       }
 

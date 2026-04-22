@@ -12,22 +12,39 @@ const serviceAccountJson = Buffer.from(
 const serviceAccount: admin.ServiceAccount = JSON.parse(serviceAccountJson);
 
 // Initialize Firebase SDK
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
 
 // Multiple users
 const sendPushNotifications = async (
   values: admin.messaging.MulticastMessage
 ) => {
-  const res = await admin.messaging().sendEachForMulticast(values);
-  logger.info('Notifications sent successfully', res);
+  try {
+    const res = await admin.messaging().sendEachForMulticast(values);
+    logger.info('Notifications batch result:', {
+      successCount: res.successCount,
+      failureCount: res.failureCount,
+    });
+    return res;
+  } catch (error) {
+    logger.error('FCM Multicast Error:', error);
+    throw error;
+  }
 };
 
 // Single user
 const sendPushNotification = async (values: admin.messaging.Message) => {
-  const res = await admin.messaging().send(values);
-  logger.info('Notification sent successfully', res);
+  try {
+    const res = await admin.messaging().send(values);
+    logger.info('Notification sent successfully', res);
+    return res;
+  } catch (error) {
+    logger.error('FCM Single Error:', error);
+    throw error;
+  }
 };
 
 export const pushNotificationHelper = {
