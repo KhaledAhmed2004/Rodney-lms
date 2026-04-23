@@ -22,7 +22,7 @@ const transporter = nodemailer.createTransport({
 const sendEmail = async (values: ISendEmail) => {
   try {
     const info = await transporter.sendMail({
-      from: `"Rise & Impact Adademy" <${config.email.user}>`,
+      from: `"${config.app.name}" <${config.email.user}>`,
       to: values.to,
       subject: values.subject,
       html: values.html,

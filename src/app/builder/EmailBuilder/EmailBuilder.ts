@@ -337,7 +337,11 @@ export class EmailBuilder {
     }
 
     this.subject = this.interpolate(template.subject, this.variables);
-    this.html = template.render(this.variables, this.theme, componentRegistry);
+    const renderVars = {
+      appName: config.app.name,
+      ...this.variables,
+    };
+    this.html = template.render(renderVars, this.theme, componentRegistry);
     return this;
   }
 
@@ -533,8 +537,12 @@ export class EmailBuilder {
    * Interpolate variables in a string using {{variable}} syntax
    */
   private interpolate(template: string, variables: Record<string, any>): string {
+    const allVars: Record<string, any> = {
+      appName: config.app.name,
+      ...variables,
+    };
     return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-      return variables[key] !== undefined ? String(variables[key]) : match;
+      return allVars[key] !== undefined ? String(allVars[key]) : match;
     });
   }
 

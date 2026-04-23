@@ -686,8 +686,12 @@ export class NotificationBuilder {
     database: { title?: string; text: string; type: NotificationType };
   } {
     const interpolate = (str: string, vars: Record<string, any>): string => {
+      const allVars: Record<string, any> = {
+        appName: config.app.name,
+        ...vars,
+      };
       return str.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-        return vars[key] !== undefined ? String(vars[key]) : match;
+        return allVars[key] !== undefined ? String(allVars[key]) : match;
       });
     };
 

@@ -15,7 +15,7 @@ exports.default = {
     frontend_url: process.env.FRONTEND_URL,
     // Project branding configuration
     app: {
-        name: process.env.APP_NAME || 'Educoin Backend',
+        name: process.env.APP_NAME || 'Rise & Impact Academy',
         tagline: process.env.APP_TAGLINE || 'Enterprise API',
         version: process.env.APP_VERSION || '1.0.0',
         logo: process.env.APP_LOGO || 'public/logo.png',
