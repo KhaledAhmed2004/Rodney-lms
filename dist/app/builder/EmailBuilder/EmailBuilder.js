@@ -264,7 +264,8 @@ class EmailBuilder {
             this.variables = Object.assign(Object.assign({}, this.variables), variables);
         }
         this.subject = this.interpolate(template.subject, this.variables);
-        this.html = template.render(this.variables, this.theme, componentRegistry);
+        const renderVars = Object.assign({ appName: config_1.default.app.name }, this.variables);
+        this.html = template.render(renderVars, this.theme, componentRegistry);
         return this;
     }
     /**
@@ -431,8 +432,9 @@ class EmailBuilder {
      * Interpolate variables in a string using {{variable}} syntax
      */
     interpolate(template, variables) {
+        const allVars = Object.assign({ appName: config_1.default.app.name }, variables);
         return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-            return variables[key] !== undefined ? String(variables[key]) : match;
+            return allVars[key] !== undefined ? String(allVars[key]) : match;
         });
     }
     /**

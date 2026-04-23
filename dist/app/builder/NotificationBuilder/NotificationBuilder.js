@@ -560,8 +560,9 @@ class NotificationBuilder {
      */
     resolveContent() {
         const interpolate = (str, vars) => {
+            const allVars = Object.assign({ appName: config_1.default.app.name }, vars);
             return str.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-                return vars[key] !== undefined ? String(vars[key]) : match;
+                return allVars[key] !== undefined ? String(allVars[key]) : match;
             });
         };
         // Helper to stringify data object for FCM (only accepts string values)
