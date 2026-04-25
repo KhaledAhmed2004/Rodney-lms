@@ -81,6 +81,11 @@ const quizAttemptSchema = new mongoose_1.Schema({
         ref: 'User',
         required: true,
     },
+    course: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: 'Course',
+        required: true,
+    },
     answers: { type: [StudentAnswerSchema], default: [] },
     score: { type: Number, default: 0 },
     maxScore: { type: Number, default: 0 },
@@ -95,5 +100,5 @@ const quizAttemptSchema = new mongoose_1.Schema({
         default: quiz_interface_1.ATTEMPT_STATUS.IN_PROGRESS,
     },
 }, { timestamps: true });
-quizAttemptSchema.index({ quiz: 1, student: 1 });
+quizAttemptSchema.index({ quiz: 1, student: 1, course: 1 });
 exports.QuizAttempt = (0, mongoose_1.model)('QuizAttempt', quizAttemptSchema);

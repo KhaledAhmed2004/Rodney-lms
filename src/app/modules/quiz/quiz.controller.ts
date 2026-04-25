@@ -72,7 +72,12 @@ const getQuizAttempts = catchAsync(async (req: Request, res: Response) => {
 
 const getStudentView = catchAsync(async (req: Request, res: Response) => {
   const userId = (req.user as JwtPayload).id;
-  const result = await QuizService.getStudentView(req.params.id, userId);
+  const { courseId } = req.query;
+  const result = await QuizService.getStudentView(
+    req.params.id,
+    userId,
+    courseId as string,
+  );
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -83,11 +88,20 @@ const getStudentView = catchAsync(async (req: Request, res: Response) => {
 
 const startAttempt = catchAsync(async (req: Request, res: Response) => {
   const userId = (req.user as JwtPayload).id;
-  const result = await QuizService.startAttempt(req.params.id, userId);
+  const { courseId } = req.body;
+  const result = await QuizService.startAttempt(req.params.id, userId, courseId);
+
+  const isNew =
+    result.status === 'IN_PROGRESS' &&
+    new Date(result.createdAt!).getTime() ===
+      new Date(result.updatedAt!).getTime();
+
   sendResponse(res, {
     success: true,
-    statusCode: StatusCodes.CREATED,
-    message: 'Quiz attempt started successfully',
+    statusCode: isNew ? StatusCodes.CREATED : StatusCodes.OK,
+    message: isNew
+      ? 'Quiz attempt started successfully'
+      : 'Quiz attempt retrieved successfully',
     data: result,
   });
 });

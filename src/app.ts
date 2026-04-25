@@ -37,7 +37,11 @@ import { clientInfo } from './app/logging/clientInfo';
 import { requestLogger } from './app/logging/requestLogger';
 import { otelExpressMiddleware } from './app/logging/otelExpress';
 import { logger, errorLogger } from './shared/logger';
-import { allowedOrigins, maybeLogCors } from './app/logging/corsLogger';
+import {
+  allowedOrigins,
+  maybeLogCors,
+  isOriginAllowed,
+} from './app/logging/corsLogger';
 // autoLabelBootstrap moved above router import to ensure controllers are wrapped before route binding
 
 const app = express();
@@ -101,15 +105,11 @@ app.use(otelExpressMiddleware);
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, Postman)
-      if (!origin) {
-        maybeLogCors(origin, true);
-        return callback(null, true);
-      }
-      if (allowedOrigins.includes(origin)) {
+      if (isOriginAllowed(origin)) {
         maybeLogCors(origin, true);
         callback(null, true);
       } else {
+        errorLogger.error(`CORS blocked for origin: ${origin}`);
         maybeLogCors(origin, false);
         callback(new Error('Not allowed by CORS'));
       }
@@ -123,7 +123,13 @@ app.use(
 app.options(
   '*',
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
   }),

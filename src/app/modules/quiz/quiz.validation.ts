@@ -99,8 +99,18 @@ const submitAttempt = z.object({
   }),
 });
 
+const startAttempt = z.object({
+  params: z.object({
+    id: z.string({ required_error: 'Quiz ID is required' }),
+  }),
+  body: z.object({
+    courseId: z.string({ required_error: 'Course ID is required' }),
+  }),
+});
+
 export const QuizValidation = {
   createQuiz,
   updateQuiz,
   submitAttempt,
+  startAttempt,
 };

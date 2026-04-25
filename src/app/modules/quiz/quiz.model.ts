@@ -98,6 +98,11 @@ const quizAttemptSchema = new Schema<IQuizAttempt, QuizAttemptModel>(
       ref: 'User',
       required: true,
     },
+    course: {
+      type: Schema.Types.ObjectId,
+      ref: 'Course',
+      required: true,
+    },
     answers: { type: [StudentAnswerSchema], default: [] },
     score: { type: Number, default: 0 },
     maxScore: { type: Number, default: 0 },
@@ -115,7 +120,7 @@ const quizAttemptSchema = new Schema<IQuizAttempt, QuizAttemptModel>(
   { timestamps: true },
 );
 
-quizAttemptSchema.index({ quiz: 1, student: 1 });
+quizAttemptSchema.index({ quiz: 1, student: 1, course: 1 });
 
 export const QuizAttempt = model<IQuizAttempt, QuizAttemptModel>(
   'QuizAttempt',

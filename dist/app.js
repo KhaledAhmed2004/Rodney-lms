@@ -39,6 +39,7 @@ const requestContext_1 = require("./app/logging/requestContext");
 const clientInfo_1 = require("./app/logging/clientInfo");
 const requestLogger_1 = require("./app/logging/requestLogger");
 const otelExpress_1 = require("./app/logging/otelExpress");
+const logger_1 = require("./shared/logger");
 const corsLogger_1 = require("./app/logging/corsLogger");
 // autoLabelBootstrap moved above router import to ensure controllers are wrapped before route binding
 const app = (0, express_1.default)();
@@ -84,16 +85,12 @@ app.use(otelExpress_1.otelExpressMiddleware);
 // CORS setup moved to logging/corsLogger.ts (allowedOrigins, maybeLogCors)
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps, Postman)
-        if (!origin) {
-            (0, corsLogger_1.maybeLogCors)(origin, true);
-            return callback(null, true);
-        }
-        if (corsLogger_1.allowedOrigins.includes(origin)) {
+        if ((0, corsLogger_1.isOriginAllowed)(origin)) {
             (0, corsLogger_1.maybeLogCors)(origin, true);
             callback(null, true);
         }
         else {
+            logger_1.errorLogger.error(`CORS blocked for origin: ${origin}`);
             (0, corsLogger_1.maybeLogCors)(origin, false);
             callback(new Error('Not allowed by CORS'));
         }
@@ -103,7 +100,14 @@ app.use((0, cors_1.default)({
 }));
 // Explicitly handle preflight OPTIONS requests
 app.options('*', (0, cors_1.default)({
-    origin: corsLogger_1.allowedOrigins,
+    origin: (origin, callback) => {
+        if ((0, corsLogger_1.isOriginAllowed)(origin)) {
+            callback(null, true);
+        }
+        else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
 }));

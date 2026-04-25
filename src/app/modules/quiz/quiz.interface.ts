@@ -61,6 +61,7 @@ export type IStudentAnswer = {
 export type IQuizAttempt = {
   quiz: Types.ObjectId;
   student: Types.ObjectId;
+  course: Types.ObjectId;
   answers: IStudentAnswer[];
   score: number;
   maxScore: number;
