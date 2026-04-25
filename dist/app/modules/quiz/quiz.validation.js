@@ -93,8 +93,17 @@ const submitAttempt = zod_1.z.object({
         })),
     }),
 });
+const startAttempt = zod_1.z.object({
+    params: zod_1.z.object({
+        id: zod_1.z.string({ required_error: 'Quiz ID is required' }),
+    }),
+    body: zod_1.z.object({
+        courseId: zod_1.z.string({ required_error: 'Course ID is required' }),
+    }),
+});
 exports.QuizValidation = {
     createQuiz,
     updateQuiz,
     submitAttempt,
+    startAttempt,
 };

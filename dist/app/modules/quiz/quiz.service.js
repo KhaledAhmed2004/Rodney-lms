@@ -18,6 +18,7 @@ const http_status_codes_1 = require("http-status-codes");
 const mongoose_1 = require("mongoose");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
+const quiz_interface_1 = require("./quiz.interface");
 const quiz_model_1 = require("./quiz.model");
 const course_model_1 = require("../course/course.model");
 const enrollment_model_1 = require("../enrollment/enrollment.model");
@@ -111,10 +112,19 @@ const shuffleArray = (array) => {
     }
     return shuffled;
 };
-const getStudentView = (quizId, studentId) => __awaiter(void 0, void 0, void 0, function* () {
+const getStudentView = (quizId, studentId, courseId) => __awaiter(void 0, void 0, void 0, function* () {
     const quiz = yield quiz_model_1.Quiz.findById(quizId);
     if (!quiz) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Quiz not found');
+    }
+    // Find last attempt if courseId is provided
+    let lastAttempt;
+    if (courseId) {
+        lastAttempt = yield quiz_model_1.QuizAttempt.findOne({
+            quiz: quizId,
+            student: studentId,
+            course: courseId,
+        }).sort({ createdAt: -1 });
     }
     // Strip correct answers + explanation
     let questions = quiz.questions.map(q => ({
@@ -148,41 +158,64 @@ const getStudentView = (quizId, studentId) => __awaiter(void 0, void 0, void 0, 
             showResults: quiz.settings.showResults,
         },
         totalMarks: quiz.totalMarks,
+        lastAttempt: lastAttempt || undefined,
     };
 });
-const startAttempt = (quizId, studentId) => __awaiter(void 0, void 0, void 0, function* () {
+const startAttempt = (quizId, studentId, courseId) => __awaiter(void 0, void 0, void 0, function* () {
     const quiz = yield quiz_model_1.Quiz.findById(quizId);
     if (!quiz) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Quiz not found');
     }
-    // Check if already attempted
-    const existing = yield quiz_model_1.QuizAttempt.findOne({
+    // Check if already COMPLETED in this course (Block retake if completed)
+    const completedAttempt = yield quiz_model_1.QuizAttempt.findOne({
         quiz: quizId,
         student: studentId,
+        course: courseId,
+        status: quiz_interface_1.ATTEMPT_STATUS.COMPLETED,
     });
-    if (existing) {
-        // In-progress — return existing to continue
-        if (existing.status === 'IN_PROGRESS') {
-            return {
-                _id: existing._id,
-                startedAt: existing.startedAt,
-                maxScore: existing.maxScore,
-                status: existing.status,
-            };
-        }
-        // Already completed — no retry
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Quiz already attempted');
+    if (completedAttempt) {
+        return completedAttempt;
     }
-    yield quiz_model_1.QuizAttempt.create({
+    // Check for any IN_PROGRESS attempt to resume
+    const existingInProgress = yield quiz_model_1.QuizAttempt.findOne({
         quiz: quizId,
         student: studentId,
+        course: courseId,
+        status: quiz_interface_1.ATTEMPT_STATUS.IN_PROGRESS,
+    }).sort({ createdAt: -1 });
+    if (existingInProgress) {
+        if (quiz.settings.timeLimit > 0) {
+            const elapsedSeconds = Math.floor((Date.now() - existingInProgress.startedAt.getTime()) / 1000);
+            const limitSeconds = quiz.settings.timeLimit * 60 + 30; // 30s grace period
+            if (elapsedSeconds > limitSeconds) {
+                // Mark as timed out
+                yield quiz_model_1.QuizAttempt.findByIdAndUpdate(existingInProgress._id, {
+                    $set: {
+                        status: quiz_interface_1.ATTEMPT_STATUS.TIMED_OUT,
+                        completedAt: new Date(),
+                    },
+                });
+                // Let it fall through to create a NEW attempt (Retake allowed for TIMED_OUT)
+            }
+            else {
+                // Not timed out, allow resuming the in-progress attempt
+                return existingInProgress;
+            }
+        }
+        else {
+            // No time limit, allow resuming
+            return existingInProgress;
+        }
+    }
+    // If no COMPLETED and no valid IN_PROGRESS, create a new attempt
+    const attempt = yield quiz_model_1.QuizAttempt.create({
+        quiz: quizId,
+        student: studentId,
+        course: courseId,
         maxScore: quiz.totalMarks,
+        status: quiz_interface_1.ATTEMPT_STATUS.IN_PROGRESS,
+        startedAt: new Date(),
     });
-    const attempt = yield quiz_model_1.QuizAttempt.findOne({
-        quiz: quizId,
-        student: studentId,
-        status: 'IN_PROGRESS',
-    }).select('startedAt maxScore status');
     return attempt;
 });
 const submitAttempt = (attemptId, studentId, answers) => __awaiter(void 0, void 0, void 0, function* () {
@@ -193,7 +226,7 @@ const submitAttempt = (attemptId, studentId, answers) => __awaiter(void 0, void 
     if (attempt.student.toString() !== studentId) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized');
     }
-    if (attempt.status !== 'IN_PROGRESS') {
+    if (attempt.status !== quiz_interface_1.ATTEMPT_STATUS.IN_PROGRESS) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Attempt already submitted');
     }
     const quiz = yield quiz_model_1.Quiz.findById(attempt.quiz);
@@ -246,7 +279,7 @@ const submitAttempt = (attemptId, studentId, answers) => __awaiter(void 0, void 
             passed,
             timeSpent,
             completedAt: new Date(),
-            status: 'COMPLETED',
+            status: quiz_interface_1.ATTEMPT_STATUS.COMPLETED,
         },
     }, { new: true });
     // Gamification: award points for quiz pass/perfect
@@ -259,11 +292,11 @@ const submitAttempt = (attemptId, studentId, answers) => __awaiter(void 0, void 
         catch ( /* points failure should not block quiz submission */_a) { /* points failure should not block quiz submission */ }
         // Auto-complete QUIZ lesson on pass
         try {
-            const lesson = yield course_model_1.Lesson.findOne({ quiz: attempt.quiz }).select('courseId');
+            const lesson = yield course_model_1.Lesson.findOne({ quiz: attempt.quiz, courseId: attempt.course }).select('courseId');
             if (lesson) {
                 const enrollment = yield enrollment_model_1.Enrollment.findOne({
                     student: studentId,
-                    course: lesson.courseId,
+                    course: attempt.course,
                     status: 'ACTIVE',
                 });
                 if (enrollment) {
@@ -325,8 +358,17 @@ const getMyAttempts = (studentId, query) => __awaiter(void 0, void 0, void 0, fu
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(Math.max(1, Number(query.limit) || 10), 100);
     const skip = (page - 1) * limit;
+    const matchStage = {
+        student: new mongoose_1.Types.ObjectId(studentId),
+        status: quiz_interface_1.ATTEMPT_STATUS.COMPLETED,
+    };
+    if (query.courseId) {
+        matchStage.course = new mongoose_1.Types.ObjectId(query.courseId);
+    }
     const pipeline = [
-        { $match: { student: new mongoose_1.Types.ObjectId(studentId), status: 'COMPLETED' } },
+        {
+            $match: matchStage,
+        },
         {
             $lookup: {
                 from: 'quizzes',
@@ -340,7 +382,7 @@ const getMyAttempts = (studentId, query) => __awaiter(void 0, void 0, void 0, fu
         {
             $lookup: {
                 from: 'courses',
-                localField: 'quizData.course',
+                localField: 'course', // Use the course from attempt instead of quizData.course
                 foreignField: '_id',
                 as: 'courseData',
                 pipeline: [{ $project: { title: 1 } }],
@@ -349,12 +391,15 @@ const getMyAttempts = (studentId, query) => __awaiter(void 0, void 0, void 0, fu
         { $unwind: { path: '$courseData', preserveNullAndEmptyArrays: true } },
         {
             $project: {
-                _id: 0,
+                _id: 1,
                 quizTitle: '$quizData.title',
                 courseName: { $ifNull: ['$courseData.title', null] },
+                score: 1,
+                maxScore: 1,
                 percentage: 1,
                 passed: 1,
                 completedAt: 1,
+                timeSpent: 1,
             },
         },
         {

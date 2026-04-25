@@ -23,6 +23,7 @@ router.get(
 router.post(
   '/:id/attempts',
   auth(USER_ROLES.STUDENT),
+  validateRequest(QuizValidation.startAttempt),
   QuizController.startAttempt,
 );
 

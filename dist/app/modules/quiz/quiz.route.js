@@ -14,7 +14,7 @@ const router = express_1.default.Router();
 // ==================== STUDENT ROUTES ====================
 router.get('/my-attempts', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), quiz_controller_1.QuizController.getMyAttempts);
 router.get('/:id/student-view', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), quiz_controller_1.QuizController.getStudentView);
-router.post('/:id/attempts', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), quiz_controller_1.QuizController.startAttempt);
+router.post('/:id/attempts', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), (0, validateRequest_1.default)(quiz_validation_1.QuizValidation.startAttempt), quiz_controller_1.QuizController.startAttempt);
 router.patch('/attempts/:attemptId/submit', (0, auth_1.default)(user_1.USER_ROLES.STUDENT), (0, validateRequest_1.default)(quiz_validation_1.QuizValidation.submitAttempt), quiz_controller_1.QuizController.submitAttempt);
 router.get('/attempts/:attemptId', (0, auth_1.default)(user_1.USER_ROLES.STUDENT, user_1.USER_ROLES.SUPER_ADMIN), quiz_controller_1.QuizController.getAttemptById);
 // ==================== ADMIN ROUTES ====================

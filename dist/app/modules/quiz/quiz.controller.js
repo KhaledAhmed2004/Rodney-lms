@@ -76,7 +76,8 @@ const getQuizAttempts = (0, catchAsync_1.default)((req, res) => __awaiter(void 0
 // ==================== STUDENT ====================
 const getStudentView = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
-    const result = yield quiz_service_1.QuizService.getStudentView(req.params.id, userId);
+    const { courseId } = req.query;
+    const result = yield quiz_service_1.QuizService.getStudentView(req.params.id, userId, courseId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -86,11 +87,17 @@ const getStudentView = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
 }));
 const startAttempt = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.user.id;
-    const result = yield quiz_service_1.QuizService.startAttempt(req.params.id, userId);
+    const { courseId } = req.body;
+    const result = yield quiz_service_1.QuizService.startAttempt(req.params.id, userId, courseId);
+    const isNew = result.status === 'IN_PROGRESS' &&
+        new Date(result.createdAt).getTime() ===
+            new Date(result.updatedAt).getTime();
     (0, sendResponse_1.default)(res, {
         success: true,
-        statusCode: http_status_codes_1.StatusCodes.CREATED,
-        message: 'Quiz attempt started successfully',
+        statusCode: isNew ? http_status_codes_1.StatusCodes.CREATED : http_status_codes_1.StatusCodes.OK,
+        message: isNew
+            ? 'Quiz attempt started successfully'
+            : 'Quiz attempt retrieved successfully',
         data: result,
     });
 }));

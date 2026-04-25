@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import { PipelineStage, Types } from 'mongoose';
 import ApiError from '../../../errors/ApiError';
 import QueryBuilder from '../../builder/QueryBuilder';
-import { IQuiz, IQuizAttempt } from './quiz.interface';
+import { IQuiz, IQuizAttempt, ATTEMPT_STATUS } from './quiz.interface';
 import { Quiz, QuizAttempt } from './quiz.model';
 import { Lesson } from '../course/course.model';
 import { Enrollment } from '../enrollment/enrollment.model';
@@ -141,10 +141,21 @@ const shuffleArray = <T>(array: T[]): T[] => {
 const getStudentView = async (
   quizId: string,
   studentId: string,
-): Promise<Partial<IQuiz>> => {
+  courseId?: string,
+): Promise<any> => {
   const quiz = await Quiz.findById(quizId);
   if (!quiz) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Quiz not found');
+  }
+
+  // Find last attempt if courseId is provided
+  let lastAttempt;
+  if (courseId) {
+    lastAttempt = await QuizAttempt.findOne({
+      quiz: quizId,
+      student: studentId,
+      course: courseId,
+    }).sort({ createdAt: -1 });
   }
 
   // Strip correct answers + explanation
@@ -184,50 +195,76 @@ const getStudentView = async (
       showResults: quiz.settings.showResults,
     },
     totalMarks: quiz.totalMarks,
-  } as Partial<IQuiz>;
+    lastAttempt: lastAttempt || undefined,
+  };
 };
 
 const startAttempt = async (
   quizId: string,
   studentId: string,
+  courseId: string,
 ): Promise<IQuizAttempt> => {
   const quiz = await Quiz.findById(quizId);
   if (!quiz) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Quiz not found');
   }
 
-  // Check if already attempted
-  const existing = await QuizAttempt.findOne({
+  // Check if already COMPLETED in this course (Block retake if completed)
+  const completedAttempt = await QuizAttempt.findOne({
     quiz: quizId,
     student: studentId,
+    course: courseId,
+    status: ATTEMPT_STATUS.COMPLETED,
   });
-  if (existing) {
-    // In-progress — return existing to continue
-    if (existing.status === 'IN_PROGRESS') {
-      return {
-        _id: existing._id,
-        startedAt: existing.startedAt,
-        maxScore: existing.maxScore,
-        status: existing.status,
-      } as unknown as IQuizAttempt;
-    }
-    // Already completed — no retry
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Quiz already attempted');
+
+  if (completedAttempt) {
+    return completedAttempt;
   }
 
-  await QuizAttempt.create({
+  // Check for any IN_PROGRESS attempt to resume
+  const existingInProgress = await QuizAttempt.findOne({
     quiz: quizId,
     student: studentId,
+    course: courseId,
+    status: ATTEMPT_STATUS.IN_PROGRESS,
+  }).sort({ createdAt: -1 });
+
+  if (existingInProgress) {
+    if (quiz.settings.timeLimit > 0) {
+      const elapsedSeconds = Math.floor(
+        (Date.now() - existingInProgress.startedAt.getTime()) / 1000,
+      );
+      const limitSeconds = quiz.settings.timeLimit * 60 + 30; // 30s grace period
+      if (elapsedSeconds > limitSeconds) {
+        // Mark as timed out
+        await QuizAttempt.findByIdAndUpdate(existingInProgress._id, {
+          $set: {
+            status: ATTEMPT_STATUS.TIMED_OUT,
+            completedAt: new Date(),
+          },
+        });
+        // Let it fall through to create a NEW attempt (Retake allowed for TIMED_OUT)
+      } else {
+        // Not timed out, allow resuming the in-progress attempt
+        return existingInProgress;
+      }
+    } else {
+      // No time limit, allow resuming
+      return existingInProgress;
+    }
+  }
+
+  // If no COMPLETED and no valid IN_PROGRESS, create a new attempt
+  const attempt = await QuizAttempt.create({
+    quiz: quizId,
+    student: studentId,
+    course: courseId,
     maxScore: quiz.totalMarks,
+    status: ATTEMPT_STATUS.IN_PROGRESS,
+    startedAt: new Date(),
   });
 
-  const attempt = await QuizAttempt.findOne({
-    quiz: quizId,
-    student: studentId,
-    status: 'IN_PROGRESS',
-  }).select('startedAt maxScore status');
-
-  return attempt!;
+  return attempt;
 };
 
 const submitAttempt = async (
@@ -245,7 +282,7 @@ const submitAttempt = async (
   if (attempt.student.toString() !== studentId) {
     throw new ApiError(StatusCodes.FORBIDDEN, 'Not authorized');
   }
-  if (attempt.status !== 'IN_PROGRESS') {
+  if (attempt.status !== ATTEMPT_STATUS.IN_PROGRESS) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Attempt already submitted');
   }
 
@@ -319,7 +356,7 @@ const submitAttempt = async (
         passed,
         timeSpent,
         completedAt: new Date(),
-        status: 'COMPLETED',
+        status: ATTEMPT_STATUS.COMPLETED,
       },
     },
     { new: true },
@@ -335,11 +372,11 @@ const submitAttempt = async (
 
     // Auto-complete QUIZ lesson on pass
     try {
-      const lesson = await Lesson.findOne({ quiz: attempt.quiz }).select('courseId');
+      const lesson = await Lesson.findOne({ quiz: attempt.quiz, courseId: attempt.course }).select('courseId');
       if (lesson) {
         const enrollment = await Enrollment.findOne({
           student: studentId,
-          course: lesson.courseId,
+          course: attempt.course,
           status: 'ACTIVE',
         });
         if (enrollment) {
@@ -416,8 +453,19 @@ const getMyAttempts = async (
   const limit = Math.min(Math.max(1, Number(query.limit) || 10), 100);
   const skip = (page - 1) * limit;
 
+  const matchStage: Record<string, any> = {
+    student: new Types.ObjectId(studentId),
+    status: ATTEMPT_STATUS.COMPLETED,
+  };
+
+  if (query.courseId) {
+    matchStage.course = new Types.ObjectId(query.courseId as string);
+  }
+
   const pipeline: PipelineStage[] = [
-    { $match: { student: new Types.ObjectId(studentId), status: 'COMPLETED' } },
+    {
+      $match: matchStage,
+    },
     {
       $lookup: {
         from: 'quizzes',
@@ -431,7 +479,7 @@ const getMyAttempts = async (
     {
       $lookup: {
         from: 'courses',
-        localField: 'quizData.course',
+        localField: 'course', // Use the course from attempt instead of quizData.course
         foreignField: '_id',
         as: 'courseData',
         pipeline: [{ $project: { title: 1 } }],
@@ -440,12 +488,15 @@ const getMyAttempts = async (
     { $unwind: { path: '$courseData', preserveNullAndEmptyArrays: true } },
     {
       $project: {
-        _id: 0,
+        _id: 1,
         quizTitle: '$quizData.title',
         courseName: { $ifNull: ['$courseData.title', null] },
+        score: 1,
+        maxScore: 1,
         percentage: 1,
         passed: 1,
         completedAt: 1,
+        timeSpent: 1,
       },
     },
     {
