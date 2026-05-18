@@ -28,6 +28,7 @@
 import nodemailer from 'nodemailer';
 import fs from 'fs';
 import path from 'path';
+import * as cheerio from 'cheerio';
 import config from '../../../config';
 import { defaultTheme } from './themes/default';
 import { darkTheme } from './themes/dark';
@@ -100,6 +101,7 @@ export interface ISendEmailOptions {
   to: string | string[];
   subject: string;
   html: string;
+  text?: string;
   attachments?: IEmailAttachment[];
   cc?: string | string[];
   bcc?: string | string[];
@@ -251,6 +253,10 @@ export class EmailBuilder {
           to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
           subject: options.subject,
           html: options.html,
+          text: options.text,
+          headers: {
+            'List-Unsubscribe': `<mailto:support@${config.email.user?.split('@')[1] || 'example.com'}?subject=unsubscribe>`,
+          },
         };
 
         if (options.attachments) {
@@ -468,7 +474,7 @@ export class EmailBuilder {
   /**
    * Build the final HTML email
    */
-  build(): { html: string; subject: string; attachments: IEmailAttachment[] } {
+  build(): { html: string; text: string; subject: string; attachments: IEmailAttachment[] } {
     let finalHtml: string;
 
     if (this.html) {
@@ -509,8 +515,21 @@ export class EmailBuilder {
       }
     }
 
+    // Generate plain text version from HTML
+    const $ = cheerio.load(finalHtml);
+    
+    // Remove scripts and styles from text version
+    $('script, style').remove();
+    
+    // Get text and clean up whitespace
+    const text = $.root().text()
+      .replace(/\n\s*\n/g, '\n\n') // Normalize multiple newlines
+      .replace(/[ \t]+/g, ' ')     // Normalize spaces
+      .trim();
+
     return {
       html: finalHtml,
+      text,
       subject: this.subject,
       attachments,
     };
@@ -520,12 +539,13 @@ export class EmailBuilder {
    * Build and send the email
    */
   async send(to: string | string[], options?: { cc?: string | string[]; bcc?: string | string[]; replyTo?: string }): Promise<void> {
-    const { html, subject, attachments } = this.build();
+    const { html, text, subject, attachments } = this.build();
 
     await EmailBuilder.send({
       to,
       subject,
       html,
+      text,
       attachments,
       ...options,
     });

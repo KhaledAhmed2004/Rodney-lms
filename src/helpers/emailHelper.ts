@@ -6,6 +6,7 @@ type ISendEmail = {
   to: string;
   subject: string;
   html: string;
+  text?: string;
   attachments?: any[];
 };
 
@@ -26,7 +27,11 @@ const sendEmail = async (values: ISendEmail) => {
       to: values.to,
       subject: values.subject,
       html: values.html,
+      text: values.text,
       attachments: values.attachments,
+      headers: {
+        'List-Unsubscribe': `<mailto:support@${config.email.user?.split('@')[1] || 'example.com'}?subject=unsubscribe>`,
+      },
     });
 
     logger.info('Mail send successfully', info.accepted);
