@@ -26,14 +26,16 @@ const createAccount = (values: ICreateAccount) => {
     .addComponent('otp', { code: values.otp.toString() })
     .addText(`This code is valid for 3 minutes. For your security, please do not share this code with anyone.`)
     .addDivider()
-    .addText(`If you did not create an account with us, you can safely ignore this email.`);
+    .addText(`This is an automated security notification from ${config.app.name}. If you did not create an account with us, you can safely ignore this email. No further action is required. Your privacy and security are our top priorities.`, { fontSize: '12px', color: '#666666' })
+    .addText(`Rise & Impact Academy • Support Team • support@example.com`, { fontSize: '12px', color: '#999999', textAlign: 'center' });
 
-  const { html, subject, attachments } = builder.build();
+  const { html, text, subject, attachments } = builder.build();
 
   return {
     to: values.email,
     subject,
     html,
+    text,
     attachments,
   };
 };
@@ -53,12 +55,13 @@ const resetPassword = (values: IResetPassword) => {
     .addDivider()
     .addText(`If you didn't request a password reset, please ignore this email or contact support if you have concerns.`);
 
-  const { html, subject, attachments } = builder.build();
+  const { html, text, subject, attachments } = builder.build();
 
   return {
     to: values.email,
     subject,
     html,
+    text,
     attachments,
   };
 };
