@@ -1,7 +1,6 @@
 import puppeteer, { Browser, PaperFormat } from 'puppeteer';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
-import { createCanvas } from 'canvas';
 import {
   themes,
   fontFamilies,
@@ -805,7 +804,20 @@ class PDFBuilder {
     } = config;
 
     try {
-      const canvas = createCanvas(300, height + (displayValue ? 30 : 10));
+      let createCanvasFn: any;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const canvasPkg = require('canvas');
+        createCanvasFn = canvasPkg.createCanvas;
+      } catch (err) {
+        // canvas native binding not available on this environment
+      }
+
+      if (!createCanvasFn) {
+        return '';
+      }
+
+      const canvas = createCanvasFn(300, height + (displayValue ? 30 : 10));
       JsBarcode(canvas, data, {
         format,
         width,

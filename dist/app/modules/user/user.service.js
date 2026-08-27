@@ -16,10 +16,7 @@ exports.UserService = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const user_1 = require("../../../enums/user");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
-const emailHelper_1 = require("../../../helpers/emailHelper");
-const emailTemplate_1 = require("../../../shared/emailTemplate");
 const fileHandler_1 = require("../../middlewares/fileHandler");
-const generateOTP_1 = __importDefault(require("../../../util/generateOTP"));
 const user_model_1 = require("./user.model");
 const enrollment_model_1 = require("../enrollment/enrollment.model");
 const enrollment_interface_1 = require("../enrollment/enrollment.interface");
@@ -27,25 +24,31 @@ const escape_string_regexp_1 = __importDefault(require("escape-string-regexp"));
 const AggregationBuilder_1 = __importDefault(require("../../builder/AggregationBuilder"));
 const DEFAULT_PROFILE_PICTURE = 'https://i.ibb.co/z5YHLV9/profile.png';
 const createUserToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
-    const createUser = yield user_model_1.User.create(payload);
+    // Set verified: true so user can login directly without OTP verification
+    const createUser = yield user_model_1.User.create(Object.assign(Object.assign({}, payload), { verified: true }));
     if (!createUser) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Failed to create user');
     }
-    //send email
-    const otp = (0, generateOTP_1.default)();
-    const values = {
-        name: createUser.name,
-        otp: otp,
-        email: createUser.email,
-    };
-    const createAccountTemplate = emailTemplate_1.emailTemplate.createAccount(values);
-    yield emailHelper_1.emailHelper.sendEmail(createAccountTemplate);
-    //save to DB
-    const authentication = {
-        oneTimeCode: otp,
-        expireAt: new Date(Date.now() + 3 * 60000),
-    };
-    yield user_model_1.User.findOneAndUpdate({ _id: createUser._id }, { $set: { authentication } });
+    // --- OTP Verification temporarily commented out ---
+    // //send email
+    // const otp = generateOTP();
+    // const values = {
+    //   name: createUser.name,
+    //   otp: otp,
+    //   email: createUser.email!,
+    // };
+    // const createAccountTemplate = emailTemplate.createAccount(values);
+    // await emailHelper.sendEmail(createAccountTemplate);
+    // //save to DB
+    // const authentication = {
+    //   oneTimeCode: otp,
+    //   expireAt: new Date(Date.now() + 3 * 60000),
+    // };
+    // await User.findOneAndUpdate(
+    //   { _id: createUser._id },
+    //   { $set: { authentication } }
+    // );
+    // --------------------------------------------------
     const sanitizedUser = yield user_model_1.User.findById(createUser._id).select('name email role verified profilePicture onboardingCompleted createdAt');
     return sanitizedUser;
 });

@@ -15,7 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendVerificationOTP = void 0;
 const user_model_1 = require("../app/modules/user/user.model");
 const generateOTP_1 = __importDefault(require("../util/generateOTP"));
-const EmailBuilder_1 = __importDefault(require("../app/builder/EmailBuilder/EmailBuilder"));
+const emailHelper_1 = require("./emailHelper");
+const emailTemplate_1 = require("../shared/emailTemplate");
 const OTP_EXPIRY_MINUTES = 3;
 /**
  * Generates OTP, saves to user record, and sends verification email
@@ -34,19 +35,11 @@ const sendVerificationOTP = (email) => __awaiter(void 0, void 0, void 0, functio
         expireAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60000),
     };
     yield user_model_1.User.findOneAndUpdate({ email }, { $set: { authentication } });
-    // Send email using EmailBuilder
-    const emailBuilder = new EmailBuilder_1.default()
-        .useTemplate('otp', {
+    const emailData = emailTemplate_1.emailTemplate.createAccount({
         name: user.name,
+        email: user.email,
         otp,
     });
-    const { subject, html, text } = emailBuilder.build();
-    yield EmailBuilder_1.default.send({
-        to: user.email,
-        subject,
-        html,
-        text,
-    });
-    return { otp };
+    yield emailHelper_1.emailHelper.sendEmail(emailData);
 });
 exports.sendVerificationOTP = sendVerificationOTP;
