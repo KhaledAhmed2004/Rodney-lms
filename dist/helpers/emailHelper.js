@@ -26,13 +26,18 @@ const transporter = nodemailer_1.default.createTransport({
     },
 });
 const sendEmail = (values) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const info = yield transporter.sendMail({
             from: `"${config_1.default.app.name}" <${config_1.default.email.user}>`,
             to: values.to,
             subject: values.subject,
             html: values.html,
+            text: values.text,
             attachments: values.attachments,
+            headers: {
+                'List-Unsubscribe': `<mailto:support@${((_a = config_1.default.email.user) === null || _a === void 0 ? void 0 : _a.split('@')[1]) || 'example.com'}?subject=unsubscribe>`,
+            },
         });
         logger_1.logger.info('Mail send successfully', info.accepted);
     }

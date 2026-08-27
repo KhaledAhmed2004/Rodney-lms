@@ -65,6 +65,7 @@ exports.EmailBuilder = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const cheerio = __importStar(require("cheerio"));
 const config_1 = __importDefault(require("../../../config"));
 const default_1 = require("./themes/default");
 const dark_1 = require("./themes/dark");
@@ -158,7 +159,7 @@ class EmailBuilder {
     static send(options) {
         return __awaiter(this, void 0, void 0, function* () {
             return (0, builderTracing_1.traceOperation)('EmailBuilder', 'send', () => __awaiter(this, void 0, void 0, function* () {
-                var _a;
+                var _a, _b;
                 const builderConfig = (0, builderConfig_1.getBuilderConfig)().email;
                 (0, builderTracing_1.addSpanAttributes)({
                     'email.to': Array.isArray(options.to) ? options.to.length : 1,
@@ -181,6 +182,10 @@ class EmailBuilder {
                         to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
                         subject: options.subject,
                         html: options.html,
+                        text: options.text,
+                        headers: {
+                            'List-Unsubscribe': `<mailto:support@${((_b = config_1.default.email.user) === null || _b === void 0 ? void 0 : _b.split('@')[1]) || 'example.com'}?subject=unsubscribe>`,
+                        },
                     };
                     if (options.attachments) {
                         mailOptions.attachments = options.attachments.map(att => ({
@@ -409,8 +414,18 @@ class EmailBuilder {
                 logoAttachment.cid = cid;
             }
         }
+        // Generate plain text version from HTML
+        const $ = cheerio.load(finalHtml);
+        // Remove scripts and styles from text version
+        $('script, style').remove();
+        // Get text and clean up whitespace
+        const text = $.root().text()
+            .replace(/\n\s*\n/g, '\n\n') // Normalize multiple newlines
+            .replace(/[ \t]+/g, ' ') // Normalize spaces
+            .trim();
         return {
             html: finalHtml,
+            text,
             subject: this.subject,
             attachments,
         };
@@ -420,10 +435,11 @@ class EmailBuilder {
      */
     send(to, options) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { html, subject, attachments } = this.build();
+            const { html, text, subject, attachments } = this.build();
             yield EmailBuilder.send(Object.assign({ to,
                 subject,
                 html,
+                text,
                 attachments }, options));
         });
     }

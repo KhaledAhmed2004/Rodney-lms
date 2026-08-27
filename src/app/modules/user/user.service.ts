@@ -17,30 +17,33 @@ import AggregationBuilder from '../../builder/AggregationBuilder';
 const DEFAULT_PROFILE_PICTURE = 'https://i.ibb.co/z5YHLV9/profile.png';
 
 const createUserToDB = async (payload: Partial<IUser>): Promise<IUser> => {
-  const createUser = await User.create(payload);
+  // Set verified: true so user can login directly without OTP verification
+  const createUser = await User.create({ ...payload, verified: true });
   if (!createUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to create user');
   }
 
-  //send email
-  const otp = generateOTP();
-  const values = {
-    name: createUser.name,
-    otp: otp,
-    email: createUser.email!,
-  };
-  const createAccountTemplate = emailTemplate.createAccount(values);
-  await emailHelper.sendEmail(createAccountTemplate);
+  // --- OTP Verification temporarily commented out ---
+  // //send email
+  // const otp = generateOTP();
+  // const values = {
+  //   name: createUser.name,
+  //   otp: otp,
+  //   email: createUser.email!,
+  // };
+  // const createAccountTemplate = emailTemplate.createAccount(values);
+  // await emailHelper.sendEmail(createAccountTemplate);
 
-  //save to DB
-  const authentication = {
-    oneTimeCode: otp,
-    expireAt: new Date(Date.now() + 3 * 60000),
-  };
-  await User.findOneAndUpdate(
-    { _id: createUser._id },
-    { $set: { authentication } }
-  );
+  // //save to DB
+  // const authentication = {
+  //   oneTimeCode: otp,
+  //   expireAt: new Date(Date.now() + 3 * 60000),
+  // };
+  // await User.findOneAndUpdate(
+  //   { _id: createUser._id },
+  //   { $set: { authentication } }
+  // );
+  // --------------------------------------------------
 
   const sanitizedUser = await User.findById(createUser._id).select(
     'name email role verified profilePicture onboardingCompleted createdAt'

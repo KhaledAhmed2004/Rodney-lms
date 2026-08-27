@@ -18,9 +18,8 @@ const http_status_codes_1 = require("http-status-codes");
 const config_1 = __importDefault(require("../../../config"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const authHelpers_1 = require("../../../helpers/authHelpers");
-const emailHelper_1 = require("../../../helpers/emailHelper");
 const jwtHelper_1 = require("../../../helpers/jwtHelper");
-const emailTemplate_1 = require("../../../shared/emailTemplate");
+const EmailBuilder_1 = __importDefault(require("../../../app/builder/EmailBuilder/EmailBuilder"));
 const cryptoToken_1 = __importDefault(require("../../../util/cryptoToken"));
 const generateOTP_1 = __importDefault(require("../../../util/generateOTP"));
 const resetToken_model_1 = require("./resetToken/resetToken.model");
@@ -84,14 +83,17 @@ const forgetPasswordToDB = (email) => __awaiter(void 0, void 0, void 0, function
         isExistUser.status === user_1.USER_STATUS.INACTIVE) {
         return; // Silent — same as non-existent
     }
-    //send mail
+    //send mail using EmailBuilder
     const otp = (0, generateOTP_1.default)();
-    const value = {
-        otp,
-        email: isExistUser.email,
-    };
-    const forgetPassword = emailTemplate_1.emailTemplate.resetPassword(value);
-    yield emailHelper_1.emailHelper.sendEmail(forgetPassword);
+    const emailBuilder = new EmailBuilder_1.default()
+        .useTemplate('resetPassword', { otp });
+    const { subject, html, text } = emailBuilder.build();
+    yield EmailBuilder_1.default.send({
+        to: isExistUser.email,
+        subject,
+        html,
+        text,
+    });
     //save to DB
     const authentication = {
         oneTimeCode: otp,
